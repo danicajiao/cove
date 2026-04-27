@@ -100,7 +100,7 @@ struct HomeView: View {
                             ForEach(viewModel.brands, id: \.id) { brand in
                                 VStack(spacing: Spacing.xs) {
                                     Circle()
-                                        .fill(Color.Colors.Fills.secondary)
+                                        .fill(Color.Colors.Fills.inverse)
                                         .stroke(Color.Colors.Strokes.primary, lineWidth: 1)
                                         .frame(width: 131, height: 131)
                                         .overlay {

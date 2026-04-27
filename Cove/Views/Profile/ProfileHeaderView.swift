@@ -13,7 +13,7 @@ struct ProfileHeaderView: View {
     var body: some View {
         VStack(spacing: Spacing.lg) {
             Circle()
-                .fill(Color.Colors.Fills.secondary)
+                .fill(Color.Colors.Fills.inverse)
                 .frame(width: 140, height: 140)
                 .overlay {
                     if let url = viewModel.photoURL {

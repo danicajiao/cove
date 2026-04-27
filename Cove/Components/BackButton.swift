@@ -15,7 +15,7 @@ struct BackButton: View {
             dismiss()
         } label: {
             Circle()
-                .fill(Color.Colors.Fills.secondary)
+                .fill(Color.Colors.Fills.inverse)
                 .strokeBorder(Color.Colors.Strokes.primary, lineWidth: 1)
                 .frame(width: 44, height: 44)
                 .overlay {

@@ -41,7 +41,7 @@ struct BannerButton: View {
                             }
                             .padding(Spacing.lg)
                             .frame(width: geometry.size.height - (11 * 2), height: geometry.size.height - (11 * 2))
-                            .background(Color.Colors.Fills.secondary)
+                            .background(Color.Colors.Fills.inverse)
                             .foregroundStyle(Color.Colors.Fills.primary)
                             .cornerRadius(Radius.lg)
                         }
@@ -69,7 +69,7 @@ struct BannerButton: View {
                     .clipped()
             }
             .frame(height: 120)
-            .background(Color.Colors.Fills.secondary)
+            .background(Color.Colors.Fills.inverse)
             .cornerRadius(Radius.xl)
             .customShadow()
         }

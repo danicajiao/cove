@@ -9,6 +9,7 @@ import SwiftUI
 
 struct CoffeeCategoryButton: View {
     let category: String
+    let cornerRadius = Radius.md
 
     var body: some View {
         // TODO: Refactor category buttons to have less reused code // swiftlint:disable:this todo
@@ -38,7 +39,7 @@ struct CoffeeCategoryButton: View {
             .mask {
                 Rectangle()
             }
-            .cornerRadius(8)
+            .cornerRadius(cornerRadius)
         case "Choco":
             ZStack {
                 Image("no-revisions-pLmTMF2Se7M-unsplash")
@@ -63,7 +64,7 @@ struct CoffeeCategoryButton: View {
             .mask {
                 Rectangle()
             }
-            .cornerRadius(8)
+            .cornerRadius(cornerRadius)
         case "Citrus":
             ZStack {
                 Image("am-jd-8du-1nR9OkM-unsplash")
@@ -88,7 +89,7 @@ struct CoffeeCategoryButton: View {
             .mask {
                 Rectangle()
             }
-            .cornerRadius(8)
+            .cornerRadius(cornerRadius)
         case "Earthy":
             ZStack {
                 Image("jocelyn-morales-uReASzIJDBs-unsplash")
@@ -113,7 +114,7 @@ struct CoffeeCategoryButton: View {
             .mask {
                 Rectangle()
             }
-            .cornerRadius(8)
+            .cornerRadius(cornerRadius)
         default:
             ZStack {
                 Image("michael-c-9qxNIXCg1Yw-unsplash")
@@ -138,14 +139,24 @@ struct CoffeeCategoryButton: View {
             .mask {
                 Rectangle()
             }
-            .cornerRadius(8)
+            .cornerRadius(cornerRadius)
         }
     }
 }
 
 struct CoffeeCategoryButton_Previews: PreviewProvider {
     static var previews: some View {
-        CoffeeCategoryButton(category: "Preview")
-            .previewLayout(.sizeThatFits)
+        VStack {
+            CoffeeCategoryButton(category: "Fruity")
+                .previewLayout(.sizeThatFits)
+            CoffeeCategoryButton(category: "Choco")
+                .previewLayout(.sizeThatFits)
+            CoffeeCategoryButton(category: "Citrus")
+                .previewLayout(.sizeThatFits)
+            CoffeeCategoryButton(category: "Earthy")
+                .previewLayout(.sizeThatFits)
+            CoffeeCategoryButton(category: "Preview")
+                .previewLayout(.sizeThatFits)
+        }
     }
 }

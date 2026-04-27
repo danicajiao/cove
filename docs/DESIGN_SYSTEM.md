@@ -48,13 +48,11 @@ Used for backgrounds of UI elements (cards, sheets, buttons, overlays).
 | Figma variable | Swift | Value / Meaning |
 |---|---|---|
 | `fills/primary` | `Color.Colors.Fills.primary` | `#52331F` — dark brown, primary surface |
-| `fills/inverse` | `Color.Colors.Fills.secondary` | `#FFFFFF` — white, on-dark surfaces ¹ |
-| `fills/secondary` | — | `#2B2627` — charcoal, secondary surface ¹ |
+| `fills/inverse` | `Color.Colors.Fills.inverse` | `#FFFFFF` — white, on-dark surfaces |
+| `fills/secondary` | — | `#2B2627` — charcoal, secondary surface |
 | `fills/tertiary` | `Color.Colors.Fills.tertiary` | Charcoal 60% opacity |
 | `fills/quaternary` | `Color.Colors.Fills.quaternary` | Charcoal 30% opacity |
 | `fills/quinary` | `Color.Colors.Fills.quinary` | Charcoal 10% opacity |
-
-¹ The Figma variable was renamed (`secondary` → `inverse`, new `secondary` added) but the Swift colorset names have not been updated yet. Treat `Color.Colors.Fills.secondary` as the white/inverse fill until the asset catalog is updated.
 
 ### Text
 
@@ -63,12 +61,10 @@ Used for foreground text colors.
 | Figma variable | Swift | Value / Meaning |
 |---|---|---|
 | `text/primary` | `Color.Colors.Text.textPrimary` | `#52331F` — dark brown, primary text |
-| `text/inverse` | `Color.Colors.Text.textSecondary` | `#FFFFFF` — white text on dark backgrounds ¹ |
+| `text/inverse` | `Color.Colors.Text.textInverse` | `#FFFFFF` — white text on dark backgrounds |
 | `text/tertiary` | `Color.Colors.Text.textTertiary` | Charcoal 60% opacity |
 | `text/quaternary` | — | Charcoal 30% opacity |
 | `text/quinary` | — | Charcoal 10% opacity |
-
-¹ Same naming drift as fills — `textSecondary` in Swift currently maps to white/inverse. Named constants for quaternary and quinary not yet added to the asset catalog.
 
 ### Strokes
 
@@ -88,14 +84,12 @@ Brand palette colors used for identity, accents, and category expression.
 | `brand/primary` | `Color.Colors.Brand.Palette.primary` | `#52331F` — dark brown |
 | `brand/secondary` | `Color.Colors.Brand.Palette.secondary` | `#FFFFFF` — white |
 | `brand/accent` | `Color.Colors.Brand.accent` | `#E29547` — amber, interactive accent |
-| `brand/coral` | `Color.Colors.Brand.Palette.red` | `#FF8181` — coral ¹ |
-| `brand/amber` | `Color.Colors.Brand.Palette.orange` | `#FFB557` — amber ¹ |
+| `brand/coral` | `Color.Colors.Brand.Palette.coral` | `#FF8181` — coral |
+| `brand/amber` | `Color.Colors.Brand.Palette.amber` | `#FFB557` — amber |
 | `brand/yellow` | `Color.Colors.Brand.Palette.yellow` | `#FFFAA0` — yellow |
-| `brand/sage` | `Color.Colors.Brand.Palette.green` | `#8BA96A` — sage green ¹ |
+| `brand/sage` | `Color.Colors.Brand.Palette.sage` | `#8BA96A` — sage green |
 | `brand/blue` | `Color.Colors.Brand.Palette.blue` | `#6CA8D0` — blue |
 | `brand/violet` | `Color.Colors.Brand.Palette.violet` | `#D3C6FF` — violet |
-
-¹ Figma variables were renamed (red→coral, orange→amber, green→sage) but Swift asset names have not been updated yet.
 
 ### Backgrounds
 
@@ -290,22 +284,11 @@ All components are defined in the **Components page** of the Figma file. Views s
 
 ## Roadmap & Known Gaps
 
-Outstanding work to achieve full parity between Figma and Swift:
-
-| Area | Status | Action needed |
+| Area | Status | Notes |
 |---|---|---|
 | Spacing constants | ✅ Done | `Cove/Constants/Spacing.swift` |
 | Radius constants | ✅ Done | `Cove/Constants/Radius.swift` |
 | Support colors | ✅ Done | `Cove/Resources/Assets.xcassets/Colors/Support/` |
-| Color naming drift | ⏳ Pending | Rename Swift colorsets to match updated Figma variable names (`secondary` → `inverse`, `textSecondary` → `textInverse`, brand palette names) |
-| Codebase realignment | ⏳ Pending | Full pass through all Views and Components to replace hardcoded colors, fonts, spacing, and radius values with design system tokens |
-
-### Codebase realignment pass
-
-The next major design system milestone is a full sweep of the codebase to bring all existing UI code into alignment with these tokens. This includes:
-
-- Replace any remaining hardcoded colors with `Color.Colors.*`
-- Replace any remaining raw spacing values with annotated constants (and eventually named `Spacing.*` calls)
-- Replace any remaining raw corner radius values with annotated constants
-- Replace any remaining `Poppins` font references with `Lato`
-- Verify all views use component instances rather than inline reimplementations
+| Color naming drift | ✅ Done | Asset catalog renamed to match Figma variable names |
+| Codebase realignment | ✅ Done | All Views and Components use `Color.Colors.*`, `Spacing.*`, `Radius.*`, and `Lato` fonts |
+| `BagView` realignment | ⏳ Pending | Excluded from realignment pass — scheduled for full rework |
