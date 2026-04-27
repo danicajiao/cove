@@ -23,10 +23,10 @@ struct LargeButton: View {
                 .overlay(alignment: .topLeading) {
                     Text(category)
                         .font(Font.custom("Lato-Regular", size: 14))
-                        .padding(10)
+                        .padding(Spacing.sm)
                 }
                 .frame(width: 140, height: 200)
-                .cornerRadius(8)
+                .cornerRadius(Radius.md)
         case "Coffee":
             Rectangle()
                 .foregroundStyle(.clear)
@@ -39,10 +39,10 @@ struct LargeButton: View {
                 .overlay(alignment: .topLeading) {
                     Text(category)
                         .font(Font.custom("Lato-Regular", size: 14))
-                        .padding(10)
+                        .padding(Spacing.sm)
                 }
                 .frame(width: 140, height: 200)
-                .cornerRadius(8)
+                .cornerRadius(Radius.md)
         case "Home":
             Rectangle()
                 .foregroundStyle(.clear)
@@ -56,10 +56,10 @@ struct LargeButton: View {
                 .overlay(alignment: .topLeading) {
                     Text(category)
                         .font(Font.custom("Lato-Regular", size: 14))
-                        .padding(10)
+                        .padding(Spacing.sm)
                 }
                 .frame(width: 140, height: 200)
-                .cornerRadius(8)
+                .cornerRadius(Radius.md)
         case "Bevs":
             Rectangle()
                 .foregroundStyle(.clear)
@@ -74,11 +74,11 @@ struct LargeButton: View {
                 .overlay(alignment: .topLeading) {
                     Text(category)
                         .font(Font.custom("Lato-Regular", size: 14))
-                        .padding(10)
+                        .padding(Spacing.sm)
                 }
                 .background(Color(red: 255 / 255, green: 252 / 255, blue: 246 / 255))
                 .frame(width: 140, height: 200)
-                .cornerRadius(8)
+                .cornerRadius(Radius.md)
         default:
             Rectangle()
                 .foregroundStyle(.clear)
@@ -92,11 +92,11 @@ struct LargeButton: View {
                 .overlay(alignment: .topLeading) {
                     Text(category)
                         .font(Font.custom("Lato-Regular", size: 14))
-                        .padding(10)
+                        .padding(Spacing.sm)
                 }
                 .background(Color(red: 255 / 255, green: 252 / 255, blue: 246 / 255))
                 .frame(width: 140, height: 200)
-                .cornerRadius(8)
+                .cornerRadius(Radius.md)
         }
     }
 }

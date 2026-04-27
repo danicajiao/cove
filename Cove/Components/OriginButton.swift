@@ -25,10 +25,10 @@ struct OriginButton: View {
                 .overlay(alignment: .topLeading) {
                     Text(origin)
                         .font(Font.custom("Lato-Regular", size: 14))
-                        .padding(10)
+                        .padding(Spacing.sm)
                 }
                 .frame(width: 140, height: 200)
-                .cornerRadius(8)
+                .cornerRadius(Radius.md)
         case "Guatemala":
             Rectangle()
                 .foregroundStyle(.clear)
@@ -41,10 +41,10 @@ struct OriginButton: View {
                 .overlay(alignment: .topLeading) {
                     Text(origin)
                         .font(Font.custom("Lato-Regular", size: 14))
-                        .padding(10)
+                        .padding(Spacing.sm)
                 }
                 .frame(width: 140, height: 200)
-                .cornerRadius(8)
+                .cornerRadius(Radius.md)
         case "Ethiopia":
             Rectangle()
                 .foregroundStyle(.clear)
@@ -57,10 +57,10 @@ struct OriginButton: View {
                 .overlay(alignment: .topLeading) {
                     Text(origin)
                         .font(Font.custom("Lato-Regular", size: 14))
-                        .padding(10)
+                        .padding(Spacing.sm)
                 }
                 .frame(width: 140, height: 200)
-                .cornerRadius(8)
+                .cornerRadius(Radius.md)
         case "Costa Rica":
             Rectangle()
                 .foregroundStyle(.clear)
@@ -73,10 +73,10 @@ struct OriginButton: View {
                 .overlay(alignment: .topLeading) {
                     Text(origin)
                         .font(Font.custom("Lato-Regular", size: 14))
-                        .padding(10)
+                        .padding(Spacing.sm)
                 }
                 .frame(width: 140, height: 200)
-                .cornerRadius(8)
+                .cornerRadius(Radius.md)
         default:
             Rectangle()
                 .foregroundStyle(.clear)
@@ -90,10 +90,10 @@ struct OriginButton: View {
                 .overlay(alignment: .topLeading) {
                     Text(origin)
                         .font(Font.custom("Lato-Regular", size: 14))
-                        .padding(10)
+                        .padding(Spacing.sm)
                 }
                 .frame(width: 140, height: 200)
-                .cornerRadius(8)
+                .cornerRadius(Radius.md)
         }
     }
 }

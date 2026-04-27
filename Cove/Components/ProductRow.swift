@@ -84,7 +84,7 @@ struct ProductRow: View {
                 }
             }
             .frame(height: 80)
-            .padding(20)
+            .padding(Spacing.xl)
         } else if let musicProduct = bagProduct.product as? MusicProduct {
             HStack {
                 AsyncImage(url: URL(string: musicProduct.defaultImageURL)) { image in
@@ -155,7 +155,7 @@ struct ProductRow: View {
                 }
             }
             .frame(height: 80)
-            .padding(20)
+            .padding(Spacing.xl)
         } else if let apparelProduct = bagProduct.product as? ApparelProduct {
             HStack {
                 AsyncImage(url: URL(string: apparelProduct.defaultImageURL)) { image in
@@ -226,7 +226,7 @@ struct ProductRow: View {
                 }
             }
             .frame(height: 80)
-            .padding(20)
+            .padding(Spacing.xl)
         }
     }
 }

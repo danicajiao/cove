@@ -20,7 +20,7 @@ struct SignupView: View {
 
     var body: some View {
         GeometryReader { _ in
-            VStack(spacing: 20) {
+            VStack(spacing: Spacing.xl) {
                 Text("Cove.")
                     .font(.custom("Gazpacho-Heavy", size: 40))
                     .foregroundStyle(Color.Colors.Fills.primary)
