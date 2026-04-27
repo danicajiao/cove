@@ -48,8 +48,8 @@ Used for backgrounds of UI elements (cards, sheets, buttons, overlays).
 | Figma variable | Swift | Value / Meaning |
 |---|---|---|
 | `fills/primary` | `Color.Colors.Fills.primary` | `#52331F` — dark brown, primary surface |
+| `fills/secondary` | `Color.Colors.Fills.secondary` | `#2B2627` — charcoal, secondary surface |
 | `fills/inverse` | `Color.Colors.Fills.inverse` | `#FFFFFF` — white, on-dark surfaces |
-| `fills/secondary` | — | `#2B2627` — charcoal, secondary surface |
 | `fills/tertiary` | `Color.Colors.Fills.tertiary` | Charcoal 60% opacity |
 | `fills/quaternary` | `Color.Colors.Fills.quaternary` | Charcoal 30% opacity |
 | `fills/quinary` | `Color.Colors.Fills.quinary` | Charcoal 10% opacity |
@@ -61,10 +61,11 @@ Used for foreground text colors.
 | Figma variable | Swift | Value / Meaning |
 |---|---|---|
 | `text/primary` | `Color.Colors.Text.textPrimary` | `#52331F` — dark brown, primary text |
+| `text/secondary` | `Color.Colors.Text.textSecondary` | `#2B2627` — charcoal text |
 | `text/inverse` | `Color.Colors.Text.textInverse` | `#FFFFFF` — white text on dark backgrounds |
 | `text/tertiary` | `Color.Colors.Text.textTertiary` | Charcoal 60% opacity |
-| `text/quaternary` | — | Charcoal 30% opacity |
-| `text/quinary` | — | Charcoal 10% opacity |
+| `text/quaternary` | `Color.Colors.Text.textQuaternary` | Charcoal 30% opacity |
+| `text/quinary` | `Color.Colors.Text.textQuinary` | Charcoal 10% opacity |
 
 ### Strokes
 
