@@ -41,9 +41,11 @@ The asset catalog folder structure maps directly to Swift: `Colors/Fills/primary
 
 > **Rule:** Always use semantic tokens. Never hardcode hex values or use `Color(.black)` / `Color(.white)`.
 
+> **Dark mode note:** All color tokens have light and dark variants in the asset catalog. Dark mode values are currently placeholders — they will be updated once the dark palette is defined in Figma. The semantic token structure means no Swift code changes will be needed when that happens.
+
 ### Fills
 
-Used for backgrounds of UI elements (cards, sheets, buttons, overlays).
+Surface colors for UI components (buttons, cards, chips, sheets, overlays) that sit on top of a background. Use `Fills.*` when coloring the surface of an element, not the canvas behind it.
 
 | Figma variable | Swift | Value / Meaning |
 |---|---|---|
@@ -94,7 +96,7 @@ Brand palette colors used for identity, accents, and category expression.
 
 ### Backgrounds
 
-Page-level background colors.
+Page-level canvas colors. Use for the outermost `.background()` of a screen or major section — the surface everything else sits on. If you're coloring a component rather than the canvas behind it, use `Fills.*` instead.
 
 | Figma variable | Swift | Value / Meaning |
 |---|---|---|
@@ -121,7 +123,11 @@ Used to tint the coffee category tiles.
 
 ### Support
 
-Used for alerts, banners, and status indicators.
+Used for alerts, banners, and status indicators. Each state has three roles:
+
+- **`fill`** — the solid indicator color itself (icon fill, badge background, border highlight)
+- **`fg`** — foreground text or icon color used *on top of* the surface, darker for contrast
+- **`surface`** — a light tinted background for the alert container or banner
 
 > **Naming note:** The Figma variable is named `support/*/default` but Swift's `default` is a reserved keyword. The Swift colorset uses `fill` instead.
 
