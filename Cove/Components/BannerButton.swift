@@ -39,16 +39,16 @@ struct BannerButton: View {
                                 Text("See all items \(Image(systemName: "arrow.right"))")
                                     .font(Font.custom("Lato-Regular", size: 10))
                             }
-                            .padding(14)
+                            .padding(Spacing.lg)
                             .frame(width: geometry.size.height - (11 * 2), height: geometry.size.height - (11 * 2))
                             .background(Color.Colors.Fills.secondary)
                             .foregroundStyle(Color.Colors.Fills.primary)
-                            .cornerRadius(8)
+                            .cornerRadius(Radius.lg)
                         }
                         .frame(width: geometry.size.height, height: geometry.size.height)
                     }
                 }
-                .cornerRadius(12)
+                .cornerRadius(Radius.xl)
                 .customShadow()
         default:
             HStack(spacing: 0) {
@@ -60,6 +60,7 @@ struct BannerButton: View {
                 }
                 .foregroundStyle(Color.Colors.Fills.primary)
                 .frame(maxWidth: .infinity)
+                .padding(Spacing.xl)
 
                 Image("How-To-Store-Coffee-Beans-Gear-Patrol-Lead-Full")
                     .resizable()
@@ -68,8 +69,8 @@ struct BannerButton: View {
                     .clipped()
             }
             .frame(height: 120)
-            .background(.white)
-            .cornerRadius(12)
+            .background(Color.Colors.Fills.secondary)
+            .cornerRadius(Radius.xl)
             .customShadow()
         }
     }
@@ -78,11 +79,11 @@ struct BannerButton: View {
 struct BannerButton_Previews: PreviewProvider {
     static var previews: some View {
         BannerButton(bannerType: 1)
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Spacing.xl)
             .previewLayout(.sizeThatFits)
 
         BannerButton(bannerType: 2)
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Spacing.xl)
             .previewLayout(.sizeThatFits)
     }
 }

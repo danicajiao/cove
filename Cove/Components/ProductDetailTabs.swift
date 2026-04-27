@@ -9,11 +9,13 @@ import SwiftUI
 
 struct ProductDetailTabs: View {
     @ObservedObject var viewModel: ProductDetailViewModel
+    let stackSpacing = Spacing.lg
+    let tabSpacing = Spacing.xs
 
     var body: some View {
         if let musicProductDetails = viewModel.productDetails as? MusicProductDetails {
-            VStack(spacing: 16) {
-                HStack(spacing: 6) {
+            VStack(spacing: stackSpacing) {
+                HStack(spacing: tabSpacing) {
                     tabPill("Description", selection: .description)
                     tabPill("Tracklist", selection: .tracklist)
                     tabPill("About", selection: .about)
@@ -49,8 +51,8 @@ struct ProductDetailTabs: View {
             }
 
         } else if let coffeeProductDetails = viewModel.productDetails as? CoffeeProductDetails {
-            VStack(spacing: 16) {
-                HStack(spacing: 6) {
+            VStack(spacing: stackSpacing) {
+                HStack(spacing: tabSpacing) {
                     tabPill("Description", selection: .description)
                     tabPill("Origin", selection: .origin)
                     tabPill("About", selection: .about)
@@ -85,8 +87,8 @@ struct ProductDetailTabs: View {
             }
 
         } else if let apparelProductDetails = viewModel.productDetails as? ApparelProductDetails {
-            VStack(spacing: 16) {
-                HStack(spacing: 6) {
+            VStack(spacing: stackSpacing) {
+                HStack(spacing: tabSpacing) {
                     tabPill("Description", selection: .description)
                     tabPill("Specifics", selection: .specifications)
                     tabPill("About", selection: .about)
@@ -99,7 +101,7 @@ struct ProductDetailTabs: View {
                         .foregroundStyle(Color.Colors.Fills.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 } else if viewModel.detailSelection == .specifications {
-                    VStack(spacing: 20) {
+                    VStack(spacing: Spacing.lg) {
                         ForEach(apparelProductDetails.specifications, id: \.self) { spec in
                             VStack(alignment: .leading) {
                                 Text(spec.title)
@@ -141,8 +143,8 @@ struct ProductDetailTabs: View {
                     .font(Font.custom(isSelected ? "Lato-Bold" : "Lato-Regular", size: 14))
                     .foregroundStyle(isSelected ? Color.Colors.Fills.primary : Color.Colors.Fills.tertiary)
             )
-            .padding(.horizontal, 20)
-            .padding(.vertical, 10)
+            .padding(.horizontal, Spacing.xl)
+            .padding(.vertical, Spacing.md)
             .overlay(
                 Capsule()
                     .strokeBorder(Color.Colors.Strokes.primary, lineWidth: 1)

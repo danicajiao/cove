@@ -33,9 +33,9 @@ struct ProductDetailView: View {
         _viewModel = StateObject(wrappedValue: ProductDetailViewModel(productId: productId))
     }
 
-    var rows: [GridItem] = [
-        GridItem(.adaptive(minimum: .infinity, maximum: .infinity), spacing: 20)
-    ]
+//    var rows: [GridItem] = [
+//        GridItem(.adaptive(minimum: .infinity, maximum: .infinity), spacing: 20)
+//    ]
 
     private func fetchImage() {
         guard let product = viewModel.product,
@@ -79,7 +79,7 @@ struct ProductDetailView: View {
                     Text("Loading product...")
                         .font(.caption)
                         .foregroundColor(.gray)
-                        .padding(.top, 8)
+                        .padding(.top, Spacing.sm)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -156,65 +156,75 @@ private struct ProductDetailContent: View {
                         )
                 }
 
-                VStack(spacing: 16) {
-                    VStack(spacing: 0) {
-                        Text(titleStr)
-                            .font(Font.custom("Gazpacho-Black", size: 20))
-                            .foregroundStyle(Color.Colors.Fills.primary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(spacing: Spacing.xl) {
+                    VStack(spacing: Spacing.lg) {
+                        VStack(spacing: 0) {
+                            Text(titleStr)
+                                .font(Font.custom("Gazpacho-Black", size: 20))
+                                .foregroundStyle(Color.Colors.Fills.primary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
 
-                        Text(subtitleStr)
-                            .font(Font.custom("Lato-Regular", size: 20))
-                            .foregroundStyle(Color.Colors.Fills.tertiary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
+                            Text(subtitleStr)
+                                .font(Font.custom("Lato-Regular", size: 20))
+                                .foregroundStyle(Color.Colors.Fills.tertiary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
 
-                    NavigationLink(destination: Text("Item Reviews!")) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 10) {
-                                HStack {
-                                    RatingView(rating: 4)
-                                    Text("4.3")
+                        NavigationLink(destination: Text("Item Reviews!")) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: Spacing.sm) {
+                                    HStack(spacing: Spacing.md) {
+                                        RatingView(rating: 4)
+                                        Text("4.3")
+                                            .font(Font.custom("Lato-Regular", size: 14))
+                                    }
+                                    Text("22 Reviews \(Image(systemName: "chevron.right"))")
                                         .font(Font.custom("Lato-Regular", size: 14))
+                                        .foregroundStyle(Color.Colors.Fills.tertiary)
                                 }
-                                Text("22 Reviews \(Image(systemName: "chevron.right"))")
-                                    .font(Font.custom("Lato-Regular", size: 14))
-                                    .foregroundStyle(Color.Colors.Fills.tertiary)
+
+                                Spacer()
+
+                                Circle()
+                                    .frame(width: 35, height: 35)
+                                    .foregroundStyle(Color.Colors.Fills.secondary)
+                                    .overlay {
+                                        Circle()
+                                            .frame(width: 30, height: 30)
+                                    }
                             }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(Spacing.lg)
+                            .background(Color.Colors.Fills.secondary)
+                            .clipShape(RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: Radius.lg, style: .continuous).stroke(Color.Colors.Strokes.primary, lineWidth: 1))
+                        }
+                        .buttonStyle(PlainButtonStyle())
 
-                            Spacer()
+                        ProductDetailTabs(viewModel: viewModel)
+                    }
+                    .padding(.horizontal, Spacing.xl)
 
-                            Circle()
-                                .frame(width: 35, height: 35)
-                                .foregroundStyle(Color.Colors.Fills.secondary)
-                                .overlay {
-                                    Circle()
-                                        .frame(width: 30, height: 30)
+                    Rectangle()
+                        .frame(height: 3)
+                        .foregroundStyle(Color.Colors.Fills.quinary)
+
+                    VStack(spacing: Spacing.lg) {
+                        SectionHeader(title: "Similar to this")
+
+                        ScrollView(.horizontal) {
+                            HStack(spacing: Spacing.md) {
+                                ForEach(viewModel.similarProducts, id: \.id) { product in
+                                    ProductCardView(product: product)
                                 }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(16)
-                        .background(Color.Colors.Fills.secondary)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.Colors.Strokes.primary, lineWidth: 1))
-                    }
-                    .buttonStyle(PlainButtonStyle())
-
-                    ProductDetailTabs(viewModel: viewModel)
-
-                    SectionHeader(title: "Similar to this")
-
-                    ScrollView(.horizontal) {
-                        HStack(spacing: 20) {
-                            ForEach(viewModel.similarProducts, id: \.id) { product in
-                                ProductCardView(product: product)
                             }
                         }
+                        .scrollClipDisabled()
                     }
-                    .scrollClipDisabled()
+                    .padding(.horizontal, Spacing.xl)
                 }
-                .padding(.top, 30)
-                .padding([.horizontal, .bottom], 20)
+                .padding(.top, Spacing.xxxl)
+                .padding(.bottom, Spacing.xl)
                 .background(
                     Color.Colors.Fills.secondary
                         .padding(.bottom, -1000)
@@ -226,24 +236,17 @@ private struct ProductDetailContent: View {
                 BackButton()
                 Spacer()
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Spacing.xl)
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 0) {
                 Rectangle()
                     .frame(height: 1)
                     .foregroundStyle(Color.Colors.Fills.quinary)
-                HStack(spacing: 14) {
-                    // RoundedRectangle(cornerRadius: 10)
-                    //     .stroke(.gray, lineWidth: 1)
-                    //     .frame(width: 55, height: 55)
-                    //     .overlay {
-                    //         LikeButton(enabled: product.isFavorite ?? false)
-                    //     }
-
-                    if let productId = product.id {
-                        LikeButton(productId: productId, categoryId: product.categoryId, size: 40, outlined: true)
-                    }
+                HStack(spacing: Spacing.lg) {
+//                    if let productId = product.id {
+//                        LikeButton(productId: productId, categoryId: product.categoryId, size: 40, outlined: true)
+//                    }
 
                     Button {
                         if !bag.bagProducts.contains(where: { bagProduct in
@@ -271,12 +274,12 @@ private struct ProductDetailContent: View {
 
                         print(bag.bagProducts)
                     } label: {
-                        Text("Add to bag")
+                        Text("Add to visit list")
                     }
-                    .buttonStyle(PrimaryButton(width: .infinity, height: 55))
+                    .buttonStyle(PrimaryButton())
                 }
-                .padding(.vertical, 16)
-                .padding(.horizontal, 20)
+                .padding(.vertical, Spacing.sm)
+                .padding(.horizontal, Spacing.xl)
                 .background {
                     Color.Colors.Fills.secondary.ignoresSafeArea()
                 }

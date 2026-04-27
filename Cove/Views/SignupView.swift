@@ -20,7 +20,7 @@ struct SignupView: View {
 
     var body: some View {
         GeometryReader { _ in
-            VStack(spacing: 20) {
+            VStack(spacing: Spacing.xl) {
                 Text("Cove.")
                     .font(.custom("Gazpacho-Heavy", size: 40))
                     .foregroundStyle(Color.Colors.Fills.primary)
@@ -33,7 +33,7 @@ struct SignupView: View {
                         .foregroundStyle(Color.Colors.Fills.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
-                    VStack(spacing: 4) {
+                    VStack(spacing: Spacing.xs) {
                         CustomTextField(
                             placeholder: "email@provider.com",
                             text: $email,
@@ -56,15 +56,15 @@ struct SignupView: View {
                         )
                         HStack {
                             Text("Passwords must contain at least 8 characters.")
-                                .font(.custom("Lato-Regular", size: 14))
+                                .font(.custom("Lato-Regular", size: 12))
                                 .foregroundStyle(Color.Colors.Fills.tertiary)
                             Spacer()
                         }
-                        .padding(.horizontal, 10)
+                        .padding(.horizontal, Spacing.md)
                     }
                 }
 
-                VStack(spacing: 10) {
+                VStack(spacing: Spacing.md) {
                     Button {
                         loading = true
                         appState.emailLogIn(
@@ -99,44 +99,43 @@ struct SignupView: View {
 
                     HStack {
                         Text("By signing up, you are agreeing to our Terms of Service. View our Privacy Policy.")
-                            .font(.custom("Lato-Regular", size: 14))
+                            .font(.custom("Lato-Regular", size: 12))
                             .foregroundStyle(Color.Colors.Fills.tertiary)
                     }
-                    .padding(.horizontal, 10)
+                    .padding(.horizontal, Spacing.md)
                 }
 
-                HStack {
+                HStack(spacing: Spacing.md) {
                     Capsule()
                         .fill(Color.Colors.Fills.quaternary)
-                        .frame(height: 2)
-                        .padding(.leading, 60)
-                        .padding(.trailing)
+                        .frame(width: 100, height: 2)
+                        .padding(.horizontal, Spacing.md)
                     Text("OR")
                         .font(.custom("Lato-Regular", size: 12))
                         .foregroundStyle(Color.Colors.Fills.quaternary)
                     Capsule()
                         .fill(Color.Colors.Fills.quaternary)
-                        .frame(height: 2)
-                        .padding(.trailing, 60)
-                        .padding(.leading)
+                        .frame(width: 100, height: 2)
+                        .padding(.horizontal, Spacing.md)
                 }
 
                 // TODO: Add Links to Social Provider Views // swiftlint:disable:this todo
-                HStack(spacing: 30) {
+                HStack(spacing: Spacing.xxl) {
                     SmallSocialButton(socialType: .apple)
                     SmallSocialButton(socialType: .facebook)
                     SmallSocialButton(socialType: .google)
                 }
 
-                HStack(spacing: 0) {
-                    Text("Already have an email? ")
+                HStack(spacing: Spacing.xs) {
+                    Text("Already have an email account? ")
                         .font(.custom("Lato-Regular", size: 14))
                         .foregroundStyle(Color.Colors.Fills.tertiary)
                     Button {
                         appState.path.append(.login)
                     } label: {
-                        Text("Log In")
+                        Text("Log in")
                             .font(.custom("Lato-Regular", size: 14))
+                            .underline()
                             .foregroundStyle(Color.Colors.Fills.primary)
                     }
                 }
@@ -144,11 +143,11 @@ struct SignupView: View {
                 Spacer()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding(20)
+            .padding(Spacing.xl)
             .background(Color.Colors.Backgrounds.primary)
             .overlay(alignment: .topLeading) {
                 BackButton()
-                    .padding(20)
+                    .padding(Spacing.xl)
             }
             .toolbar(.hidden, for: .navigationBar)
             .onAppear {

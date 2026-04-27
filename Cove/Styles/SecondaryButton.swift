@@ -12,7 +12,7 @@ struct SecondaryButton: PrimitiveButtonStyle {
     let width: CGFloat?
     let height: CGFloat?
 
-    init(width: CGFloat? = .infinity, height: CGFloat? = 55) {
+    init(width: CGFloat? = .infinity, height: CGFloat? = 50) {
         self.width = width
         self.height = height
     }

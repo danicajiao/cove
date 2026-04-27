@@ -38,7 +38,7 @@ struct LikeButton: View {
                 .overlay(Circle().strokeBorder(Color.Colors.Strokes.primary, lineWidth: 1).opacity(outlined ? 1 : 0))
             Image(systemName: isFavorited ? "heart.fill" : "heart")
                 .font(.system(size: iconSize))
-                .foregroundStyle(isFavorited ? .pink : Color.Colors.Strokes.primary)
+                .foregroundStyle(isFavorited ? Color.Colors.Brand.Palette.red : Color.Colors.Strokes.primary)
         }
         .scaleEffect(scale)
         .allowsHitTesting(!favoritesStore.isTogglingFavorite)

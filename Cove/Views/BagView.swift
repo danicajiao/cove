@@ -57,7 +57,7 @@ struct BagView: View {
 
                 VStack {
                     Rectangle()
-                        .frame(height: 4)
+                        .frame(height: 3)
                         .foregroundStyle(Color.Colors.Fills.quinary)
 
                     HStack {
@@ -80,7 +80,7 @@ struct BagView: View {
                     .padding([.top, .bottom], 10)
 
                     Rectangle()
-                        .frame(height: 4)
+                        .frame(height: 3)
                         .foregroundStyle(Color.Colors.Fills.quinary)
                 }
 

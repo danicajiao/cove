@@ -64,15 +64,15 @@ struct CustomTextField: View {
     }
 
     var body: some View {
-        VStack(spacing: 5) {
+        VStack(spacing: Spacing.xs) {
             if label != nil {
                 Text(label ?? "")
                     .font(.custom("Lato-Bold", size: 12))
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 10)
+                    .padding(.horizontal, Spacing.md)
                     .foregroundStyle(Color.Colors.Fills.tertiary)
             }
-            HStack(spacing: 10) {
+            HStack(spacing: Spacing.md) {
                 if let leftIcon {
                     Image(systemName: leftIcon)
                         .font(.system(size: 14))
@@ -98,11 +98,11 @@ struct CustomTextField: View {
                     }
                 }
             }
-            .padding(.horizontal, 10)
+            .padding(.horizontal, Spacing.md)
             .frame(height: 50)
             .background(.white)
             .overlay {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                RoundedRectangle(cornerRadius: Radius.lg, style: .continuous)
                     .strokeBorder(Color.Colors.Strokes.primary, lineWidth: 1)
             }
         }

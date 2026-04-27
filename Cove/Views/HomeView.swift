@@ -24,12 +24,12 @@ struct HomeView: View {
     var body: some View {
         let _ = Self._printChanges()
         ScrollView(showsIndicators: false) {
-            VStack(spacing: 20) {
-                HStack {
+            VStack(spacing: Spacing.xl) {
+                HStack(spacing: Spacing.md) {
                     // TODO: Implement time-based greeting message // swiftlint:disable:this todo
                     Text("Good morning, Daniel")
-                        .frame(maxWidth: 215, alignment: .leading)
-                        .font(Font.custom("Gazpacho-Black", size: 25))
+                        .frame(width: 300, alignment: .leading)
+                        .font(Font.custom("Gazpacho-Black", size: 28))
                         .lineSpacing(6) // SwiftUI lineSpacing = Figma line height - Font size
                         .foregroundStyle(Color.Colors.Fills.primary)
                     Spacer()
@@ -39,7 +39,7 @@ struct HomeView: View {
                         .frame(width: 25, height: 25)
                         .foregroundStyle(Color.Colors.Brand.accent)
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, Spacing.xl)
 
                 CustomTextField(
                     placeholder: "Find records, coffee, home, and more",
@@ -50,68 +50,59 @@ struct HomeView: View {
                     leftIcon: "magnifyingglass",
                     tag: 0
                 )
-                .padding(.horizontal, 20)
+                .padding(.horizontal, Spacing.xl)
 
                 VStack {
                     SectionHeader(title: "Categories")
-                        .padding(.horizontal, 20)
 
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
+                        HStack(spacing: Spacing.md) {
                             ForEach(viewModel.categories, id: \.self) { category in
                                 SmallCategoryButton(category: category)
                             }
                         }
-                        .padding(.horizontal, 20)
                     }
                     .scrollClipDisabled()
                 }
+                .padding(.horizontal, Spacing.xl)
 
-                VStack {
+                VStack(spacing: Spacing.lg) {
                     SectionHeader(title: "Featured")
-                        .padding(.horizontal, 20)
-
                     BannerButton(bannerType: 1)
-                        .padding(.horizontal, 20)
                 }
+                .padding(.horizontal, Spacing.xl)
 
-                VStack {
+                VStack(spacing: Spacing.lg) {
                     SectionHeader(title: "Popular")
 
                     if !viewModel.products.isEmpty {
                         LazyVGrid(
                             columns: columns,
                             alignment: .center,
-                            spacing: 20
+                            spacing: Spacing.xl
                         ) {
                             ForEach(viewModel.products, id: \.id) { product in
                                 ProductCardView(product: product)
                             }
                         }
                     }
-
-//                    if !viewModel.products.isEmpty {
-//                        WaterfallCollection(products: viewModel.products)
-//                            // .frame(height: 600) // Adjust height as needed
-//                    }
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, Spacing.xl)
 
                 BannerButton(bannerType: 2)
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, Spacing.xl)
 
-                VStack {
+                VStack(spacing: Spacing.lg) {
                     SectionHeader(title: "Stores")
-                        .padding(.horizontal, 20)
 
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
+                        HStack(alignment: .top, spacing: Spacing.md) {
                             ForEach(viewModel.brands, id: \.id) { brand in
-                                VStack(spacing: 5) {
+                                VStack(spacing: Spacing.xs) {
                                     Circle()
                                         .fill(Color.Colors.Fills.secondary)
                                         .stroke(Color.Colors.Strokes.primary, lineWidth: 1)
-                                        .frame(width: 161, height: 161)
+                                        .frame(width: 131, height: 131)
                                         .overlay {
                                             AsyncImage(url: URL(string: brand.imageURL)) { image in
                                                 image
@@ -121,23 +112,26 @@ struct HomeView: View {
                                             } placeholder: {
                                                 ProgressView()
                                             }
+                                            .padding(Spacing.xl)
                                         }
 
                                     Text(brand.name)
-                                        .font(Font.custom("Lato-Bold", size: 14))
+                                        .font(Font.custom("Lato-Regular", size: 12))
                                         .foregroundStyle(Color.Colors.Fills.primary)
                                         .frame(width: 100)
                                         .multilineTextAlignment(.center)
+                                        .truncationMode(.tail)
                                 }
                             }
                         }
-                        .padding(.horizontal, 20)
                     }
+                    .scrollClipDisabled()
                 }
+                .padding(.horizontal, Spacing.xl)
             }
-            .padding(.top, 30)
+            .padding(.top, Spacing.xxxl)
+            .padding(.bottom, Spacing.xl)
         }
-//        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.Colors.Backgrounds.primary.ignoresSafeArea(.all))
         .refreshable {
             try? await viewModel.fetchProducts(forceRefresh: true)

@@ -18,7 +18,7 @@ struct SectionHeader: View {
             Button {
                 // TODO: Navigate to Categories View // swiftlint:disable:this todo
             } label: {
-                HStack {
+                HStack(spacing: Spacing.xs) {
                     Text("See all")
                         .font(Font.custom("Lato-Regular", size: 14))
                     Image(systemName: "arrow.right")

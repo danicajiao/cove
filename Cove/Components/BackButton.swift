@@ -17,7 +17,7 @@ struct BackButton: View {
             Circle()
                 .fill(Color.Colors.Fills.secondary)
                 .strokeBorder(Color.Colors.Strokes.primary, lineWidth: 1)
-                .frame(width: 36, height: 36)
+                .frame(width: 44, height: 44)
                 .overlay {
                     Image(systemName: "arrow.left")
                         .resizable()
