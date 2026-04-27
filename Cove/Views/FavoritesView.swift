@@ -18,7 +18,6 @@ struct FavoritesView: View {
                 HStack {
                     Text("My Favorites")
                         .font(Font.custom("Lato-Bold", size: 26))
-                        .padding(.top, 28)
                     Spacer()
                 }
                 .padding([.leading, .trailing], Spacing.xl)
@@ -26,7 +25,7 @@ struct FavoritesView: View {
                 if viewModel.isLoading {
                     ProgressView()
                         .frame(maxWidth: .infinity)
-                        .padding(.top, 100)
+                        .padding(.top, Spacing.xxxxl)
                 } else if viewModel.favorites.isEmpty {
                     RoundedRectangle(cornerRadius: Radius.lg)
                         .fill(Color.Colors.Backgrounds.secondary)
@@ -35,7 +34,7 @@ struct FavoritesView: View {
                                 .multilineTextAlignment(.center)
                                 .font(Font.custom("Lato-Regular", size: 16))
                                 .foregroundStyle(Color.Colors.Fills.primary)
-                                .padding(50)
+                                .padding(Spacing.xxxxl)
                         }
                         .border(Color.Colors.Strokes.primary, width: 1)
                         .frame(height: 300)
@@ -53,7 +52,7 @@ struct FavoritesView: View {
                     .padding(.horizontal, Spacing.xl)
                 }
             }
-            .padding(.top, 30)
+            .padding(.top, Spacing.xxxl)
         }
         .background(Color.Colors.Backgrounds.primary.ignoresSafeArea(.all))
         .onAppear {
