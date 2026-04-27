@@ -60,12 +60,12 @@ Used for foreground text colors.
 
 | Figma variable | Swift | Value / Meaning |
 |---|---|---|
-| `text/primary` | `Color.Colors.Text.textPrimary` | `#52331F` — dark brown, primary text |
-| `text/secondary` | `Color.Colors.Text.textSecondary` | `#2B2627` — charcoal text |
-| `text/inverse` | `Color.Colors.Text.textInverse` | `#FFFFFF` — white text on dark backgrounds |
-| `text/tertiary` | `Color.Colors.Text.textTertiary` | Charcoal 60% opacity |
-| `text/quaternary` | `Color.Colors.Text.textQuaternary` | Charcoal 30% opacity |
-| `text/quinary` | `Color.Colors.Text.textQuinary` | Charcoal 10% opacity |
+| `text/primary` | `Color.Colors.Text.primary` | `#52331F` — dark brown, primary text |
+| `text/secondary` | `Color.Colors.Text.secondary` | `#2B2627` — charcoal text |
+| `text/inverse` | `Color.Colors.Text.inverse` | `#FFFFFF` — white text on dark backgrounds |
+| `text/tertiary` | `Color.Colors.Text.tertiary` | Charcoal 60% opacity |
+| `text/quaternary` | `Color.Colors.Text.quaternary` | Charcoal 30% opacity |
+| `text/quinary` | `Color.Colors.Text.quinary` | Charcoal 10% opacity |
 
 ### Strokes
 

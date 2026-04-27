@@ -16,7 +16,7 @@ struct EmailField: View {
             Text("Email")
                 .font(.custom("Lato-Bold", size: 12))
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .foregroundStyle(Color.Colors.Text.textTertiary)
+                .foregroundStyle(Color.Colors.Text.tertiary)
             TextField(String("email@example.com"), text: $text)
                 .font(.custom("Lato-Regular", size: 14))
                 .padding()
