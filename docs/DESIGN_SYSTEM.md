@@ -43,6 +43,8 @@ The asset catalog folder structure maps directly to Swift: `Colors/Fills/primary
 
 > **Dark mode note:** All color tokens have light and dark variants in the asset catalog. Dark mode values are currently placeholders — they will be updated once the dark palette is defined in Figma. The semantic token structure means no Swift code changes will be needed when that happens.
 
+> **Open question — `Fills.inverse` vs `Fills.surface`:** `Fills.inverse` currently serves two roles: (1) the elevated component surface on a light background (input fields, cards), and (2) white foreground elements on dark fills (white text/icons on a brown button). These are semantically different and may need to be split into separate tokens (`Fills.surface` and `Fills.inverse`) when the dark palette is designed — in dark mode they would require different values. Defer this decision until dark mode is defined in Figma, as the right split will be obvious then.
+
 ### Fills
 
 Surface colors for UI components (buttons, cards, chips, sheets, overlays) that sit on top of a background. Use `Fills.*` when coloring the surface of an element, not the canvas behind it.
