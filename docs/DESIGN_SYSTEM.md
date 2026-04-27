@@ -82,15 +82,15 @@ Brand palette colors used for identity, accents, and category expression.
 
 | Figma variable | Swift | Value / Meaning |
 |---|---|---|
-| `brand/primary` | `Color.Colors.Brand.Palette.primary` | `#52331F` — dark brown |
-| `brand/secondary` | `Color.Colors.Brand.Palette.secondary` | `#FFFFFF` — white |
+| `brand/primary` | `Color.Colors.Brand.primary` | `#52331F` — dark brown |
+| `brand/secondary` | `Color.Colors.Brand.secondary` | `#FFFFFF` — white |
 | `brand/accent` | `Color.Colors.Brand.accent` | `#E29547` — amber, interactive accent |
-| `brand/coral` | `Color.Colors.Brand.Palette.coral` | `#FF8181` — coral |
-| `brand/amber` | `Color.Colors.Brand.Palette.amber` | `#FFB557` — amber |
-| `brand/yellow` | `Color.Colors.Brand.Palette.yellow` | `#FFFAA0` — yellow |
-| `brand/sage` | `Color.Colors.Brand.Palette.sage` | `#8BA96A` — sage green |
-| `brand/blue` | `Color.Colors.Brand.Palette.blue` | `#6CA8D0` — blue |
-| `brand/violet` | `Color.Colors.Brand.Palette.violet` | `#D3C6FF` — violet |
+| `brand/coral` | `Color.Colors.Brand.coral` | `#FF8181` — coral |
+| `brand/amber` | `Color.Colors.Brand.amber` | `#FFB557` — amber |
+| `brand/yellow` | `Color.Colors.Brand.yellow` | `#FFFAA0` — yellow |
+| `brand/sage` | `Color.Colors.Brand.sage` | `#8BA96A` — sage green |
+| `brand/blue` | `Color.Colors.Brand.blue` | `#6CA8D0` — blue |
+| `brand/violet` | `Color.Colors.Brand.violet` | `#D3C6FF` — violet |
 
 ### Backgrounds
 

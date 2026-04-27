@@ -141,7 +141,7 @@ private struct ProductDetailContent: View {
                         .aspectRatio(contentMode: .fit)
                         .frame(maxHeight: 300)
                         .background(
-                            Color.Colors.Brand.Palette.blue
+                            Color.Colors.Brand.blue
                                 .padding(.top, -1000)
                         )
                 } else {
@@ -151,7 +151,7 @@ private struct ProductDetailContent: View {
                             fetchImage()
                         }
                         .background(
-                            Color.Colors.Brand.Palette.blue
+                            Color.Colors.Brand.blue
                                 .padding(.top, -1000)
                         )
                 }
