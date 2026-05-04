@@ -18,7 +18,7 @@ struct ProductRow: View {
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .background {
-                            Color.Colors.Backgrounds.secondary
+                            Color.Colors.Fills.inverse
                         }
                         .cornerRadius(Radius.lg)
                 } placeholder: {
@@ -31,10 +31,10 @@ struct ProductRow: View {
                 VStack(alignment: .leading) {
                     Text(coffeeProduct.info.name)
                         .font(Font.custom("Lato-Regular", size: 12))
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .foregroundStyle(Color.Colors.Text.primary)
                     Text(coffeeProduct.info.roastery)
                         .font(Font.custom("Lato-Regular", size: 12))
-                        .foregroundStyle(Color.Colors.Fills.tertiary)
+                        .foregroundStyle(Color.Colors.Text.tertiary)
 
                     Spacer()
 
@@ -80,7 +80,7 @@ struct ProductRow: View {
                     Spacer()
                     Text("$\(String(Int(coffeeProduct.defaultPrice)))")
                         .font(Font.custom("Lato-Bold", size: 16))
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .foregroundStyle(Color.Colors.Text.primary)
                 }
             }
             .frame(height: 80)
@@ -102,10 +102,10 @@ struct ProductRow: View {
                 VStack(alignment: .leading) {
                     Text(musicProduct.info.album)
                         .font(Font.custom("Lato-Regular", size: 12))
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .foregroundStyle(Color.Colors.Text.primary)
                     Text(musicProduct.info.artist)
                         .font(Font.custom("Lato-Regular", size: 12))
-                        .foregroundStyle(Color.Colors.Fills.tertiary)
+                        .foregroundStyle(Color.Colors.Text.tertiary)
 
                     Spacer()
 
@@ -151,7 +151,7 @@ struct ProductRow: View {
                     Spacer()
                     Text("$\(String(Int(musicProduct.defaultPrice)))")
                         .font(Font.custom("Lato-Bold", size: 16))
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .foregroundStyle(Color.Colors.Text.primary)
                 }
             }
             .frame(height: 80)
@@ -173,10 +173,10 @@ struct ProductRow: View {
                 VStack(alignment: .leading) {
                     Text(apparelProduct.info.name)
                         .font(Font.custom("Lato-Regular", size: 12))
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .foregroundStyle(Color.Colors.Text.primary)
                     Text(apparelProduct.info.brand)
                         .font(Font.custom("Lato-Regular", size: 12))
-                        .foregroundStyle(Color.Colors.Fills.tertiary)
+                        .foregroundStyle(Color.Colors.Text.tertiary)
 
                     Spacer()
 
@@ -222,7 +222,7 @@ struct ProductRow: View {
                     Spacer()
                     Text("$\(String(Int(apparelProduct.defaultPrice)))")
                         .font(Font.custom("Lato-Bold", size: 16))
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .foregroundStyle(Color.Colors.Text.primary)
                 }
             }
             .frame(height: 80)

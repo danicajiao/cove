@@ -70,7 +70,7 @@ struct CustomTextField: View {
                     .font(.custom("Lato-Bold", size: 12))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, Spacing.md)
-                    .foregroundStyle(Color.Colors.Fills.tertiary)
+                    .foregroundStyle(Color.Colors.Text.tertiary)
             }
             HStack(spacing: Spacing.md) {
                 if let leftIcon {

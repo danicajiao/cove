@@ -33,7 +33,7 @@ struct FavoritesView: View {
                             Text("Products you save will appear here")
                                 .multilineTextAlignment(.center)
                                 .font(Font.custom("Lato-Regular", size: 16))
-                                .foregroundStyle(Color.Colors.Fills.primary)
+                                .foregroundStyle(Color.Colors.Text.primary)
                                 .padding(Spacing.xxxxl)
                         }
                         .border(Color.Colors.Strokes.primary, width: 1)

@@ -36,7 +36,7 @@ struct BagView: View {
                             Text("Products you add to your bag can be found here!")
                                 .multilineTextAlignment(.center)
                                 .font(Font.custom("Lato-Regular", size: 16))
-                                .foregroundStyle(Color.Colors.Fills.primary)
+                                .foregroundStyle(Color.Colors.Text.primary)
                                 .padding(50)
                         }
                         .border(Color.Colors.Strokes.primary, width: 1)
@@ -115,7 +115,7 @@ struct BagView: View {
                     VStack(alignment: .leading) {
                         Text("Total")
                             .font(Font.custom("Lato-Regular", size: 14))
-                            .foregroundStyle(Color.Colors.Fills.tertiary)
+                            .foregroundStyle(Color.Colors.Text.tertiary)
                         Text("$\(bag.total)")
                             .font(Font.custom("Lato-Bold", size: 20))
                             .foregroundStyle(Color.Colors.Brand.accent)

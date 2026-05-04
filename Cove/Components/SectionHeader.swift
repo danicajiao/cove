@@ -13,7 +13,7 @@ struct SectionHeader: View {
         HStack {
             Text(title)
                 .font(Font.custom("Lato-Bold", size: 20))
-                .foregroundStyle(Color.Colors.Fills.primary)
+                .foregroundStyle(Color.Colors.Text.primary)
             Spacer()
             Button {
                 // TODO: Navigate to Categories View // swiftlint:disable:this todo

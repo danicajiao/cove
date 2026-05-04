@@ -81,14 +81,14 @@ struct ProductCardView: View {
                 VStack(spacing: 0) {
                     Text(titleStr)
                         .font(Font.custom("Gazpacho-Black", size: 12))
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .foregroundStyle(Color.Colors.Text.primary)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                     Text(subtitleStr)
                         .font(Font.custom("Lato-Regular", size: 12))
-                        .foregroundStyle(Color.Colors.Fills.tertiary)
+                        .foregroundStyle(Color.Colors.Text.tertiary)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -96,7 +96,7 @@ struct ProductCardView: View {
 
                 Text("$\(Int(price))")
                     .font(Font.custom("Lato-SemiBold", size: 14))
-                    .foregroundStyle(Color.Colors.Fills.primary)
+                    .foregroundStyle(Color.Colors.Text.primary)
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .frame(maxWidth: .infinity, alignment: .leading)

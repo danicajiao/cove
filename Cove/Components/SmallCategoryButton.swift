@@ -27,7 +27,7 @@ struct SmallCategoryButton: View {
                 .overlay(alignment: .topLeading) {
                     Text(category)
                         .font(Font.custom("Gazpacho-Black", size: 14))
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .foregroundStyle(Color.Colors.Text.primary)
                         .padding(.horizontal, Spacing.sm)
                         .padding(.vertical, Spacing.xs)
                 }
@@ -46,7 +46,7 @@ struct SmallCategoryButton: View {
                 .overlay(alignment: .topLeading) {
                     Text(category)
                         .font(Font.custom("Gazpacho-Black", size: 14))
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .foregroundStyle(Color.Colors.Text.primary)
                         .padding(.horizontal, Spacing.sm)
                         .padding(.vertical, Spacing.xs)
                 }
@@ -65,7 +65,7 @@ struct SmallCategoryButton: View {
                 .overlay(alignment: .topLeading) {
                     Text(category)
                         .font(Font.custom("Gazpacho-Black", size: 14))
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .foregroundStyle(Color.Colors.Text.primary)
                         .padding(.horizontal, Spacing.sm)
                         .padding(.vertical, Spacing.xs)
                 }
@@ -86,7 +86,7 @@ struct SmallCategoryButton: View {
                 .overlay(alignment: .topLeading) {
                     Text(category)
                         .font(Font.custom("Gazpacho-Black", size: 14))
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .foregroundStyle(Color.Colors.Text.primary)
                         .padding(.horizontal, Spacing.sm)
                         .padding(.vertical, Spacing.xs)
                 }
@@ -105,7 +105,7 @@ struct SmallCategoryButton: View {
                 .overlay(alignment: .topLeading) {
                     Text(category)
                         .font(Font.custom("Gazpacho-Black", size: 14))
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .foregroundStyle(Color.Colors.Text.primary)
                         .padding(.horizontal, Spacing.sm)
                         .padding(.vertical, Spacing.xs)
                 }

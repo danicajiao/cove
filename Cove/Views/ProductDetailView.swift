@@ -161,12 +161,12 @@ private struct ProductDetailContent: View {
                         VStack(spacing: 0) {
                             Text(titleStr)
                                 .font(Font.custom("Gazpacho-Black", size: 20))
-                                .foregroundStyle(Color.Colors.Fills.primary)
+                                .foregroundStyle(Color.Colors.Text.primary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
 
                             Text(subtitleStr)
                                 .font(Font.custom("Lato-Regular", size: 20))
-                                .foregroundStyle(Color.Colors.Fills.tertiary)
+                                .foregroundStyle(Color.Colors.Text.tertiary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
 
@@ -180,7 +180,7 @@ private struct ProductDetailContent: View {
                                     }
                                     Text("22 Reviews \(Image(systemName: "chevron.right"))")
                                         .font(Font.custom("Lato-Regular", size: 14))
-                                        .foregroundStyle(Color.Colors.Fills.tertiary)
+                                        .foregroundStyle(Color.Colors.Text.tertiary)
                                 }
 
                                 Spacer()

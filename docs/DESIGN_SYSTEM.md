@@ -103,7 +103,7 @@ Page-level canvas colors. Use for the outermost `.background()` of a screen or m
 | Figma variable | Swift | Value / Meaning |
 |---|---|---|
 | `backgrounds/primary` | `Color.Colors.Backgrounds.primary` | Off-white warm background |
-| `backgrounds/secondary` | `Color.Colors.Backgrounds.secondary` | Slightly darker warm background |
+| `backgrounds/secondary` | `Color.Colors.Backgrounds.secondary` | `#FFFFFF` — white, used as a secondary canvas surface |
 
 ### Category
 

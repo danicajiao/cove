@@ -31,7 +31,7 @@ struct HomeView: View {
                         .frame(width: 300, alignment: .leading)
                         .font(Font.custom("Gazpacho-Black", size: 28))
                         .lineSpacing(6) // SwiftUI lineSpacing = Figma line height - Font size
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .foregroundStyle(Color.Colors.Text.primary)
                     Spacer()
                     // TODO: Add notifications button to the right of greeting Text // swiftlint:disable:this todo
                     Image(systemName: "bell.fill")
@@ -117,7 +117,7 @@ struct HomeView: View {
 
                                     Text(brand.name)
                                         .font(Font.custom("Lato-Regular", size: 12))
-                                        .foregroundStyle(Color.Colors.Fills.primary)
+                                        .foregroundStyle(Color.Colors.Text.primary)
                                         .frame(width: 100)
                                         .multilineTextAlignment(.center)
                                         .truncationMode(.tail)
