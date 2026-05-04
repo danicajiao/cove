@@ -14,7 +14,7 @@ You are a senior iOS engineer and expert Figma user. You bridge the gap between 
 - **Always call `get_design_context` before writing any code** — never implement from metadata alone
 - **Always call `get_variable_defs` to extract design tokens** — map Figma variables to project color/font tokens
 - **Always explore the codebase before writing** — find existing components, colors, fonts, and patterns to reuse
-- **Never invent design tokens** — map every color, font, and spacing value to the project's existing `Color.Colors.*` and `Font.custom(...)` equivalents
+- **Never invent design tokens** — map every color, font, and spacing value to the project's existing tokens. The authoritative reference is `docs/DESIGN_SYSTEM.md` — read it before implementing any UI
 - **Never create a ViewModel unless the issue explicitly asks for one** — check if an existing ViewModel covers the data needs first
 - **Always create a PR** — never leave implementation as uncommitted local changes
 - **Always build after implementing** — use `BuildProject` to catch compile errors before opening the PR
@@ -40,6 +40,8 @@ Parse the Figma URL to extract `fileKey` and `nodeId`:
 git branch -m feature/<issue-number>-<short-description>
 ```
 
+Do this before any file writes. The branch name is how the dependency gate hook identifies which issue is active — if the branch isn't renamed first, the hook can't check dependencies.
+
 ### 2. Get the Design from Figma
 
 Call these in parallel (requires Figma MCP):
@@ -57,10 +59,11 @@ Use `search_design_system` to find if any Figma component in the design maps to 
 Before writing a single line of SwiftUI, understand what already exists:
 
 ```
+read/readFile: docs/DESIGN_SYSTEM.md              → authoritative token reference (colors, fonts, spacing, radius)
 search/fileSearch: Cove/Views/**/*.swift          → find similar screens for structural reference
 search/fileSearch: Cove/View Models/*.swift       → find existing ViewModels that may cover data needs
 search/fileSearch: Cove/Components/**/*.swift     → find reusable components
-search/textSearch: "Color.Colors"                 → confirm available color token names
+search/textSearch: "Color.Colors"                 → confirm available color token names in use
 search/textSearch: "Font.custom"                  → confirm available font names and sizes
 ```
 
@@ -79,6 +82,7 @@ import SwiftUI
 
 struct <ScreenName>View: View {
     @StateObject private var viewModel = <ScreenName>ViewModel()
+    // or @EnvironmentObject var appState: AppState if no ViewModel needed
 
     var body: some View {
         // implementation
@@ -90,18 +94,36 @@ struct <ScreenName>View: View {
 }
 ```
 
-**Design token mapping:**
+**ViewModel structure (only if needed):**
+```swift
+//
+//  <ScreenName>ViewModel.swift
+//  Cove
+//
 
-| Design intent | SwiftUI equivalent |
-|---|---|
-| Primary text | `Color.Colors.Fills.primary` |
-| Secondary/muted text | `Color.Colors.Fills.secondary` |
-| Background | `Color.Colors.Backgrounds.primary` |
-| Accent / brand color | `Color.Colors.Brand.accent` |
-| Dividers / borders | `Color.Colors.Strokes.primary` |
-| Display / headline font | `Font.custom("Gazpacho-Black", size: N)` |
-| Body / label font | `Font.custom("Lato-Bold", size: N)` or `Lato-Regular` |
-| Standard horizontal padding | `.padding(.horizontal, 20)` |
+import FirebaseFirestore
+import FirebaseAuth  // only if Auth.auth() is used directly in this ViewModel
+
+@MainActor
+class <ScreenName>ViewModel: ObservableObject {
+    @Published var <property>: <Type> = <default>
+
+    func fetch<Data>() async throws {
+        // Firebase fetch pattern — see HomeViewModel.swift for reference
+    }
+}
+```
+
+**Design tokens:**
+
+Read `docs/DESIGN_SYSTEM.md` for the full token reference — all color groups, type scale, spacing, and radius. The four critical rules:
+
+- `Backgrounds.*` — canvas layers only (outermost `.background()` of a screen)
+- `Fills.*` — component surfaces and non-text foreground elements (icons, shapes)
+- `Text.*` — `.foregroundStyle()` on SwiftUI `Text` views only
+- `Strokes.*` — `.stroke()` and `.border()` on shapes and overlays
+
+When the Figma design uses raw hex colors, cross-reference `get_variable_defs` output against `docs/DESIGN_SYSTEM.md` to find the correct semantic token. Never hardcode hex values or raw spacing numbers.
 
 **Reusable components to prefer:**
 - `SectionHeader(title:)` — section titles
@@ -129,7 +151,7 @@ After writing all files, build the project (requires Xcode MCP):
 BuildProject
 ```
 
-Fix all compile errors before proceeding. Do not open a PR with a broken build.
+Fix all compile errors before proceeding. Do not open a PR with a broken build. Use `XcodeListNavigatorIssues` to see any remaining warnings or errors after fixing.
 
 ### 7. Verify Acceptance Criteria and Update the Issue
 

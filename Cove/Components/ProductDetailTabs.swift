@@ -25,7 +25,7 @@ struct ProductDetailTabs: View {
                 if viewModel.detailSelection == .description {
                     Text(musicProductDetails.description)
                         .font(Font.custom("Lato-Regular", size: 16))
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .foregroundStyle(Color.Colors.Text.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 } else if viewModel.detailSelection == .tracklist {
                     VStack {
@@ -33,7 +33,7 @@ struct ProductDetailTabs: View {
                             HStack {
                                 Text(track.title)
                                     .font(Font.custom("Lato-Regular", size: 16))
-                                    .foregroundStyle(Color.Colors.Fills.primary)
+                                    .foregroundStyle(Color.Colors.Text.primary)
 
                                 Text(String(track.durationSec))
                                     .font(Font.custom("Lato-Regular", size: 16))
@@ -45,7 +45,7 @@ struct ProductDetailTabs: View {
                 } else if viewModel.detailSelection == .about {
                     Text(musicProductDetails.about)
                         .font(Font.custom("Lato-Regular", size: 16))
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .foregroundStyle(Color.Colors.Text.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
@@ -62,7 +62,7 @@ struct ProductDetailTabs: View {
                 if viewModel.detailSelection == .description {
                     Text(coffeeProductDetails.description)
                         .font(Font.custom("Lato-Regular", size: 16))
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .foregroundStyle(Color.Colors.Text.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 } else if viewModel.detailSelection == .origin {
                     VStack {
@@ -70,7 +70,7 @@ struct ProductDetailTabs: View {
                             HStack {
                                 Text(originDetail.title)
                                     .font(Font.custom("Lato-Bold", size: 16))
-                                    .foregroundStyle(Color.Colors.Fills.primary)
+                                    .foregroundStyle(Color.Colors.Text.primary)
                                 Text(originDetail.content)
                                     .font(Font.custom("Lato-Regular", size: 16))
                                     .foregroundStyle(Color.Colors.Brand.accent)
@@ -81,7 +81,7 @@ struct ProductDetailTabs: View {
                 } else if viewModel.detailSelection == .about {
                     Text(coffeeProductDetails.about)
                         .font(Font.custom("Lato-Regular", size: 16))
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .foregroundStyle(Color.Colors.Text.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
@@ -98,7 +98,7 @@ struct ProductDetailTabs: View {
                 if viewModel.detailSelection == .description {
                     Text(apparelProductDetails.description)
                         .font(Font.custom("Lato-Regular", size: 16))
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .foregroundStyle(Color.Colors.Text.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 } else if viewModel.detailSelection == .specifications {
                     VStack(spacing: Spacing.lg) {
@@ -106,11 +106,11 @@ struct ProductDetailTabs: View {
                             VStack(alignment: .leading) {
                                 Text(spec.title)
                                     .font(Font.custom("Lato-Bold", size: 16))
-                                    .foregroundStyle(Color.Colors.Fills.primary)
+                                    .foregroundStyle(Color.Colors.Text.primary)
                                 ForEach(spec.content, id: \.self) { item in
                                     Text(item)
                                         .font(Font.custom("Lato-Regular", size: 16))
-                                        .foregroundStyle(Color.Colors.Fills.primary)
+                                        .foregroundStyle(Color.Colors.Text.primary)
                                 }
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -119,7 +119,7 @@ struct ProductDetailTabs: View {
                 } else if viewModel.detailSelection == .about {
                     Text(apparelProductDetails.about)
                         .font(Font.custom("Lato-Regular", size: 16))
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .foregroundStyle(Color.Colors.Text.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }

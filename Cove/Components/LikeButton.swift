@@ -34,11 +34,11 @@ struct LikeButton: View {
         ZStack {
             Circle()
                 .frame(width: size, height: size)
-                .foregroundStyle(Color.Colors.Fills.secondary)
+                .foregroundStyle(Color.Colors.Fills.inverse)
                 .overlay(Circle().strokeBorder(Color.Colors.Strokes.primary, lineWidth: 1).opacity(outlined ? 1 : 0))
             Image(systemName: isFavorited ? "heart.fill" : "heart")
                 .font(.system(size: iconSize))
-                .foregroundStyle(isFavorited ? Color.Colors.Brand.Palette.red : Color.Colors.Strokes.primary)
+                .foregroundStyle(isFavorited ? Color.Colors.Brand.coral : Color.Colors.Strokes.primary)
         }
         .scaleEffect(scale)
         .allowsHitTesting(!favoritesStore.isTogglingFavorite)

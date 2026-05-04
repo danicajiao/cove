@@ -23,14 +23,14 @@ struct LoginView: View {
             VStack(spacing: Spacing.xl) {
                 Text("Cove.")
                     .font(.custom("Gazpacho-Heavy", size: 40))
-                    .foregroundStyle(Color.Colors.Fills.primary)
+                    .foregroundStyle(Color.Colors.Text.primary)
 
                 SpectrumDivider()
 
                 Group {
                     Text("Log in to your account")
                         .font(.custom("Lato-Bold", size: 28))
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .foregroundStyle(Color.Colors.Text.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                     VStack(spacing: Spacing.xs) {
@@ -61,7 +61,7 @@ struct LoginView: View {
                                 Text("Forgot password?")
                                     .font(.custom("Lato-Regular", size: 12))
                                     .underline()
-                                    .foregroundStyle(Color.Colors.Fills.tertiary)
+                                    .foregroundStyle(Color.Colors.Text.tertiary)
                             }
                             Spacer()
                             Button {
@@ -69,7 +69,7 @@ struct LoginView: View {
                             } label: {
                                 Text("Face ID \(Image(systemName: "faceid"))")
                                     .font(.custom("Lato-Regular", size: 14))
-                                    .foregroundStyle(Color.Colors.Fills.tertiary)
+                                    .foregroundStyle(Color.Colors.Text.tertiary)
                             }
                         }
                         .padding(.horizontal, Spacing.md)
@@ -111,7 +111,7 @@ struct LoginView: View {
                         .padding(.horizontal, Spacing.md)
                     Text("OR")
                         .font(.custom("Lato-Regular", size: 12))
-                        .foregroundStyle(Color.Colors.Fills.quaternary)
+                        .foregroundStyle(Color.Colors.Text.quaternary)
                     Capsule()
                         .fill(Color.Colors.Fills.quaternary)
                         .frame(width: 100, height: 2)
@@ -128,14 +128,14 @@ struct LoginView: View {
                 HStack(spacing: Spacing.xs) {
                     Text("Don't have an account? ")
                         .font(.custom("Lato-Regular", size: 14))
-                        .foregroundStyle(Color.Colors.Fills.tertiary)
+                        .foregroundStyle(Color.Colors.Text.tertiary)
                     Button {
                         appState.path.append(.signup)
                     } label: {
                         Text("Sign up")
                             .font(.custom("Lato-Regular", size: 14))
                             .underline()
-                            .foregroundStyle(Color.Colors.Fills.primary)
+                            .foregroundStyle(Color.Colors.Text.primary)
                     }
                 }
 

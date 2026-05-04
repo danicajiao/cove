@@ -13,7 +13,7 @@ struct ProfileHeaderView: View {
     var body: some View {
         VStack(spacing: Spacing.lg) {
             Circle()
-                .fill(Color.Colors.Fills.secondary)
+                .fill(Color.Colors.Fills.inverse)
                 .frame(width: 140, height: 140)
                 .overlay {
                     if let url = viewModel.photoURL {
@@ -33,16 +33,16 @@ struct ProfileHeaderView: View {
             VStack(spacing: Spacing.xs) {
                 Text(viewModel.displayName)
                     .font(Font.custom("Gazpacho-Black", size: 24))
-                    .foregroundStyle(Color.Colors.Fills.primary)
+                    .foregroundStyle(Color.Colors.Text.primary)
 
                 Text(viewModel.username)
                     .font(Font.custom("Lato-SemiBold", size: 16))
-                    .foregroundStyle(Color.Colors.Fills.primary)
+                    .foregroundStyle(Color.Colors.Text.primary)
 
                 if !viewModel.memberSinceText.isEmpty {
                     Text(viewModel.memberSinceText)
                         .font(Font.custom("Lato-Regular", size: 14))
-                        .foregroundStyle(Color.Colors.Fills.tertiary)
+                        .foregroundStyle(Color.Colors.Text.tertiary)
                 }
             }
             .padding(.horizontal, Spacing.xl)
@@ -54,7 +54,7 @@ struct ProfileHeaderView: View {
     private var initialsView: some View {
         Text(viewModel.initials)
             .font(Font.custom("Gazpacho-Black", size: 30))
-            .foregroundStyle(Color.Colors.Fills.primary)
+            .foregroundStyle(Color.Colors.Text.primary)
     }
 }
 

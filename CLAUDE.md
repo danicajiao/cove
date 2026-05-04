@@ -85,19 +85,13 @@ private struct ProductDetailContent: View { ... }
 
 ### Colors & Fonts
 
-Always use the centralized color and font systems — never hardcode values.
+Always use semantic tokens — never hardcode hex values or use system colors. See `docs/DESIGN_SYSTEM.md` for the full token reference including all color groups, type scale, spacing, and radius values.
 
-```swift
-// Colors
-Color.Colors.Backgrounds.primary
-Color.Colors.Fills.secondary
-Color.Colors.Brand.accent
-
-// Fonts
-Font.custom("Gazpacho-Black", size: 25)   // headings
-Font.custom("Lato-Bold", size: 16)         // subheadings
-Font.custom("Lato-Regular", size: 14)      // body
-```
+The four rules to remember:
+- `Backgrounds.*` — canvas layers only (outermost `.background()` of a screen)
+- `Fills.*` — component surfaces and non-text foreground elements (icons, shapes)
+- `Text.*` — `.foregroundStyle()` on SwiftUI `Text` views only
+- `Strokes.*` — `.stroke()` and `.border()` on shapes and overlays
 
 ### Formatting
 

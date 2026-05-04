@@ -23,7 +23,7 @@ struct PrimaryButton: PrimitiveButtonStyle {
             .padding()
             .frame(maxWidth: width)
             .frame(height: height)
-            .foregroundStyle(Color.Colors.Fills.secondary)
+            .foregroundStyle(Color.Colors.Fills.inverse)
             .background {
                 Capsule()
                     .fill(Color.Colors.Fills.primary)

@@ -25,12 +25,12 @@ struct WelcomeView: View {
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 Text("Shop where it counts.")
                     .font(.custom("Gazpacho-Black", size: 28))
-                    .foregroundStyle(Color.Colors.Fills.primary)
+                    .foregroundStyle(Color.Colors.Text.primary)
                     .frame(width: 200, alignment: .leading)
 //                    .containerRelativeFrame(.horizontal, count: 2, span: 1, spacing: 0)
                 Text("Cove.")
                     .font(.custom("Gazpacho-Heavy", size: 60))
-                    .foregroundStyle(Color.Colors.Fills.primary)
+                    .foregroundStyle(Color.Colors.Text.primary)
 
                 Button {
                     appState.path.append(.signup)

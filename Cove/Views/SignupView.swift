@@ -23,14 +23,14 @@ struct SignupView: View {
             VStack(spacing: Spacing.xl) {
                 Text("Cove.")
                     .font(.custom("Gazpacho-Heavy", size: 40))
-                    .foregroundStyle(Color.Colors.Fills.primary)
+                    .foregroundStyle(Color.Colors.Text.primary)
 
                 SpectrumDivider()
 
                 Group {
                     Text("Create your account")
                         .font(.custom("Lato-Bold", size: 28))
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .foregroundStyle(Color.Colors.Text.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                     VStack(spacing: Spacing.xs) {
@@ -57,7 +57,7 @@ struct SignupView: View {
                         HStack {
                             Text("Passwords must contain at least 8 characters.")
                                 .font(.custom("Lato-Regular", size: 12))
-                                .foregroundStyle(Color.Colors.Fills.tertiary)
+                                .foregroundStyle(Color.Colors.Text.tertiary)
                             Spacer()
                         }
                         .padding(.horizontal, Spacing.md)
@@ -100,7 +100,7 @@ struct SignupView: View {
                     HStack {
                         Text("By signing up, you are agreeing to our Terms of Service. View our Privacy Policy.")
                             .font(.custom("Lato-Regular", size: 12))
-                            .foregroundStyle(Color.Colors.Fills.tertiary)
+                            .foregroundStyle(Color.Colors.Text.tertiary)
                     }
                     .padding(.horizontal, Spacing.md)
                 }
@@ -112,7 +112,7 @@ struct SignupView: View {
                         .padding(.horizontal, Spacing.md)
                     Text("OR")
                         .font(.custom("Lato-Regular", size: 12))
-                        .foregroundStyle(Color.Colors.Fills.quaternary)
+                        .foregroundStyle(Color.Colors.Text.quaternary)
                     Capsule()
                         .fill(Color.Colors.Fills.quaternary)
                         .frame(width: 100, height: 2)
@@ -129,14 +129,14 @@ struct SignupView: View {
                 HStack(spacing: Spacing.xs) {
                     Text("Already have an email account? ")
                         .font(.custom("Lato-Regular", size: 14))
-                        .foregroundStyle(Color.Colors.Fills.tertiary)
+                        .foregroundStyle(Color.Colors.Text.tertiary)
                     Button {
                         appState.path.append(.login)
                     } label: {
                         Text("Log in")
                             .font(.custom("Lato-Regular", size: 14))
                             .underline()
-                            .foregroundStyle(Color.Colors.Fills.primary)
+                            .foregroundStyle(Color.Colors.Text.primary)
                     }
                 }
 

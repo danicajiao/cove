@@ -31,7 +31,7 @@ struct HomeView: View {
                         .frame(width: 300, alignment: .leading)
                         .font(Font.custom("Gazpacho-Black", size: 28))
                         .lineSpacing(6) // SwiftUI lineSpacing = Figma line height - Font size
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .foregroundStyle(Color.Colors.Text.primary)
                     Spacer()
                     // TODO: Add notifications button to the right of greeting Text // swiftlint:disable:this todo
                     Image(systemName: "bell.fill")
@@ -100,7 +100,7 @@ struct HomeView: View {
                             ForEach(viewModel.brands, id: \.id) { brand in
                                 VStack(spacing: Spacing.xs) {
                                     Circle()
-                                        .fill(Color.Colors.Fills.secondary)
+                                        .fill(Color.Colors.Fills.inverse)
                                         .stroke(Color.Colors.Strokes.primary, lineWidth: 1)
                                         .frame(width: 131, height: 131)
                                         .overlay {
@@ -117,7 +117,7 @@ struct HomeView: View {
 
                                     Text(brand.name)
                                         .font(Font.custom("Lato-Regular", size: 12))
-                                        .foregroundStyle(Color.Colors.Fills.primary)
+                                        .foregroundStyle(Color.Colors.Text.primary)
                                         .frame(width: 100)
                                         .multilineTextAlignment(.center)
                                         .truncationMode(.tail)

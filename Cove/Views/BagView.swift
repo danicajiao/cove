@@ -31,12 +31,12 @@ struct BagView: View {
 
                 if bag.bagProducts.isEmpty {
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.Colors.Backgrounds.secondary)
+                        .fill(Color.Colors.Fills.inverse)
                         .overlay {
                             Text("Products you add to your bag can be found here!")
                                 .multilineTextAlignment(.center)
                                 .font(Font.custom("Lato-Regular", size: 16))
-                                .foregroundStyle(Color.Colors.Fills.primary)
+                                .foregroundStyle(Color.Colors.Text.primary)
                                 .padding(50)
                         }
                         .border(Color.Colors.Strokes.primary, width: 1)
@@ -115,7 +115,7 @@ struct BagView: View {
                     VStack(alignment: .leading) {
                         Text("Total")
                             .font(Font.custom("Lato-Regular", size: 14))
-                            .foregroundStyle(Color.Colors.Fills.tertiary)
+                            .foregroundStyle(Color.Colors.Text.tertiary)
                         Text("$\(bag.total)")
                             .font(Font.custom("Lato-Bold", size: 20))
                             .foregroundStyle(Color.Colors.Brand.accent)
@@ -129,7 +129,7 @@ struct BagView: View {
                 .padding(.vertical, 16)
                 .padding(.horizontal, 20)
                 .background {
-                    Color.Colors.Fills.secondary.ignoresSafeArea()
+                    Color.Colors.Fills.inverse.ignoresSafeArea()
                 }
             }
         }

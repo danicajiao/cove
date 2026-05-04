@@ -141,7 +141,7 @@ private struct ProductDetailContent: View {
                         .aspectRatio(contentMode: .fit)
                         .frame(maxHeight: 300)
                         .background(
-                            Color.Colors.Brand.Palette.blue
+                            Color.Colors.Brand.blue
                                 .padding(.top, -1000)
                         )
                 } else {
@@ -151,7 +151,7 @@ private struct ProductDetailContent: View {
                             fetchImage()
                         }
                         .background(
-                            Color.Colors.Brand.Palette.blue
+                            Color.Colors.Brand.blue
                                 .padding(.top, -1000)
                         )
                 }
@@ -161,12 +161,12 @@ private struct ProductDetailContent: View {
                         VStack(spacing: 0) {
                             Text(titleStr)
                                 .font(Font.custom("Gazpacho-Black", size: 20))
-                                .foregroundStyle(Color.Colors.Fills.primary)
+                                .foregroundStyle(Color.Colors.Text.primary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
 
                             Text(subtitleStr)
                                 .font(Font.custom("Lato-Regular", size: 20))
-                                .foregroundStyle(Color.Colors.Fills.tertiary)
+                                .foregroundStyle(Color.Colors.Text.tertiary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
 
@@ -180,14 +180,14 @@ private struct ProductDetailContent: View {
                                     }
                                     Text("22 Reviews \(Image(systemName: "chevron.right"))")
                                         .font(Font.custom("Lato-Regular", size: 14))
-                                        .foregroundStyle(Color.Colors.Fills.tertiary)
+                                        .foregroundStyle(Color.Colors.Text.tertiary)
                                 }
 
                                 Spacer()
 
                                 Circle()
                                     .frame(width: 35, height: 35)
-                                    .foregroundStyle(Color.Colors.Fills.secondary)
+                                    .foregroundStyle(Color.Colors.Fills.inverse)
                                     .overlay {
                                         Circle()
                                             .frame(width: 30, height: 30)
@@ -195,7 +195,7 @@ private struct ProductDetailContent: View {
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(Spacing.lg)
-                            .background(Color.Colors.Fills.secondary)
+                            .background(Color.Colors.Fills.inverse)
                             .clipShape(RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
                             .overlay(RoundedRectangle(cornerRadius: Radius.lg, style: .continuous).stroke(Color.Colors.Strokes.primary, lineWidth: 1))
                         }
@@ -226,7 +226,7 @@ private struct ProductDetailContent: View {
                 .padding(.top, Spacing.xxxl)
                 .padding(.bottom, Spacing.xl)
                 .background(
-                    Color.Colors.Fills.secondary
+                    Color.Colors.Fills.inverse
                         .padding(.bottom, -1000)
                 )
             }
@@ -281,7 +281,7 @@ private struct ProductDetailContent: View {
                 .padding(.vertical, Spacing.sm)
                 .padding(.horizontal, Spacing.xl)
                 .background {
-                    Color.Colors.Fills.secondary.ignoresSafeArea()
+                    Color.Colors.Fills.inverse.ignoresSafeArea()
                 }
             }
         }
