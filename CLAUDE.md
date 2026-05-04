@@ -87,10 +87,11 @@ private struct ProductDetailContent: View { ... }
 
 Always use semantic tokens — never hardcode hex values or use system colors. See `docs/DESIGN_SYSTEM.md` for the full token reference including all color groups, type scale, spacing, and radius values.
 
-The three rules to remember:
+The four rules to remember:
 - `Backgrounds.*` — canvas layers only (outermost `.background()` of a screen)
 - `Fills.*` — component surfaces and non-text foreground elements (icons, shapes)
 - `Text.*` — `.foregroundStyle()` on SwiftUI `Text` views only
+- `Strokes.*` — `.stroke()` and `.border()` on shapes and overlays
 
 ### Formatting
 

@@ -116,11 +116,12 @@ class <ScreenName>ViewModel: ObservableObject {
 
 **Design tokens:**
 
-Read `docs/DESIGN_SYSTEM.md` for the full token reference — all color groups, type scale, spacing, and radius. The three critical rules:
+Read `docs/DESIGN_SYSTEM.md` for the full token reference — all color groups, type scale, spacing, and radius. The four critical rules:
 
 - `Backgrounds.*` — canvas layers only (outermost `.background()` of a screen)
 - `Fills.*` — component surfaces and non-text foreground elements (icons, shapes)
 - `Text.*` — `.foregroundStyle()` on SwiftUI `Text` views only
+- `Strokes.*` — `.stroke()` and `.border()` on shapes and overlays
 
 When the Figma design uses raw hex colors, cross-reference `get_variable_defs` output against `docs/DESIGN_SYSTEM.md` to find the correct semantic token. Never hardcode hex values or raw spacing numbers.
 
