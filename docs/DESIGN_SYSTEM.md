@@ -41,20 +41,22 @@ The asset catalog folder structure maps directly to Swift: `Colors/Fills/primary
 
 > **Rule:** Always use semantic tokens. Never hardcode hex values or use `Color(.black)` / `Color(.white)`.
 
+> **Dark mode note:** All color tokens have light and dark variants in the asset catalog. Dark mode values are currently placeholders — they will be updated once the dark palette is defined in Figma. The semantic token structure means no Swift code changes will be needed when that happens.
+
+> **Open question — `Fills.inverse` vs `Fills.surface`:** `Fills.inverse` currently serves two roles: (1) the elevated component surface on a light background (input fields, cards), and (2) white foreground elements on dark fills (white text/icons on a brown button). These are semantically different and may need to be split into separate tokens (`Fills.surface` and `Fills.inverse`) when the dark palette is designed — in dark mode they would require different values. Defer this decision until dark mode is defined in Figma, as the right split will be obvious then.
+
 ### Fills
 
-Used for backgrounds of UI elements (cards, sheets, buttons, overlays).
+Surface colors for UI components (buttons, cards, chips, sheets, overlays) that sit on top of a background. Use `Fills.*` when coloring the surface of an element, not the canvas behind it.
 
 | Figma variable | Swift | Value / Meaning |
 |---|---|---|
 | `fills/primary` | `Color.Colors.Fills.primary` | `#52331F` — dark brown, primary surface |
-| `fills/inverse` | `Color.Colors.Fills.secondary` | `#FFFFFF` — white, on-dark surfaces ¹ |
-| `fills/secondary` | — | `#2B2627` — charcoal, secondary surface ¹ |
+| `fills/secondary` | `Color.Colors.Fills.secondary` | `#2B2627` — charcoal, secondary surface |
+| `fills/inverse` | `Color.Colors.Fills.inverse` | `#FFFFFF` — white, on-dark surfaces |
 | `fills/tertiary` | `Color.Colors.Fills.tertiary` | Charcoal 60% opacity |
 | `fills/quaternary` | `Color.Colors.Fills.quaternary` | Charcoal 30% opacity |
 | `fills/quinary` | `Color.Colors.Fills.quinary` | Charcoal 10% opacity |
-
-¹ The Figma variable was renamed (`secondary` → `inverse`, new `secondary` added) but the Swift colorset names have not been updated yet. Treat `Color.Colors.Fills.secondary` as the white/inverse fill until the asset catalog is updated.
 
 ### Text
 
@@ -62,13 +64,12 @@ Used for foreground text colors.
 
 | Figma variable | Swift | Value / Meaning |
 |---|---|---|
-| `text/primary` | `Color.Colors.Text.textPrimary` | `#52331F` — dark brown, primary text |
-| `text/inverse` | `Color.Colors.Text.textSecondary` | `#FFFFFF` — white text on dark backgrounds ¹ |
-| `text/tertiary` | `Color.Colors.Text.textTertiary` | Charcoal 60% opacity |
-| `text/quaternary` | — | Charcoal 30% opacity |
-| `text/quinary` | — | Charcoal 10% opacity |
-
-¹ Same naming drift as fills — `textSecondary` in Swift currently maps to white/inverse. Named constants for quaternary and quinary not yet added to the asset catalog.
+| `text/primary` | `Color.Colors.Text.primary` | `#52331F` — dark brown, primary text |
+| `text/secondary` | `Color.Colors.Text.secondary` | `#2B2627` — charcoal text |
+| `text/inverse` | `Color.Colors.Text.inverse` | `#FFFFFF` — white text on dark backgrounds |
+| `text/tertiary` | `Color.Colors.Text.tertiary` | Charcoal 60% opacity |
+| `text/quaternary` | `Color.Colors.Text.quaternary` | Charcoal 30% opacity |
+| `text/quinary` | `Color.Colors.Text.quinary` | Charcoal 10% opacity |
 
 ### Strokes
 
@@ -85,26 +86,24 @@ Brand palette colors used for identity, accents, and category expression.
 
 | Figma variable | Swift | Value / Meaning |
 |---|---|---|
-| `brand/primary` | `Color.Colors.Brand.Palette.primary` | `#52331F` — dark brown |
-| `brand/secondary` | `Color.Colors.Brand.Palette.secondary` | `#FFFFFF` — white |
+| `brand/primary` | `Color.Colors.Brand.primary` | `#52331F` — dark brown |
+| `brand/secondary` | `Color.Colors.Brand.secondary` | `#FFFFFF` — white |
 | `brand/accent` | `Color.Colors.Brand.accent` | `#E29547` — amber, interactive accent |
-| `brand/coral` | `Color.Colors.Brand.Palette.red` | `#FF8181` — coral ¹ |
-| `brand/amber` | `Color.Colors.Brand.Palette.orange` | `#FFB557` — amber ¹ |
-| `brand/yellow` | `Color.Colors.Brand.Palette.yellow` | `#FFFAA0` — yellow |
-| `brand/sage` | `Color.Colors.Brand.Palette.green` | `#8BA96A` — sage green ¹ |
-| `brand/blue` | `Color.Colors.Brand.Palette.blue` | `#6CA8D0` — blue |
-| `brand/violet` | `Color.Colors.Brand.Palette.violet` | `#D3C6FF` — violet |
-
-¹ Figma variables were renamed (red→coral, orange→amber, green→sage) but Swift asset names have not been updated yet.
+| `brand/coral` | `Color.Colors.Brand.coral` | `#FF8181` — coral |
+| `brand/amber` | `Color.Colors.Brand.amber` | `#FFB557` — amber |
+| `brand/yellow` | `Color.Colors.Brand.yellow` | `#FFFAA0` — yellow |
+| `brand/sage` | `Color.Colors.Brand.sage` | `#8BA96A` — sage green |
+| `brand/blue` | `Color.Colors.Brand.blue` | `#6CA8D0` — blue |
+| `brand/violet` | `Color.Colors.Brand.violet` | `#D3C6FF` — violet |
 
 ### Backgrounds
 
-Page-level background colors.
+Page-level canvas colors. Use for the outermost `.background()` of a screen or major section — the surface everything else sits on. If you're coloring a component rather than the canvas behind it, use `Fills.*` instead.
 
 | Figma variable | Swift | Value / Meaning |
 |---|---|---|
 | `backgrounds/primary` | `Color.Colors.Backgrounds.primary` | Off-white warm background |
-| `backgrounds/secondary` | `Color.Colors.Backgrounds.secondary` | Slightly darker warm background |
+| `backgrounds/secondary` | `Color.Colors.Backgrounds.secondary` | `#FFFFFF` — white, used as a secondary canvas surface |
 
 ### Category
 
@@ -124,23 +123,27 @@ Used to tint the coffee category tiles.
 |---|---|---|
 | `feedback/star` | `Color.Colors.Feedback.star` | `#FFC107` — star rating yellow |
 
-### Support *(Figma only — not yet in Swift asset catalog)*
+### Support
 
-Used for alerts, banners, and status indicators.
+Used for alerts, banners, and status indicators. Each state has three roles:
 
-| Figma variable | Swift (pending) | Value |
+- **`fill`** — the solid indicator color itself (icon fill, badge background, border highlight)
+- **`fg`** — foreground text or icon color used *on top of* the surface, darker for contrast
+- **`surface`** — a light tinted background for the alert container or banner
+
+> **Naming note:** The Figma variable is named `support/*/default` but Swift's `default` is a reserved keyword. The Swift colorset uses `fill` instead.
+
+| Figma variable | Swift | Value |
 |---|---|---|
-| `support/success/default` | `Color.Colors.Support.Success.default` | `#8BA96A` — sage |
+| `support/success/default` | `Color.Colors.Support.Success.fill` | `#8BA96A` — sage |
 | `support/success/fg` | `Color.Colors.Support.Success.fg` | `#4A6B35` — dark sage |
 | `support/success/surface` | `Color.Colors.Support.Success.surface` | `#EEF5E8` — light sage |
-| `support/warning/default` | `Color.Colors.Support.Warning.default` | `#FFB557` — amber |
+| `support/warning/default` | `Color.Colors.Support.Warning.fill` | `#FFB557` — amber |
 | `support/warning/fg` | `Color.Colors.Support.Warning.fg` | `#8C5E00` — dark amber |
 | `support/warning/surface` | `Color.Colors.Support.Warning.surface` | `#FFF4E0` — light amber |
-| `support/error/default` | `Color.Colors.Support.Error.default` | `#FF8181` — coral |
+| `support/error/default` | `Color.Colors.Support.Error.fill` | `#FF8181` — coral |
 | `support/error/fg` | `Color.Colors.Support.Error.fg` | `#B83232` — dark coral |
 | `support/error/surface` | `Color.Colors.Support.Error.surface` | `#FFF0F0` — light coral |
-
-When implementing alerts or status UI, add these colorsets to the asset catalog first, then use `Color.Colors.Support.*`.
 
 ### Shadow color
 
@@ -178,57 +181,44 @@ Font files live in `Cove/Resources/`. Always use `Font.custom()` — never use s
 
 ## Spacing
 
-Based on a **4pt grid**. Spacing tokens are defined in the `Spacing` Figma variable collection but **named Swift constants do not exist yet** — the codebase currently uses raw `CGFloat` values throughout.
+Based on a **4pt grid**. Defined in `Cove/Constants/Spacing.swift` — use the named constants instead of raw values.
 
-> **Pending parity work:** A `Spacing` enum or extension should be added to the Swift codebase so that hardcoded values like `16`, `24`, `32` can be replaced with named constants that match the Figma token names. Until then, annotate raw values with the token name in a comment so the intent is clear and the future refactor is easy to grep for.
-
-| Figma token | Value | Primary use |
-|---|---|---|
-| `spacing/xs` | 4pt | Icon/label gap, tight component internals |
-| `spacing/sm` | 8pt | Label → input gap, icon margins, badge padding |
-| `spacing/md` | 12pt | Between components in a group, cell padding |
-| `spacing/lg` | 16pt | Screen edge inset, row vertical padding, card internals |
-| `spacing/xl` | 20pt | Between form fields, button vertical padding |
-| `spacing/2xl` | 24pt | Card-to-card gap, section breathing room |
-| `spacing/3xl` | 32pt | Major section separators, modal padding |
-| `spacing/4xl` | 48pt | Hero spacing, top-of-screen clearance |
+| Figma token | Swift constant | Value | Primary use |
+|---|---|---|---|
+| `spacing/xs` | `Spacing.xs` | 4pt | Icon/label gap, tight component internals |
+| `spacing/sm` | `Spacing.sm` | 8pt | Label → input gap, icon margins, badge padding |
+| `spacing/md` | `Spacing.md` | 12pt | Between components in a group, cell padding |
+| `spacing/lg` | `Spacing.lg` | 16pt | Screen edge inset, row vertical padding, card internals |
+| `spacing/xl` | `Spacing.xl` | 20pt | Between form fields, button vertical padding |
+| `spacing/2xl` | `Spacing.xxl` | 24pt | Card-to-card gap, section breathing room |
+| `spacing/3xl` | `Spacing.xxxl` | 32pt | Major section separators, modal padding |
+| `spacing/4xl` | `Spacing.xxxxl` | 48pt | Hero spacing, top-of-screen clearance |
 
 ```swift
-// Current practice — annotate raw values with the token name:
-.padding(.horizontal, 16) // spacing/lg
-.padding(.bottom, 24)     // spacing/2xl
-
-// Target state once Swift constants are added:
-// .padding(.horizontal, Spacing.lg)
-// .padding(.bottom, Spacing.x2l)
+.padding(.horizontal, Spacing.lg)
+.padding(.bottom, Spacing.xxl)
+VStack(spacing: Spacing.md) { ... }
 ```
 
 ---
 
 ## Corner Radius
 
-Based on a **2pt step** at smaller sizes. Radius tokens are defined in the `Radius` Figma variable collection but **named Swift constants do not exist yet** — the codebase currently uses raw `CGFloat` values.
+Based on a **2pt step** at smaller sizes. Defined in `Cove/Constants/Radius.swift` — use the named constants instead of raw values.
 
-> **Pending parity work:** A `Radius` enum or extension should be added to match the Figma token names. Until then, annotate raw values with the token name in a comment.
-
-| Figma token | Value | Primary use |
-|---|---|---|
-| `radius/none` | 0pt | Dividers, full-width elements |
-| `radius/xs` | 2pt | Tags, badges, small chips |
-| `radius/sm` | 4pt | Input fields, tooltips |
-| `radius/md` | 8pt | Buttons, list rows, image thumbnails |
-| `radius/lg` | 10pt | Cards, sheets, action menus |
-| `radius/xl` | 16pt | Large cards, modals, featured banners |
-| `radius/full` | 9999pt | Pills, avatar chips, toggle tracks |
+| Figma token | Swift constant | Value | Primary use |
+|---|---|---|---|
+| `radius/none` | `Radius.none` | 0pt | Dividers, full-width elements |
+| `radius/xs` | `Radius.xs` | 2pt | Tags, badges, small chips |
+| `radius/sm` | `Radius.sm` | 4pt | Input fields, tooltips |
+| `radius/md` | `Radius.md` | 8pt | Buttons, list rows, image thumbnails |
+| `radius/lg` | `Radius.lg` | 10pt | Cards, sheets, action menus |
+| `radius/xl` | `Radius.xl` | 16pt | Large cards, modals, featured banners |
+| `radius/full` | `Radius.full` | 9999pt | Pills, avatar chips, toggle tracks |
 
 ```swift
-// Current practice — annotate raw values with the token name:
-.cornerRadius(8)  // radius/md — buttons, rows
-.cornerRadius(10) // radius/lg — cards, sheets
-
-// Target state once Swift constants are added:
-// .cornerRadius(Radius.md)
-// .cornerRadius(Radius.lg)
+.cornerRadius(Radius.md)  // buttons, list rows
+.cornerRadius(Radius.lg)  // cards, sheets
 ```
 
 ---
@@ -303,22 +293,11 @@ All components are defined in the **Components page** of the Figma file. Views s
 
 ## Roadmap & Known Gaps
 
-Outstanding work to achieve full parity between Figma and Swift:
-
-| Area | Status | Action needed |
+| Area | Status | Notes |
 |---|---|---|
-| Spacing constants | ⏳ Pending | Add a `Spacing` enum/extension with named values matching `spacing/*` tokens |
-| Radius constants | ⏳ Pending | Add a `Radius` enum/extension with named values matching `radius/*` tokens |
-| Support colors | ⏳ Pending | Add `Colors/Support/` colorsets to the asset catalog for all 9 `support/*` tokens |
-| Color naming drift | ⏳ Pending | Rename Swift colorsets to match updated Figma variable names (`secondary` → `inverse`, `textSecondary` → `textInverse`, brand palette names) |
-| Codebase realignment | ⏳ Pending | Full pass through all Views and Components to replace hardcoded colors, fonts, spacing, and radius values with design system tokens |
-
-### Codebase realignment pass
-
-The next major design system milestone is a full sweep of the codebase to bring all existing UI code into alignment with these tokens. This includes:
-
-- Replace any remaining hardcoded colors with `Color.Colors.*`
-- Replace any remaining raw spacing values with annotated constants (and eventually named `Spacing.*` calls)
-- Replace any remaining raw corner radius values with annotated constants
-- Replace any remaining `Poppins` font references with `Lato`
-- Verify all views use component instances rather than inline reimplementations
+| Spacing constants | ✅ Done | `Cove/Constants/Spacing.swift` |
+| Radius constants | ✅ Done | `Cove/Constants/Radius.swift` |
+| Support colors | ✅ Done | `Cove/Resources/Assets.xcassets/Colors/Support/` |
+| Color naming drift | ✅ Done | Asset catalog renamed to match Figma variable names |
+| Codebase realignment | ✅ Done | All Views and Components use `Color.Colors.*`, `Spacing.*`, `Radius.*`, and `Lato` fonts |
+| `BagView` realignment | ⏳ Pending | Excluded from realignment pass — scheduled for full rework |

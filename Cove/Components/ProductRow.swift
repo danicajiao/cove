@@ -18,9 +18,9 @@ struct ProductRow: View {
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .background {
-                            Color.Colors.Backgrounds.secondary
+                            Color.Colors.Fills.inverse
                         }
-                        .cornerRadius(10)
+                        .cornerRadius(Radius.lg)
                 } placeholder: {
                     ProgressView()
                 }
@@ -30,11 +30,11 @@ struct ProductRow: View {
 
                 VStack(alignment: .leading) {
                     Text(coffeeProduct.info.name)
-                        .font(Font.custom("Poppins-Regular", size: 12))
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .font(Font.custom("Lato-Regular", size: 12))
+                        .foregroundStyle(Color.Colors.Text.primary)
                     Text(coffeeProduct.info.roastery)
-                        .font(Font.custom("Poppins-Regular", size: 12))
-                        .foregroundStyle(Color.Colors.Fills.tertiary)
+                        .font(Font.custom("Lato-Regular", size: 12))
+                        .foregroundStyle(Color.Colors.Text.tertiary)
 
                     Spacer()
 
@@ -52,7 +52,7 @@ struct ProductRow: View {
                         .disabled(bagProduct.quantity == 1 ? true : false)
 
                         Text(String(bagProduct.quantity))
-                            .font(Font.custom("Poppins-Regular", size: 14))
+                            .font(Font.custom("Lato-Regular", size: 14))
                             .frame(width: 30, height: 20)
 
                         Button {
@@ -79,19 +79,19 @@ struct ProductRow: View {
 //                        .frame(width: 20)
                     Spacer()
                     Text("$\(String(Int(coffeeProduct.defaultPrice)))")
-                        .font(Font.custom("Poppins-SemiBold", size: 16))
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .font(Font.custom("Lato-Bold", size: 16))
+                        .foregroundStyle(Color.Colors.Text.primary)
                 }
             }
             .frame(height: 80)
-            .padding(20)
+            .padding(Spacing.xl)
         } else if let musicProduct = bagProduct.product as? MusicProduct {
             HStack {
                 AsyncImage(url: URL(string: musicProduct.defaultImageURL)) { image in
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .cornerRadius(10)
+                        .cornerRadius(Radius.lg)
                 } placeholder: {
                     ProgressView()
                 }
@@ -101,11 +101,11 @@ struct ProductRow: View {
 
                 VStack(alignment: .leading) {
                     Text(musicProduct.info.album)
-                        .font(Font.custom("Poppins-Regular", size: 12))
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .font(Font.custom("Lato-Regular", size: 12))
+                        .foregroundStyle(Color.Colors.Text.primary)
                     Text(musicProduct.info.artist)
-                        .font(Font.custom("Poppins-Regular", size: 12))
-                        .foregroundStyle(Color.Colors.Fills.tertiary)
+                        .font(Font.custom("Lato-Regular", size: 12))
+                        .foregroundStyle(Color.Colors.Text.tertiary)
 
                     Spacer()
 
@@ -123,7 +123,7 @@ struct ProductRow: View {
                         .disabled(bagProduct.quantity == 1 ? true : false)
 
                         Text(String(bagProduct.quantity))
-                            .font(Font.custom("Poppins-Regular", size: 14))
+                            .font(Font.custom("Lato-Regular", size: 14))
                             .frame(width: 30, height: 20)
 
                         Button {
@@ -150,19 +150,19 @@ struct ProductRow: View {
 //                        .frame(width: 20)
                     Spacer()
                     Text("$\(String(Int(musicProduct.defaultPrice)))")
-                        .font(Font.custom("Poppins-SemiBold", size: 16))
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .font(Font.custom("Lato-Bold", size: 16))
+                        .foregroundStyle(Color.Colors.Text.primary)
                 }
             }
             .frame(height: 80)
-            .padding(20)
+            .padding(Spacing.xl)
         } else if let apparelProduct = bagProduct.product as? ApparelProduct {
             HStack {
                 AsyncImage(url: URL(string: apparelProduct.defaultImageURL)) { image in
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .cornerRadius(10)
+                        .cornerRadius(Radius.lg)
                 } placeholder: {
                     ProgressView()
                 }
@@ -172,11 +172,11 @@ struct ProductRow: View {
 
                 VStack(alignment: .leading) {
                     Text(apparelProduct.info.name)
-                        .font(Font.custom("Poppins-Regular", size: 12))
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .font(Font.custom("Lato-Regular", size: 12))
+                        .foregroundStyle(Color.Colors.Text.primary)
                     Text(apparelProduct.info.brand)
-                        .font(Font.custom("Poppins-Regular", size: 12))
-                        .foregroundStyle(Color.Colors.Fills.tertiary)
+                        .font(Font.custom("Lato-Regular", size: 12))
+                        .foregroundStyle(Color.Colors.Text.tertiary)
 
                     Spacer()
 
@@ -194,7 +194,7 @@ struct ProductRow: View {
                         .disabled(bagProduct.quantity == 1 ? true : false)
 
                         Text(String(bagProduct.quantity))
-                            .font(Font.custom("Poppins-Regular", size: 14))
+                            .font(Font.custom("Lato-Regular", size: 14))
                             .frame(width: 30, height: 20)
 
                         Button {
@@ -221,12 +221,12 @@ struct ProductRow: View {
 //                        .frame(width: 20)
                     Spacer()
                     Text("$\(String(Int(apparelProduct.defaultPrice)))")
-                        .font(Font.custom("Poppins-SemiBold", size: 16))
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .font(Font.custom("Lato-Bold", size: 16))
+                        .foregroundStyle(Color.Colors.Text.primary)
                 }
             }
             .frame(height: 80)
-            .padding(20)
+            .padding(Spacing.xl)
         }
     }
 }

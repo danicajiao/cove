@@ -10,50 +10,49 @@ import SwiftUI
 struct FavoritesView: View {
     @StateObject private var viewModel = FavoritesViewModel()
 
-    private var columns = Array(repeating: GridItem(.flexible(), spacing: 20), count: 2)
+    private var columns = Array(repeating: GridItem(.flexible(), spacing: Spacing.xl), count: 2)
 
     var body: some View {
         ScrollView(showsIndicators: false) {
-            VStack(spacing: 20) {
+            VStack(spacing: Spacing.xl) {
                 HStack {
                     Text("My Favorites")
-                        .font(Font.custom("Poppins-SemiBold", size: 26))
-                        .padding(.top, 28)
+                        .font(Font.custom("Lato-Bold", size: 26))
                     Spacer()
                 }
-                .padding([.leading, .trailing], 20)
+                .padding([.leading, .trailing], Spacing.xl)
 
                 if viewModel.isLoading {
                     ProgressView()
                         .frame(maxWidth: .infinity)
-                        .padding(.top, 100)
+                        .padding(.top, Spacing.xxxxl)
                 } else if viewModel.favorites.isEmpty {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.Colors.Backgrounds.secondary)
+                    RoundedRectangle(cornerRadius: Radius.lg)
+                        .fill(Color.Colors.Fills.inverse)
                         .overlay {
                             Text("Products you save will appear here")
                                 .multilineTextAlignment(.center)
-                                .font(Font.custom("Poppins-Regular", size: 16))
-                                .foregroundStyle(Color.Colors.Fills.primary)
-                                .padding(50)
+                                .font(Font.custom("Lato-Regular", size: 16))
+                                .foregroundStyle(Color.Colors.Text.primary)
+                                .padding(Spacing.xxxxl)
                         }
                         .border(Color.Colors.Strokes.primary, width: 1)
                         .frame(height: 300)
-                        .padding([.leading, .trailing], 20)
+                        .padding([.leading, .trailing], Spacing.xl)
                 } else {
                     LazyVGrid(
                         columns: columns,
                         alignment: .center,
-                        spacing: 20
+                        spacing: Spacing.xl
                     ) {
                         ForEach(viewModel.favorites, id: \.id) { product in
                             ProductCardView(product: product)
                         }
                     }
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, Spacing.xl)
                 }
             }
-            .padding(.top, 30)
+            .padding(.top, Spacing.xxxl)
         }
         .background(Color.Colors.Backgrounds.primary.ignoresSafeArea(.all))
         .onAppear {

@@ -12,7 +12,7 @@ struct PrimaryButton: PrimitiveButtonStyle {
     let width: CGFloat?
     let height: CGFloat?
 
-    init(width: CGFloat? = .infinity, height: CGFloat? = 55) {
+    init(width: CGFloat? = .infinity, height: CGFloat? = 50) {
         self.width = width
         self.height = height
     }
@@ -23,7 +23,7 @@ struct PrimaryButton: PrimitiveButtonStyle {
             .padding()
             .frame(maxWidth: width)
             .frame(height: height)
-            .foregroundStyle(Color.Colors.Fills.secondary)
+            .foregroundStyle(Color.Colors.Fills.inverse)
             .background {
                 Capsule()
                     .fill(Color.Colors.Fills.primary)

@@ -10,10 +10,14 @@ import SwiftUI
 struct SmallCategoryButton: View {
     let category: String
 
+    let width: CGFloat = 130
+    let height: CGFloat = 60
+
     var body: some View {
         switch category {
         case "Music":
             Rectangle()
+                .foregroundStyle(.clear)
                 .overlay {
                     Image("727a7238365525.576d3001c7656 2")
                         .resizable()
@@ -23,14 +27,16 @@ struct SmallCategoryButton: View {
                 .overlay(alignment: .topLeading) {
                     Text(category)
                         .font(Font.custom("Gazpacho-Black", size: 14))
-                        .foregroundStyle(Color.Colors.Fills.primary)
-                        .padding(10)
+                        .foregroundStyle(Color.Colors.Text.primary)
+                        .padding(.horizontal, Spacing.sm)
+                        .padding(.vertical, Spacing.xs)
                 }
-                .frame(width: 130, height: 60)
-                .cornerRadius(8)
+                .frame(width: width, height: height)
+                .cornerRadius(Radius.lg)
                 .customShadow()
         case "Coffee":
             Rectangle()
+                .foregroundStyle(.clear)
                 .overlay {
                     Image("coffee-subscription-2048px-3198-3x2-1")
                         .resizable()
@@ -40,11 +46,12 @@ struct SmallCategoryButton: View {
                 .overlay(alignment: .topLeading) {
                     Text(category)
                         .font(Font.custom("Gazpacho-Black", size: 14))
-                        .foregroundStyle(Color.Colors.Fills.primary)
-                        .padding(10)
+                        .foregroundStyle(Color.Colors.Text.primary)
+                        .padding(.horizontal, Spacing.sm)
+                        .padding(.vertical, Spacing.xs)
                 }
-                .frame(width: 130, height: 60)
-                .cornerRadius(8)
+                .frame(width: width, height: height)
+                .cornerRadius(Radius.lg)
                 .customShadow()
         case "Home":
             Rectangle()
@@ -58,14 +65,16 @@ struct SmallCategoryButton: View {
                 .overlay(alignment: .topLeading) {
                     Text(category)
                         .font(Font.custom("Gazpacho-Black", size: 14))
-                        .foregroundStyle(Color.Colors.Fills.primary)
-                        .padding(8)
+                        .foregroundStyle(Color.Colors.Text.primary)
+                        .padding(.horizontal, Spacing.sm)
+                        .padding(.vertical, Spacing.xs)
                 }
-                .frame(width: 130, height: 60)
-                .cornerRadius(10)
+                .frame(width: width, height: height)
+                .cornerRadius(Radius.lg)
                 .customShadow()
         case "Bevs":
             Rectangle()
+                .foregroundStyle(.clear)
                 .overlay {
                     Color(UIColor(red: 255 / 255, green: 252 / 255, blue: 247 / 255, alpha: 1))
                     Image("58533a99308279.5ef03e3c0da5a")
@@ -77,11 +86,12 @@ struct SmallCategoryButton: View {
                 .overlay(alignment: .topLeading) {
                     Text(category)
                         .font(Font.custom("Gazpacho-Black", size: 14))
-                        .foregroundStyle(Color.Colors.Fills.primary)
-                        .padding(10)
+                        .foregroundStyle(Color.Colors.Text.primary)
+                        .padding(.horizontal, Spacing.sm)
+                        .padding(.vertical, Spacing.xs)
                 }
-                .frame(width: 130, height: 60)
-                .cornerRadius(8)
+                .frame(width: width, height: height)
+                .cornerRadius(Radius.lg)
                 .customShadow()
         default:
             Rectangle()
@@ -95,11 +105,12 @@ struct SmallCategoryButton: View {
                 .overlay(alignment: .topLeading) {
                     Text(category)
                         .font(Font.custom("Gazpacho-Black", size: 14))
-                        .foregroundStyle(Color.Colors.Fills.primary)
-                        .padding(10)
+                        .foregroundStyle(Color.Colors.Text.primary)
+                        .padding(.horizontal, Spacing.sm)
+                        .padding(.vertical, Spacing.xs)
                 }
-                .frame(width: 130, height: 60)
-                .cornerRadius(8)
+                .frame(width: width, height: height)
+                .cornerRadius(Radius.lg)
                 .customShadow()
         }
     }
