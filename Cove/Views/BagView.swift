@@ -31,7 +31,7 @@ struct BagView: View {
 
                 if bag.bagProducts.isEmpty {
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.Colors.Backgrounds.secondary)
+                        .fill(Color.Colors.Fills.inverse)
                         .overlay {
                             Text("Products you add to your bag can be found here!")
                                 .multilineTextAlignment(.center)

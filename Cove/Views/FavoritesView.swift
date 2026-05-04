@@ -28,7 +28,7 @@ struct FavoritesView: View {
                         .padding(.top, Spacing.xxxxl)
                 } else if viewModel.favorites.isEmpty {
                     RoundedRectangle(cornerRadius: Radius.lg)
-                        .fill(Color.Colors.Backgrounds.secondary)
+                        .fill(Color.Colors.Fills.inverse)
                         .overlay {
                             Text("Products you save will appear here")
                                 .multilineTextAlignment(.center)
