@@ -85,45 +85,12 @@ private struct ProductDetailContent: View { ... }
 
 ### Colors & Fonts
 
-Always use semantic tokens — never hardcode hex values or use system colors. The full token reference is in `docs/DESIGN_SYSTEM.md`.
+Always use semantic tokens — never hardcode hex values or use system colors. See `docs/DESIGN_SYSTEM.md` for the full token reference including all color groups, type scale, spacing, and radius values.
 
-**Three color groups, each with a distinct role:**
-
-```swift
-// Backgrounds — canvas layers only (top-level view backgrounds)
-Color.Colors.Backgrounds.primary       // off-white warm canvas
-Color.Colors.Backgrounds.secondary     // white secondary canvas
-
-// Fills — component surfaces (buttons, cards, sheets, overlays)
-Color.Colors.Fills.primary             // dark brown — primary button fill
-Color.Colors.Fills.inverse             // white — card/input field surface
-
-// Text — foreground text colors only (use on SwiftUI Text views)
-Color.Colors.Text.primary              // dark brown
-Color.Colors.Text.tertiary             // charcoal 60% — muted/secondary labels
-
-// Other
-Color.Colors.Strokes.primary           // dark brown border
-Color.Colors.Brand.accent              // amber — interactive accent
-```
-
-**Fonts:**
-
-```swift
-Font.custom("Gazpacho-Black", size: 25)   // headings
-Font.custom("Lato-Bold", size: 16)         // subheadings / emphasis
-Font.custom("Lato-Regular", size: 14)      // body
-```
-
-**Spacing and radius — always use named constants, never raw values:**
-
-```swift
-.padding(.horizontal, Spacing.xl)     // 20pt
-.padding(.vertical, Spacing.lg)       // 16pt
-VStack(spacing: Spacing.md) { ... }   // 12pt
-.cornerRadius(Radius.lg)              // 10pt — cards, sheets
-.cornerRadius(Radius.md)              // 8pt — buttons, rows
-```
+The three rules to remember:
+- `Backgrounds.*` — canvas layers only (outermost `.background()` of a screen)
+- `Fills.*` — component surfaces and non-text foreground elements (icons, shapes)
+- `Text.*` — `.foregroundStyle()` on SwiftUI `Text` views only
 
 ### Formatting
 
