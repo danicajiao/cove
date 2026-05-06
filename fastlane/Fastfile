@@ -3,13 +3,13 @@
 default_platform(:ios)
 
 platform :ios do
-  
+
   # Configuration
   APP_NAME = "Cove"
-  WORKSPACE = "Cove.xcworkspace"
+  PROJECT = "Cove.xcodeproj"
   SCHEME = "Cove"
   BUNDLE_ID = "com.danicajiao.cove"
-  
+
   desc "Increment build number"
   lane :bump_build do
     # Get current build number from project
@@ -30,13 +30,11 @@ platform :ios do
       xcodeproj: "Cove.xcodeproj"
     )
   end
-  
+
   desc "Build the app for testing"
   lane :build do
-    cocoapods
-    
     build_app(
-      workspace: WORKSPACE,
+      project: PROJECT,
       scheme: SCHEME,
       configuration: "Debug",
       export_method: "development",
@@ -44,28 +42,25 @@ platform :ios do
       skip_package_ipa: true
     )
   end
-  
+
   desc "Run tests"
   lane :test do
     run_tests(
-      workspace: WORKSPACE,
+      project: PROJECT,
       scheme: SCHEME,
       device: "iPhone 17 Pro",
       code_coverage: true
     )
   end
-  
+
   desc "Build and deploy to TestFlight"
   lane :beta do
-    # Ensure we have the latest pods
-    cocoapods
-    
     # Increment build number based on TestFlight
     bump_build
-    
+
     # Build the app
     build_app(
-      workspace: WORKSPACE,
+      project: PROJECT,
       scheme: SCHEME,
       configuration: "Release",
       export_method: "app-store",
@@ -75,7 +70,7 @@ platform :ios do
         }
       }
     )
-    
+
     # Upload to TestFlight
     api_key = app_store_connect_api_key(
       key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
@@ -83,28 +78,25 @@ platform :ios do
       key_filepath: "#{Dir.home}/private_keys/AuthKey_#{ENV['APP_STORE_CONNECT_API_KEY_ID']}.p8",
       in_house: false
     )
-    
+
     upload_to_testflight(
       api_key: api_key,
       skip_waiting_for_build_processing: true,
       distribute_external: false,
       changelog: "New build from CI/CD"
     )
-    
+
     # Commit and push the version bump
     commit_version_bump(
       message: "chore: increment build number to #{lane_context[SharedValues::BUILD_NUMBER]} [skip ci]",
       xcodeproj: "Cove.xcodeproj"
     )
-    
+
     push_to_git_remote
   end
-  
+
   desc "Build and submit to App Store"
   lane :release do |options|
-    # Ensure we have the latest pods
-    cocoapods
-    
     # Get version from options or use current
     version = options[:version]
     if version
@@ -113,13 +105,13 @@ platform :ios do
         xcodeproj: "Cove.xcodeproj"
       )
     end
-    
+
     # Increment build number based on TestFlight
     bump_build
-    
+
     # Build the app
     build_app(
-      workspace: WORKSPACE,
+      project: PROJECT,
       scheme: SCHEME,
       configuration: "Release",
       export_method: "app-store",
@@ -129,7 +121,7 @@ platform :ios do
         }
       }
     )
-    
+
     # Set up API key for App Store Connect
     api_key = app_store_connect_api_key(
       key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
@@ -137,7 +129,7 @@ platform :ios do
       key_filepath: "#{Dir.home}/private_keys/AuthKey_#{ENV['APP_STORE_CONNECT_API_KEY_ID']}.p8",
       in_house: false
     )
-    
+
     # Upload to App Store Connect
     upload_to_app_store(
       api_key: api_key,
@@ -147,16 +139,16 @@ platform :ios do
       automatic_release: false,
       force: true
     )
-    
+
     # Commit and push the version bump
     commit_version_bump(
       message: "chore: bump version to #{version} (build #{lane_context[SharedValues::BUILD_NUMBER]}) [skip ci]",
       xcodeproj: "Cove.xcodeproj"
     )
-    
+
     push_to_git_remote
   end
-  
+
   desc "Run linting"
   lane :lint do
     swiftlint(
@@ -166,10 +158,10 @@ platform :ios do
       config_file: ".swiftlint.yml"
     )
   end
-  
+
   # Error handling
   error do |lane, exception|
     UI.error("Error in lane #{lane}: #{exception}")
   end
-  
+
 end

@@ -73,7 +73,7 @@ struct BagView: View {
                         Button {} label: {
                             Text("Apply")
                         }
-                        .buttonStyle(PrimaryButton(width: 72, height: .infinity))
+                        .buttonStyle(PrimaryButton(width: 72, height: 40))
                     }
                     .frame(height: 40)
                     .padding([.leading, .trailing], 20)
