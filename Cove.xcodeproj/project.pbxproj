@@ -164,16 +164,7 @@
 			alwaysOutOfDate = 1;
 			name = SwiftLint;
 			shellPath = /bin/sh;
-			shellScript = (
-				"if [ -f /opt/homebrew/bin/swiftlint ]; then",
-				"  /opt/homebrew/bin/swiftlint",
-				"elif which swiftlint > /dev/null; then",
-				"  swiftlint",
-				"else",
-				"  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"",
-				"fi",
-				"",
-			);
+			shellScript = "if [ -f /opt/homebrew/bin/swiftlint ]; then\n  /opt/homebrew/bin/swiftlint\nelif which swiftlint > /dev/null; then\n  swiftlint\nelse\n  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi\n";
 			showEnvVarsInLog = 0;
 		};
 		B4D6F8A0C2E4F6A8B0D2E4F6 /* SwiftFormat */ = {
@@ -181,16 +172,7 @@
 			alwaysOutOfDate = 1;
 			name = SwiftFormat;
 			shellPath = /bin/sh;
-			shellScript = (
-				"if [ -f /opt/homebrew/bin/swiftformat ]; then",
-				"  /opt/homebrew/bin/swiftformat .",
-				"elif which swiftformat > /dev/null; then",
-				"  swiftformat .",
-				"else",
-				"  echo \"warning: SwiftFormat not installed, download from https://github.com/nicklockwood/SwiftFormat\"",
-				"fi",
-				"",
-			);
+			shellScript = "if [ -f /opt/homebrew/bin/swiftformat ]; then\n  /opt/homebrew/bin/swiftformat .\nelif which swiftformat > /dev/null; then\n  swiftformat .\nelse\n  echo \"warning: SwiftFormat not installed, download from https://github.com/nicklockwood/SwiftFormat\"\nfi\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
