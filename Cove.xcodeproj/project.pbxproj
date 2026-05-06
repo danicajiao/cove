@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 100;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -140,7 +140,7 @@
 				D00DB7372FAB034900D56700 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				D00DB73C2FAB03FD00D56700 /* XCRemoteSwiftPackageReference "rive-ios" */,
 			);
-			preferredProjectObjectVersion = 100;
+			preferredProjectObjectVersion = 77;
 			productRefGroup = D02B2FB327BD7E61004732CB /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
