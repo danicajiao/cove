@@ -17,7 +17,7 @@ The project also serves as a testbed for agentic development: using AI agents to
 | Language | Swift / SwiftUI |
 | Architecture | MVVM |
 | Backend | Firebase (Auth, Firestore, Cloud Storage) |
-| Dependencies | CocoaPods |
+| Dependencies | Swift Package Manager |
 | CI/CD | GitHub Actions + Fastlane |
 
 ## Getting Started
@@ -25,7 +25,6 @@ The project also serves as a testbed for agentic development: using AI agents to
 ### Prerequisites
 
 - **Xcode 16+** (required for iOS 18 SDK)
-- **CocoaPods** — `sudo gem install cocoapods`
 
 ### Setup
 
@@ -34,12 +33,11 @@ The project also serves as a testbed for agentic development: using AI agents to
 git clone https://github.com/danicajiao/cove-ios.git
 cd cove-ios
 
-# 2. Install CocoaPods dependencies
-pod install
-
-# 3. Open the workspace (not the .xcodeproj)
-open Cove.xcworkspace
+# 2. Open the project
+open Cove.xcodeproj
 ```
+
+Dependencies are managed via Swift Package Manager and resolve automatically when you open the project in Xcode.
 
 ### Firebase Configuration
 
