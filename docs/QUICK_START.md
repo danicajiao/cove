@@ -5,7 +5,6 @@ Get the Cove iOS app building and running on your local machine.
 ## Prerequisites
 
 - **Xcode 16+** (required for iOS 18 SDK)
-- **CocoaPods** — `sudo gem install cocoapods`
 - **Ruby + Bundler** — for Fastlane (optional, only needed for CI/CD lanes)
 
 ## Steps
@@ -17,17 +16,13 @@ git clone https://github.com/danicajiao/cove-ios.git
 cd cove-ios
 ```
 
-### 2. Install dependencies
+### 2. Open the project
 
 ```bash
-pod install
+open Cove.xcodeproj
 ```
 
-Open the project using the **`.xcworkspace`** file, not `.xcodeproj`:
-
-```bash
-open Cove.xcworkspace
-```
+Dependencies are managed via Swift Package Manager. Xcode will resolve and download all packages automatically on first open.
 
 ### 3. Add `GoogleService-Info.plist`
 
@@ -54,8 +49,8 @@ Select a simulator or connected device in Xcode and press **⌘R**.
 
 ## Troubleshooting
 
-### `pod install` fails
-→ Ensure CocoaPods is up to date: `sudo gem install cocoapods`
+### SPM packages fail to resolve
+→ In Xcode, go to **File → Packages → Resolve Package Versions**. If that doesn't help, try **File → Packages → Reset Package Caches**.
 
 ### Build fails with Firebase errors
 → Verify `GoogleService-Info.plist` is present at the correct path and added to the Xcode target
@@ -65,4 +60,4 @@ Select a simulator or connected device in Xcode and press **⌘R**.
 
 ---
 
-**Last Updated**: March 2026
+**Last Updated**: May 2026

@@ -71,7 +71,7 @@ The Cove iOS app uses GitHub Actions for continuous integration and deployment f
 **Configuration:**
 - Runs on macOS-26
 - Uses Ruby 4.0.1 with bundler cache
-- Uses CocoaPods with caching
+- Uses Swift Package Manager (resolved automatically by xcodebuild)
 - Runs `bundle exec fastlane build` and `bundle exec fastlane test`
 
 **Note:** Tests continue on error to allow viewing all test results even if some fail.
@@ -85,21 +85,19 @@ The Cove iOS app uses GitHub Actions for continuous integration and deployment f
 **Steps:**
 1. Checkout code with full git history
 2. Set up Ruby 4.0.1 with bundler cache
-3. Cache CocoaPods dependencies
-4. Configure git for version commits
-5. Import code signing certificates
-6. Download provisioning profiles
-7. Set up App Store Connect API key
-8. **Run `fastlane beta` lane** which:
-   - Installs CocoaPods dependencies
+3. Configure git for version commits
+4. Import code signing certificates
+5. Download provisioning profiles
+6. Set up App Store Connect API key
+7. **Run `fastlane beta` lane** which:
    - Auto-increments build number (syncs with TestFlight)
-   - Builds and archives the app
+   - Builds and archives the app (SPM packages resolved by xcodebuild)
    - Uploads to TestFlight
    - Commits and pushes version bump
-9. Get version and build info from Info.plist
-10. Check for duplicate release tags
-11. Create GitHub Release with prerelease flag
-12. Upload build artifacts on failure
+8. Get version and build info from Info.plist
+9. Check for duplicate release tags
+10. Create GitHub Release with prerelease flag
+11. Upload build artifacts on failure
 
 **Versioning:**
 - `CFBundleVersion` (Build Number): **Auto-incremented** (1, 2, 3, 4...)
@@ -117,19 +115,18 @@ The Cove iOS app uses GitHub Actions for continuous integration and deployment f
 **Steps:**
 1. Checkout code with full git history
 2. Set up Ruby 4.0.1 with bundler cache
-3. Cache CocoaPods dependencies
-4. Configure git for version commits
-5. Import code signing certificates
-6. Download provisioning profiles
-7. Set up App Store Connect API key
-8. **Run `fastlane release version:X.Y.Z` lane** which:
+3. Configure git for version commits
+4. Import code signing certificates
+5. Download provisioning profiles
+6. Set up App Store Connect API key
+7. **Run `fastlane release version:X.Y.Z` lane** which:
    - Updates marketing version to specified version
    - Auto-increments build number (syncs with TestFlight)
-   - Builds and archives the app
+   - Builds and archives the app (SPM packages resolved by xcodebuild)
    - Submits to App Store Connect
    - Commits and pushes version bump
-9. Update GitHub release notes with build information (or create new release)
-10. Upload build artifacts on failure
+8. Update GitHub release notes with build information (or create new release)
+9. Upload build artifacts on failure
 
 **Versioning:**
 - `CFBundleShortVersionString`: **Derived from legacy tag parsing logic** (non-functional with manual trigger)
@@ -243,9 +240,6 @@ base64 -i YourProfile.mobileprovision -o profileb64.txt
 # Install Ruby dependencies
 bundle install
 
-# Install CocoaPods
-pod install
-
 # Run Fastlane lanes locally
 bundle exec fastlane build    # Build for testing
 bundle exec fastlane test     # Run tests
@@ -253,11 +247,13 @@ bundle exec fastlane beta     # Deploy to TestFlight
 bundle exec fastlane release  # Deploy to App Store
 ```
 
+SPM packages are resolved automatically by xcodebuild — no separate dependency install step is needed.
+
 ## Tools Used
 
 - **GitHub Actions**: CI/CD orchestration
 - **Fastlane**: iOS automation (building, signing, deploying)
-- **CocoaPods**: Dependency management (~1.15)
+- **Swift Package Manager**: Dependency management (built into Xcode)
 - **xcodebuild**: Building and archiving iOS apps
 - **TestFlight**: Beta testing platform
 - **App Store Connect**: App distribution and management
@@ -275,7 +271,7 @@ bundle exec fastlane build
 Using xcodebuild directly:
 ```bash
 xcodebuild build \
-  -workspace Cove.xcworkspace \
+  -project Cove.xcodeproj \
   -scheme Cove \
   -sdk iphonesimulator
 ```
@@ -289,7 +285,7 @@ bundle exec fastlane test
 Using xcodebuild directly:
 ```bash
 xcodebuild test \
-  -workspace Cove.xcworkspace \
+  -project Cove.xcodeproj \
   -scheme Cove \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 ```
@@ -322,10 +318,10 @@ bundle exec fastlane release version:1.1.0
 - The auto-increment script should prevent this
 - If it occurs, manually increment the build number
 
-### CocoaPods Installation Fails
-- Clear CocoaPods cache: `pod cache clean --all`
-- Update CocoaPods: `gem install cocoapods`
-- Delete `Podfile.lock` and `Pods` directory, then run `pod install`
+### SPM Package Resolution Fails
+- In Xcode: **File → Packages → Resolve Package Versions**
+- If that fails: **File → Packages → Reset Package Caches** (re-downloads all packages)
+- On CI: clearing `~/Library/Caches/org.swift.swiftpm` and `DerivedData` forces a full re-resolution
 
 ## Best Practices
 
@@ -344,4 +340,4 @@ bundle exec fastlane release version:1.1.0
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
 - [Apple Developer Portal](https://developer.apple.com/)
 - [App Store Connect](https://appstoreconnect.apple.com/)
-- [CocoaPods](https://cocoapods.org/)
+- [Swift Package Manager](https://www.swift.org/documentation/package-manager/)
