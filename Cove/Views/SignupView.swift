@@ -67,7 +67,7 @@ struct SignupView: View {
                 VStack(spacing: Spacing.md) {
                     Button {
                         loading = true
-                        appState.emailLogIn(
+                        appState.emailSignUp(
                             email: email,
                             password: password,
                             onFailure: { error in
@@ -91,7 +91,7 @@ struct SignupView: View {
                     .buttonStyle(PrimaryButton())
                     .alert(isPresented: $presentAlert) {
                         Alert(
-                            title: Text("Login Failed"),
+                            title: Text("Sign Up Failed"),
                             message: Text(errorMessage ?? "Missing error message"),
                             dismissButton: .default(Text("OK"))
                         )
