@@ -43,7 +43,7 @@ Select a simulator or connected device in Xcode and press **⌘R**.
 ## Notes
 
 - **Bundle ID:** `com.danicajiao.cove`
-- **Minimum deployment target:** iOS 18.0
+- **Minimum deployment target:** iOS 26.0
 - Google Sign-In and Facebook Login are configured via `Info.plist` — no additional setup required beyond the `GoogleService-Info.plist`
 - For CI/CD setup, see [CI/CD Workflows Documentation](CI_CD_WORKFLOWS.md)
 

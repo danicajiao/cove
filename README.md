@@ -13,7 +13,7 @@ The project also serves as a testbed for agentic development: using AI agents to
 
 | Layer | Technology |
 |---|---|
-| Platform | iOS 18+ |
+| Platform | iOS 26+ |
 | Language | Swift / SwiftUI |
 | Architecture | MVVM |
 | Backend | Firebase (Auth, Firestore, Cloud Storage) |

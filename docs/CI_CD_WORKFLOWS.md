@@ -38,7 +38,7 @@ The Cove iOS app uses GitHub Actions for continuous integration and deployment f
 
 ### 1. CI - Pull Request (`ci-pr.yml`)
 
-**Trigger:** Pull requests to `main` branch (only when Cove/** or workflow file changes)
+**Trigger:** All pull requests (no path filter — runs on every PR)
 
 **Purpose:** Ensure code quality before merging
 
