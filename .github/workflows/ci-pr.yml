@@ -7,6 +7,8 @@ jobs:
   lint-and-validate:
     name: Lint & Validate
     runs-on: macos-26
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
 
     steps:
       - name: Checkout code
