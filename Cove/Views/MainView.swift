@@ -80,7 +80,6 @@ struct MainView: View {
         // .opacity(opacity)
         .background(Color.Colors.Backgrounds.primary)
         .onAppear {
-            print(appState.path)
             // withAnimation(.easeIn(duration: 1)) {
             //     opacity = 1
             // }

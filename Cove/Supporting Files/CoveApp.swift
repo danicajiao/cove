@@ -38,7 +38,7 @@ struct CoveApp: App {
     @StateObject var favoritesStore = FavoritesStore()
     @StateObject private var networkMonitor = NetworkMonitor()
 
-    @State var text: String = ""
+    @State private var authPath: [AuthPath] = []
 
     init() {
         print("init run")
@@ -51,33 +51,33 @@ struct CoveApp: App {
                     MainView()
                         .environmentObject(bag)
                 } else {
-                    NavigationStack(path: $appState.path) {
+                    NavigationStack(path: $authPath) {
                         ZStack {
                             if networkMonitor.isConnected {
-                                WelcomeView()
-                                    .transition(.opacity)
+                                WelcomeView(
+                                    onNavigateToLogin: { authPath.append(.login) },
+                                    onNavigateToSignup: { authPath.append(.signup) }
+                                )
+                                .transition(.opacity)
                             } else {
                                 SplashView()
                                     .transition(.opacity)
                             }
                         }
                         .animation(.default, value: networkMonitor.isConnected)
-                        .navigationDestination(for: Path.self) { path in
+                        .navigationDestination(for: AuthPath.self) { path in
                             switch path {
-                            case .welcome:
-                                WelcomeView()
                             case .login:
-                                LoginView()
+                                LoginView(onNavigateToSignup: { authPath.append(.signup) })
                             case .signup:
-                                SignupView()
-                            case .home:
-                                HomeView()
-                            default:
-                                EmptyView()
+                                SignupView(onNavigateToLogin: { authPath.append(.login) })
                             }
                         }
                     }
                 }
+            }
+            .onChange(of: appState.authState) { _, _ in
+                authPath = []
             }
             .environmentObject(appState)
             .environmentObject(favoritesStore)
