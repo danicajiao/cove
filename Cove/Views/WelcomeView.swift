@@ -10,7 +10,9 @@ import RiveRuntime
 import SwiftUI
 
 struct WelcomeView: View {
-    @EnvironmentObject private var appState: AppState
+    var onNavigateToLogin: () -> Void
+    var onNavigateToSignup: () -> Void
+
     var riveViewModel = RiveViewModel(
         fileName: "hero",
         alignment: .topCenter
@@ -33,14 +35,14 @@ struct WelcomeView: View {
                     .foregroundStyle(Color.Colors.Text.primary)
 
                 Button {
-                    appState.path.append(.signup)
+                    onNavigateToSignup()
                 } label: {
                     Text("Join for free")
                 }
                 .buttonStyle(PrimaryButton())
 
                 Button {
-                    appState.path.append(.login)
+                    onNavigateToLogin()
                 } label: {
                     Text("Login")
                 }
@@ -50,17 +52,11 @@ struct WelcomeView: View {
         }
         .ignoresSafeArea(edges: .top)
         .background(Color.Colors.Backgrounds.primary)
-        .onAppear {
-            print(appState.path)
-        }
     }
 }
 
 struct WelcomeView_Previews: PreviewProvider {
-    static let appState = AppState()
-
     static var previews: some View {
-        WelcomeView()
-            .environmentObject(appState)
+        WelcomeView(onNavigateToLogin: {}, onNavigateToSignup: {})
     }
 }
