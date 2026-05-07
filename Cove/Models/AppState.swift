@@ -33,7 +33,6 @@ enum AuthMethod: String {
 }
 
 class AppState: ObservableObject {
-    @Published var path: [Path] = []
     @Published var authState: AuthState = .loggedOut
     var authMethod: AuthMethod?
 
@@ -45,7 +44,6 @@ class AppState: ObservableObject {
                 DispatchQueue.main.async {
                     self.authState = .loggedIn
                     self.authMethod = .email
-                    self.path.removeAll()
                 }
                 onSuccess()
             }
@@ -63,7 +61,6 @@ class AppState: ObservableObject {
                 DispatchQueue.main.async {
                     strongSelf.authState = .loggedIn
                     strongSelf.authMethod = .email
-                    strongSelf.path.removeAll()
                 }
                 onSuccess()
             }
@@ -232,7 +229,6 @@ class AppState: ObservableObject {
                 DispatchQueue.main.async {
                     self.authMethod = .google
                     self.authState = .loggedIn
-                    self.path.removeAll()
                 }
             }
         }
@@ -264,7 +260,6 @@ class AppState: ObservableObject {
                 DispatchQueue.main.async {
                     self.authMethod = .facebook
                     self.authState = .loggedIn
-                    self.path.removeAll()
                 }
             }
         }
@@ -287,7 +282,6 @@ class AppState: ObservableObject {
                 DispatchQueue.main.async {
                     self.authState = .loggedOut
                     self.authMethod = nil
-                    self.path.removeAll()
                 }
             } catch let signOutError as NSError {
                 print("Error signing out: %@", signOutError)
@@ -300,7 +294,6 @@ class AppState: ObservableObject {
                 DispatchQueue.main.async {
                     self.authState = .loggedOut
                     self.authMethod = nil
-                    self.path.removeAll()
                 }
             } catch let signOutError as NSError {
                 print("Error signing out: %@", signOutError)
@@ -312,7 +305,6 @@ class AppState: ObservableObject {
                 DispatchQueue.main.async {
                     self.authState = .loggedOut
                     self.authMethod = nil
-                    self.path.removeAll()
                 }
             } catch let signOutError as NSError {
                 print("Error signing out: %@", signOutError)
