@@ -13,7 +13,7 @@ The project also serves as a testbed for agentic development: using AI agents to
 
 | Layer | Technology |
 |---|---|
-| Platform | iOS 18+ |
+| Platform | iOS 26+ |
 | Language | Swift / SwiftUI |
 | Architecture | MVVM |
 | Backend | Firebase (Auth, Firestore, Cloud Storage) |
@@ -24,7 +24,7 @@ The project also serves as a testbed for agentic development: using AI agents to
 
 ### Prerequisites
 
-- **Xcode 16+** (required for iOS 18 SDK)
+- **Xcode 26.4+** (required for iOS 26 SDK and objectVersion 100 project format)
 
 ### Setup
 
@@ -64,6 +64,7 @@ Cove/
 ├── Components/         # Reusable UI components (ProductCardView, LikeButton, etc.)
 ├── Styles/             # Custom button styles and view modifiers
 ├── Enums/              # Shared enum types (ProductTypes)
+├── Constants/          # Design token constants (Spacing.swift, Radius.swift)
 └── Resources/          # Assets, fonts (Gazpacho, Lato), Rive animations
 ```
 

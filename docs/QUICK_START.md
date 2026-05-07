@@ -4,7 +4,7 @@ Get the Cove iOS app building and running on your local machine.
 
 ## Prerequisites
 
-- **Xcode 16+** (required for iOS 18 SDK)
+- **Xcode 26.4+** (required for iOS 26 SDK and objectVersion 100 project format)
 - **Ruby + Bundler** — for Fastlane (optional, only needed for CI/CD lanes)
 
 ## Steps
@@ -43,7 +43,7 @@ Select a simulator or connected device in Xcode and press **⌘R**.
 ## Notes
 
 - **Bundle ID:** `com.danicajiao.cove`
-- **Minimum deployment target:** iOS 18.0
+- **Minimum deployment target:** iOS 26.0
 - Google Sign-In and Facebook Login are configured via `Info.plist` — no additional setup required beyond the `GoogleService-Info.plist`
 - For CI/CD setup, see [CI/CD Workflows Documentation](CI_CD_WORKFLOWS.md)
 
