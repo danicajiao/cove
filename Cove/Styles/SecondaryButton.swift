@@ -12,7 +12,7 @@ struct SecondaryButton: PrimitiveButtonStyle {
     let width: CGFloat?
     let height: CGFloat?
 
-    init(width: CGFloat? = .infinity, height: CGFloat? = 55) {
+    init(width: CGFloat? = .infinity, height: CGFloat? = 50) {
         self.width = width
         self.height = height
     }
@@ -25,7 +25,7 @@ struct SecondaryButton: PrimitiveButtonStyle {
             .frame(maxWidth: width, maxHeight: height)
             .background {
                 Capsule()
-                    .fill(Color.Colors.Fills.secondary)
+                    .fill(Color.Colors.Fills.inverse)
                     .strokeBorder(Color.Colors.Strokes.primary, lineWidth: 1)
             }
             .contentShape(.capsule)

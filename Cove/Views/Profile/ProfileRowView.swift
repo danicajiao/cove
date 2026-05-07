@@ -14,7 +14,7 @@ struct ProfileRowView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 14) {
+            HStack(spacing: Spacing.lg) {
                 Image(systemName: systemImage)
                     .frame(width: 20)
                     .foregroundStyle(foregroundColor)
@@ -29,14 +29,14 @@ struct ProfileRowView: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color.Colors.Fills.tertiary)
             }
-            .padding(.vertical, 16)
+            .padding(.vertical, Spacing.lg)
 
             Divider()
         }
     }
 
     private var foregroundColor: Color {
-        isDestructive ? Color.red : Color.Colors.Fills.primary
+        isDestructive ? Color.red : Color.Colors.Text.primary
     }
 }
 
@@ -48,7 +48,7 @@ struct ProfileRowView_Previews: PreviewProvider {
             ProfileRowView(systemImage: "lock", label: "Security and Logins")
             ProfileRowView(systemImage: "rectangle.portrait.and.arrow.right", label: "Log Out", isDestructive: true)
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, Spacing.xl)
         .background(Color.Colors.Backgrounds.primary)
     }
 }

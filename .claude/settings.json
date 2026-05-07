@@ -1,15 +1,10 @@
 {
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".claude/hooks/check-dependencies.py"
-          }
-        ]
-      }
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(swiftformat *)",
+      "Bash(swiftlint *)",
+      "Bash(gh *)"
     ]
   }
 }

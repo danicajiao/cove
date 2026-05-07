@@ -13,6 +13,15 @@ disabled_rules:
   - trailing_whitespace
   - redundant_discardable_let
 
+identifier_name:
+  excluded:
+    - id
+    - xs
+    - sm
+    - md
+    - lg
+    - xl
+
 line_length:
   warning: 200
   error: 250

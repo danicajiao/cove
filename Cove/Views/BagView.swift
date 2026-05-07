@@ -23,7 +23,7 @@ struct BagView: View {
             VStack(spacing: 20) {
                 HStack {
                     Text("My Shopping Bag")
-                        .font(Font.custom("Poppins-SemiBold", size: 26))
+                        .font(Font.custom("Lato-Bold", size: 26))
                         .padding(.top, 28)
                     Spacer()
                 }
@@ -31,12 +31,12 @@ struct BagView: View {
 
                 if bag.bagProducts.isEmpty {
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.Colors.Backgrounds.secondary)
+                        .fill(Color.Colors.Fills.inverse)
                         .overlay {
                             Text("Products you add to your bag can be found here!")
                                 .multilineTextAlignment(.center)
-                                .font(Font.custom("Poppins-Regular", size: 16))
-                                .foregroundStyle(Color.Colors.Fills.primary)
+                                .font(Font.custom("Lato-Regular", size: 16))
+                                .foregroundStyle(Color.Colors.Text.primary)
                                 .padding(50)
                         }
                         .border(Color.Colors.Strokes.primary, width: 1)
@@ -57,12 +57,12 @@ struct BagView: View {
 
                 VStack {
                     Rectangle()
-                        .frame(height: 4)
+                        .frame(height: 3)
                         .foregroundStyle(Color.Colors.Fills.quinary)
 
                     HStack {
                         TextField("Insert your coupon code", text: /*@START_MENU_TOKEN@*//*@PLACEHOLDER=Value@*/ .constant("")/*@END_MENU_TOKEN@*/)
-                            .font(Font.custom("Poppins-Regular", size: 14))
+                            .font(Font.custom("Lato-Regular", size: 14))
                             .padding([.leading, .trailing])
                             .frame(maxHeight: .infinity)
                             .overlay {
@@ -73,20 +73,20 @@ struct BagView: View {
                         Button {} label: {
                             Text("Apply")
                         }
-                        .buttonStyle(PrimaryButton(width: 72, height: .infinity))
+                        .buttonStyle(PrimaryButton(width: 72, height: 40))
                     }
                     .frame(height: 40)
                     .padding([.leading, .trailing], 20)
                     .padding([.top, .bottom], 10)
 
                     Rectangle()
-                        .frame(height: 4)
+                        .frame(height: 3)
                         .foregroundStyle(Color.Colors.Fills.quinary)
                 }
 
                 if !bag.bagProducts.isEmpty {
                     Text("Other products you might like")
-                        .font(Font.custom("Poppins-SemiBold", size: 18))
+                        .font(Font.custom("Lato-Bold", size: 18))
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding([.leading, .trailing], 20)
 
@@ -114,10 +114,10 @@ struct BagView: View {
                 HStack {
                     VStack(alignment: .leading) {
                         Text("Total")
-                            .font(Font.custom("Poppins-Regular", size: 14))
-                            .foregroundStyle(Color.Colors.Fills.tertiary)
+                            .font(Font.custom("Lato-Regular", size: 14))
+                            .foregroundStyle(Color.Colors.Text.tertiary)
                         Text("$\(bag.total)")
-                            .font(Font.custom("Poppins-SemiBold", size: 20))
+                            .font(Font.custom("Lato-Bold", size: 20))
                             .foregroundStyle(Color.Colors.Brand.accent)
                     }
 
@@ -129,7 +129,7 @@ struct BagView: View {
                 .padding(.vertical, 16)
                 .padding(.horizontal, 20)
                 .background {
-                    Color.white.ignoresSafeArea()
+                    Color.Colors.Fills.inverse.ignoresSafeArea()
                 }
             }
         }

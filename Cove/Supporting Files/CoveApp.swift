@@ -27,15 +27,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         print("delegate run")
         return true
     }
-
-    func application(_ application: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any]) -> Bool {
-        ApplicationDelegate.shared.application(
-            application,
-            open: url,
-            sourceApplication: options[UIApplication.OpenURLOptionsKey.sourceApplication] as? String,
-            annotation: options[UIApplication.OpenURLOptionsKey.annotation]
-        )
-    }
 }
 
 @main
@@ -88,6 +79,7 @@ struct CoveApp: App {
             .environmentObject(favoritesStore)
             .onOpenURL { url in
                 GIDSignIn.sharedInstance.handle(url)
+                ApplicationDelegate.shared.application(UIApplication.shared, open: url, options: [:])
             }
         }
     }

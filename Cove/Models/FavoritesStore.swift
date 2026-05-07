@@ -77,7 +77,7 @@ class FavoritesStore: ObservableObject {
                     try await document.reference.delete()
                 }
             } else {
-                try await favoritesRef.addDocument(from: FavoriteProduct(productId: productId, categoryId: categoryId))
+                try favoritesRef.addDocument(from: FavoriteProduct(productId: productId, categoryId: categoryId))
             }
         } catch {
             print("Error toggling favorite: \(error)")

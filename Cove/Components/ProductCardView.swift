@@ -55,7 +55,7 @@ struct ProductCardView: View {
                 .buttonStyle(PlainButtonStyle())
 
                 LikeButton(productId: productId, categoryId: product.categoryId)
-                    .padding(10)
+                    .padding(Spacing.sm)
             } else {
                 cardContent
             }
@@ -77,38 +77,38 @@ struct ProductCardView: View {
                     }
             }
 
-            VStack(spacing: 6) {
+            VStack(spacing: Spacing.sm) {
                 VStack(spacing: 0) {
                     Text(titleStr)
                         .font(Font.custom("Gazpacho-Black", size: 12))
-                        .foregroundStyle(Color.Colors.Fills.primary)
+                        .foregroundStyle(Color.Colors.Text.primary)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                     Text(subtitleStr)
                         .font(Font.custom("Lato-Regular", size: 12))
-                        .foregroundStyle(Color.Colors.Fills.tertiary)
+                        .foregroundStyle(Color.Colors.Text.tertiary)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
                 Text("$\(Int(price))")
-                    .font(Font.custom("Lato-Bold", size: 14))
-                    .foregroundStyle(Color.Colors.Fills.primary)
+                    .font(Font.custom("Lato-SemiBold", size: 14))
+                    .foregroundStyle(Color.Colors.Text.primary)
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(8)
+            .padding(Spacing.sm)
             .background(.white)
         }
         .frame(maxWidth: .infinity) // Take up the full width of the column
         .frame(minWidth: 171)
         .frame(height: 239)
         .background(averageColor)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
         .customShadow()
     }
 
