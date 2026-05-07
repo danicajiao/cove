@@ -22,6 +22,7 @@ Cove/
 ├── Components/           # Reusable UI components (ProductCardView, LikeButton, etc.)
 ├── Styles/               # Custom button styles and shadow modifiers
 ├── Enums/                # ProductTypes
+├── Constants/            # Design token constants (Spacing.swift, Radius.swift)
 └── Resources/            # Assets, fonts (Gazpacho, Lato), Rive animations
 ```
 
