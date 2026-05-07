@@ -142,8 +142,9 @@ ExportOptions.plist
 # Uncomment if you want to track Gemfile.lock
 # Gemfile.lock
 
-### Claude hooks ###
+### Claude ###
 .claude/.dep-cleared-*
+.claude/settings.local.json
 
 ### Claude worktrees ###
 .claude/worktrees/

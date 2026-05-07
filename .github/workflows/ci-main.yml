@@ -7,9 +7,6 @@ on:
     paths:
       - 'Cove/**'
       - 'Cove.xcodeproj/**'
-      - 'Cove.xcworkspace/**'
-      - 'Podfile'
-      - 'Podfile.lock'
       - 'Gemfile'
       - 'Gemfile.lock'
       - 'fastlane/**'
@@ -29,14 +26,6 @@ jobs:
         with:
           ruby-version: '4.0.1'
           bundler-cache: true
-
-      - name: Cache CocoaPods
-        uses: actions/cache@v5
-        with:
-          path: Pods
-          key: ${{ runner.os }}-pods-${{ hashFiles('**/Podfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pods-
 
       - name: Build iOS app
         run: bundle exec fastlane build

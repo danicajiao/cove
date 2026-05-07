@@ -11,6 +11,7 @@ Welcome to the documentation for the Cove iOS app.
   - Build and run instructions
 
 ### App
+- **[Design System](DESIGN_SYSTEM.md)** - Color tokens, typography, spacing, radius, shadow, and Figma↔Swift component mapping
 - **[App Architecture](APP_ARCHITECTURE.md)** - How the app is structured and how data flows
   - MVVM pattern and ViewModels
   - Authentication and navigation
@@ -46,6 +47,9 @@ Welcome to the documentation for the Cove iOS app.
 
 ### I want to understand how the app works
 → Read [App Architecture](APP_ARCHITECTURE.md)
+
+### I'm implementing UI and need color/font/spacing tokens
+→ Read [Design System](DESIGN_SYSTEM.md)
 
 ### I need to configure CI/CD secrets
 → Follow [Secrets Setup Guide](SECRETS_SETUP.md)

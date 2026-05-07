@@ -12,19 +12,19 @@ struct EmailField: View {
     @FocusState.Binding var focus: Field?
 
     var body: some View {
-        VStack(spacing: 5) {
+        VStack(spacing: Spacing.xs) {
             Text("Email")
                 .font(.custom("Lato-Bold", size: 12))
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .foregroundStyle(.black.opacity(0.5))
+                .foregroundStyle(Color.Colors.Text.tertiary)
             TextField(String("email@example.com"), text: $text)
                 .font(.custom("Lato-Regular", size: 14))
                 .padding()
                 .frame(maxWidth: .infinity, maxHeight: 50)
-                .background(Color.white)
+                .background(Color.Colors.Fills.inverse)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .strokeBorder(Color.black, lineWidth: 1)
+                    RoundedRectangle(cornerRadius: Radius.lg, style: .continuous)
+                        .strokeBorder(Color.Colors.Strokes.primary, lineWidth: 1)
                 )
                 .focused($focus, equals: Field.email)
                 .onTapGesture {

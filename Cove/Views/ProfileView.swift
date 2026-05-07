@@ -14,7 +14,7 @@ struct ProfileView: View {
 
     var body: some View {
         ScrollView(showsIndicators: false) {
-            VStack(spacing: 20) {
+            VStack(spacing: Spacing.xl) {
                 ProfileHeaderView(viewModel: viewModel)
 
                 StatsRowView(orders: 0, followers: 0, following: 0)
@@ -39,9 +39,10 @@ struct ProfileView: View {
                         )
                     }
                 }
+                .padding(.horizontal, Spacing.xl)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 30)
+            .padding(.top, Spacing.xxxl)
+            .padding(.bottom, Spacing.xl)
         }
         .background(Color.Colors.Backgrounds.primary.ignoresSafeArea(.all))
         .confirmationDialog("Confirm Log Out", isPresented: $presentAlert) {
