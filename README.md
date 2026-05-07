@@ -24,7 +24,7 @@ The project also serves as a testbed for agentic development: using AI agents to
 
 ### Prerequisites
 
-- **Xcode 16+** (required for iOS 18 SDK)
+- **Xcode 26.4+** (required for iOS 18 SDK and objectVersion 100 project format)
 
 ### Setup
 

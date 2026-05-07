@@ -4,7 +4,7 @@ Get the Cove iOS app building and running on your local machine.
 
 ## Prerequisites
 
-- **Xcode 16+** (required for iOS 18 SDK)
+- **Xcode 26.4+** (required for iOS 18 SDK and objectVersion 100 project format)
 - **Ruby + Bundler** — for Fastlane (optional, only needed for CI/CD lanes)
 
 ## Steps
