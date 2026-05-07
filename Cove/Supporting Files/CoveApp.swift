@@ -85,6 +85,9 @@ struct CoveApp: App {
                     }
                 }
             }
+            .onChange(of: appState.authState) { _, _ in
+                authPath = []
+            }
             .environmentObject(appState)
             .environmentObject(favoritesStore)
             .onOpenURL { url in
