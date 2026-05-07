@@ -3,7 +3,7 @@
 //  Cove
 //
 
-enum AuthPath {
+enum AuthPath: Hashable {
     case login
     case signup
 }
