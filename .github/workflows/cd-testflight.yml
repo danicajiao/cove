@@ -12,6 +12,8 @@ jobs:
   deploy-testflight:
     name: Build and Deploy to TestFlight
     runs-on: macos-26
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
 
     steps:
       - name: Checkout code
