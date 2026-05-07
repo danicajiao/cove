@@ -68,4 +68,4 @@ Welcome to the documentation for the Cove iOS app.
 
 ---
 
-**Last Updated**: March 2026
+**Last Updated**: May 2026

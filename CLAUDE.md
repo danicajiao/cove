@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Cove is an iOS app built with SwiftUI following MVVM architecture. It uses Firebase (Auth, Firestore, Storage) for backend, CocoaPods for dependency management, and targets iOS 18+.
+Cove is an iOS app built with SwiftUI following MVVM architecture. It uses Firebase (Auth, Firestore, Storage) for backend, Swift Package Manager for dependencies, and targets iOS 18+.
 
 See `docs/` for architecture details: `APP_ARCHITECTURE.md`, `QUICK_START.md`, `CI_CD_WORKFLOWS.md`.
 
@@ -114,6 +114,7 @@ Cove/
 ├── Components/         # Reusable UI components
 ├── Styles/             # Button styles and view modifiers
 ├── Enums/              # Shared enum types
+├── Constants/          # Design token constants (Spacing.swift, Radius.swift)
 └── Resources/          # Assets, fonts, Rive animations
 ```
 
