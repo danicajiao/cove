@@ -33,6 +33,7 @@ Welcome to the documentation for the Cove iOS app.
 - **[Backend Infrastructure](BACKEND_INFRASTRUCTURE.md)** - Planned infrastructure: K3s, GCP API Gateway, Cloudflare Tunnel, migration phases
 - **[Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md)** - Planned data layer: hybrid SQL, NoSQL & GraphQL backend
 - **[Category & Product Architecture](CATEGORY_AND_PRODUCT_ARCHITECTURE.md)** - Planned category hierarchy and filtering system
+- **[cove-infra Bootstrap](cove-infra-bootstrap.md)** - Runbook for creating the `cove-infra` repo and laying down the Kustomize + Argo CD skeleton
 
 ### Feature Planning
 - **[LLM Integration Ideas](LLM_INTEGRATION_IDEAS.md)** - Potential ways to incorporate LLMs as production features
