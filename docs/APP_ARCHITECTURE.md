@@ -42,7 +42,7 @@ CoveApp
     └── no network          →  SplashView
 ```
 
-`AppState` holds `@Published var authState: AuthState` and `@Published var path: [Path]`. When a user successfully signs in, `authState` flips to `.loggedIn`, which triggers CoveApp to rebuild and show MainView. The navigation path is cleared automatically.
+`AppState` holds `@Published var authState: AuthState`. When a user successfully signs in, `authState` flips to `.loggedIn`, which triggers `CoveApp` to rebuild and show `MainView`. Auth navigation is owned locally by `CoveApp` via `@State private var authPath: [AuthPath]`, which is reset to `[]` via `.onChange(of: appState.authState)` on logout.
 
 ### Supported Auth Methods
 
@@ -53,15 +53,21 @@ CoveApp
 | Facebook | FBSDKLoginKit → Firebase Auth |
 | Apple | Planned, not yet implemented |
 
-### Navigation Path Enum
+### Navigation Enums
+
+`AuthPath` drives the auth `NavigationStack` in `CoveApp`:
+
+```swift
+enum AuthPath: Hashable {
+    case login
+    case signup
+}
+```
+
+`Path` drives in-app navigation within `TabNavigationStack`:
 
 ```swift
 enum Path: Hashable {
-    case welcome
-    case login
-    case signup
-    case main
-    case home
     case product(id: String)   // Product detail navigation within tabs
 }
 ```
@@ -106,7 +112,6 @@ Serves `ProfileView`. Lightweight — all data is derived from `Auth.auth().curr
 ### AppState
 Injected at the root via `.environmentObject`. Owns:
 - `authState` — drives the root UI split between auth flow and main app
-- `path` — the NavigationStack path for the auth flow
 - All sign-in/sign-out methods for every auth provider
 
 ### Bag
@@ -243,7 +248,7 @@ Product images are stored in Firebase Storage. `ProductCardView` fetches them as
 2. appState.logOut() called
 3. Provider-specific cleanup (GIDSignIn.signOut() / LoginManager().logOut())
 4. Firebase Auth signOut()
-5. authState = .loggedOut → CoveApp rebuilds → WelcomeView shown
+5. authState = .loggedOut → CoveApp resets authPath = [] → WelcomeView shown
 ```
 
 ---
