@@ -39,7 +39,7 @@ Welcome to the documentation for the Cove iOS app.
 - **[LLM Integration Ideas](LLM_INTEGRATION_IDEAS.md)** - Potential ways to incorporate LLMs as production features
 
 ### Technical Reference
-- **[Fastlane Configuration](../fastlane/README.md)** - Fastlane lanes and local usage
+- **[Fastlane Configuration](../apps/ios/fastlane/README.md)** - Fastlane lanes and local usage
 
 ## 🎯 Which Document Should I Read?
 

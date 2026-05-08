@@ -1,4 +1,4 @@
-name: CD - Deploy to TestFlight
+name: CD - Deploy to TestFlight (iOS)
 
 on:
   workflow_dispatch:
@@ -14,6 +14,9 @@ jobs:
     runs-on: macos-26
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
+    defaults:
+      run:
+        working-directory: apps/ios
 
     steps:
       - name: Checkout code
@@ -27,6 +30,7 @@ jobs:
         with:
           ruby-version: '4.0.1'
           bundler-cache: true
+          working-directory: apps/ios
 
       - name: Configure git for version bumps
         run: |
@@ -79,7 +83,7 @@ jobs:
             echo "This indicates the build number was not properly incremented by Fastlane."
             exit 1
           fi
-          
+
           echo "✓ Tag v${VERSION}-${BUILD} is unique and ready to be created"
 
       - name: Create GitHub Release
@@ -94,7 +98,7 @@ jobs:
             const version = process.env.VERSION;
             const build = process.env.BUILD;
             const reason = process.env.REASON || 'TestFlight deployment';
-            
+
             await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -112,4 +116,4 @@ jobs:
           name: build-logs
           path: |
             ~/Library/Logs/gym
-            *.log
+            apps/ios/*.log
