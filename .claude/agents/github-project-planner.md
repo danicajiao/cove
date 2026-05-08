@@ -156,7 +156,7 @@ Every issue needs a **type label**. Most sub-issues need an **area label**. Epic
 | Asset (optional) | `figma`, `rive` |
 | Meta (sparingly) | `good first issue`, `help wanted`, `question`, `wontfix` |
 
-**Rules**: Never combine `feature` + `enhancement`. Add `figma` to a `ui/ux` sub-issue only when the user has provided a Figma frame link — it signals the design exists and the issue is ready for the `figma-ui-implementer` agent. Do not add `figma` speculatively. Add `rive` when a Rive animation asset is required.
+**Rules**: Never combine `feature` + `enhancement`. Add `figma` to a `ui/ux` sub-issue only when the user has provided a Figma frame link — it signals the design exists and the issue is ready for the `swiftui-engineer` agent. Do not add `figma` speculatively. Add `rive` when a Rive animation asset is required.
 
 **Examples**:
 - Epic: Auth System → `epic, feature, security`
@@ -191,7 +191,7 @@ The issues you create are the top of a multi-agent pipeline. Once an issue is cr
 
 **How sub-issues flow downstream:**
 
-- `ui/ux + figma` sub-issues → picked up by the `figma-ui-implementer` agent, which reads the issue body as its spec, implements the view in a worktree, and creates a PR that closes the issue
+- `ui/ux + figma` sub-issues → picked up by the `swiftui-engineer` agent, which reads the issue body as its spec, implements the view in a worktree, and creates a PR that closes the issue
 - The branch the agent works on is named after the issue: `feature/<issue-id>-<short-description>`
 - Sub-issue PRs target the **integration branch** (`feature/<epic-id>-<description>`), not `main` — include the integration branch name in each sub-issue's Technical Notes so agents know where to target
 - The PR description contains `Closes #<issue-id>`, which auto-closes the issue on merge

@@ -166,6 +166,6 @@ Every epic gets an integration branch created by `github-project-planner` at pla
 
 | Sub-issue labels | Handled by |
 |---|---|
-| `ui/ux` + `figma` | `figma-ui-implementer` |
+| `ui/ux` + `figma` | `swiftui-engineer` |
 | `docs` | `documentation-maintainer` |
 | planning / epics | `github-project-planner` |
