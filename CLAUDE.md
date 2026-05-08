@@ -1,10 +1,24 @@
-# Cove iOS — Claude Context
+# Cove — Claude Context
 
 ## Project Overview
 
-Cove is an iOS app built with SwiftUI following MVVM architecture. It uses Firebase (Auth, Firestore, Storage) for backend, Swift Package Manager for dependencies, and targets iOS 26+.
+Cove is a monorepo containing the Cove iOS app and (eventually) a web client, backend services, and shared packages. The iOS app uses SwiftUI with MVVM, Firebase (Auth, Firestore, Storage), Swift Package Manager, and targets iOS 26+.
 
-**Required Xcode version: 26.4+** — the project uses `objectVersion = 100` which requires Xcode 26.4+. CI explicitly selects Xcode 26.4.1 via `DEVELOPER_DIR=/Applications/Xcode_26.4.1.app/Contents/Developer`. Use Xcode 26.4 or later locally to stay in sync with CI.
+**Repo layout:**
+
+```
+cove/
+├── apps/
+│   └── ios/                # Swift / SwiftUI iOS app — see apps/ios/Cove/
+├── services/               # Backend services (planned)
+├── packages/               # Shared code (api-schema, design-tokens — planned)
+└── docs/                   # Cross-cutting product/architecture docs
+```
+
+**iOS-specific:**
+
+- **Required Xcode version: 26.4+** — `objectVersion = 100` requires Xcode 26.4+. CI selects Xcode 26.4.1 via `DEVELOPER_DIR=/Applications/Xcode_26.4.1.app/Contents/Developer`.
+- All iOS commands (`swiftformat`, `swiftlint`, `bundle exec fastlane ...`) must be run from `apps/ios/`.
 
 See `docs/` for architecture details: `APP_ARCHITECTURE.md`, `QUICK_START.md`, `CI_CD_WORKFLOWS.md`.
 
@@ -44,15 +58,15 @@ Add ProfileViewModel with Firebase Auth user data
 
 ---
 
-## Code Conventions
+## iOS Code Conventions
 
 ### Architecture — MVVM
 
-- **Views** (`Views/`, `Components/`): SwiftUI only, no business logic
-- **ViewModels** (`View Models/`): `ObservableObject`, marked `@MainActor`, one per major view
-- **Models** (`Models/`): Data structures and global state (e.g. `AppState`, `Bag`)
-- **Enums** (`Enums/`): Shared enum types (`ProductTypes`); note that `AuthState`, `AuthMethod`, and `Path` are currently defined in `Models/AppState.swift`
-- **Styles** (`Styles/`): Custom `PrimitiveButtonStyle` implementations
+- **Views** (`apps/ios/Cove/Views/`, `apps/ios/Cove/Components/`): SwiftUI only, no business logic
+- **ViewModels** (`apps/ios/Cove/View Models/`): `ObservableObject`, marked `@MainActor`, one per major view
+- **Models** (`apps/ios/Cove/Models/`): Data structures and global state (e.g. `AppState`, `Bag`)
+- **Enums** (`apps/ios/Cove/Enums/`): Shared enum types (`ProductTypes`); note that `AuthState`, `AuthMethod`, and `Path` are currently defined in `Models/AppState.swift`
+- **Styles** (`apps/ios/Cove/Styles/`): Custom `PrimitiveButtonStyle` implementations
 
 ### Naming
 
@@ -100,15 +114,15 @@ The four rules to remember:
 - Indentation: 4 spaces
 - Max line width: 150 characters (SwiftFormat), 200 warning / 250 error (SwiftLint)
 - No semicolons
-- Run `swiftformat .` before committing (config in `.swiftformat`)
-- Run `swiftlint` before committing and resolve any errors
+- From `apps/ios/`, run `swiftformat .` before committing (config in `apps/ios/.swiftformat`)
+- From `apps/ios/`, run `swiftlint` before committing and resolve any errors
 
 ---
 
-## File Organization
+## iOS File Organization
 
 ```
-Cove/
+apps/ios/Cove/
 ├── Supporting Files/   # App entry point
 ├── Models/             # Data + global state
 ├── View Models/        # Business logic
@@ -133,13 +147,13 @@ Claude agents run in isolated git worktrees — each agent gets its own director
 ```
 github-project-planner
   └── creates epic + sub-issues on GitHub
-        └── creates integration branch: feature/<epic-id>-<description>
+        └── (optional) creates integration branch: feature/<epic-id>-<description>
               └── sub-issue is picked up by an agent
                     └── harness spins up a worktree: branch claude/<name>, isolated directory
                           └── agent renames branch: feature/<issue-id>-<desc>
-                                └── agent implements, runs swiftformat + swiftlint, commits, pushes
-                                      └── PR created targeting integration branch with "Closes #<issue-id>"
-                                            └── PRs merged into integration branch → tested in main repo
+                                └── agent implements, runs swiftformat + swiftlint from the affected app dir, commits, pushes
+                                      └── PR created targeting integration branch (or main) with "Closes #<issue-id>"
+                                            └── PRs merged into integration branch → tested
                                                   └── integration branch PR merged to main → epic closed
 ```
 
@@ -147,9 +161,9 @@ Multiple sub-issues can be in-flight simultaneously, each in its own worktree, e
 
 ### Integration branches
 
-Every epic gets an integration branch created by `github-project-planner` at planning time. Sub-issue PRs target this branch instead of `main`, so all changes can be built and tested together before touching `main`.
+Integration branches are optional and used for **cross-cutting epics** that span multiple apps/services (e.g. iOS + a backend service in the same epic). Single-area epics can target `main` directly.
 
-- Integration branch name follows the same convention: `feature/<epic-id>-<description>`
+- Integration branch name follows the convention: `feature/<epic-id>-<description>`
 - The integration branch is created from `main` at the time the epic is planned
 - A PR from the integration branch to `main` is opened once all sub-issues are merged and tested
 
@@ -165,7 +179,7 @@ This rule applies to every agent **and** to the main session. If the MCP propaga
 
 - You are already on an isolated branch (initially named `claude/<worktree-name>`) — do not run `git checkout -b`
 - Rename the branch to follow the naming convention before pushing: `git branch -m <label>/<issue-id>-<description>`
-- Before committing, run `swiftformat .` then `swiftlint` and resolve any errors
+- For iOS work: `cd apps/ios` before running `swiftformat .` and `swiftlint`
 - Commit and push your changes to that branch
 - Open a PR targeting the epic's integration branch (provided in your task prompt) or `main` if there is no epic
 - Include `Closes #<issue-id>` in the PR description

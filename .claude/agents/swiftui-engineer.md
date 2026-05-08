@@ -64,9 +64,9 @@ Before writing a single line of SwiftUI, understand what already exists:
 
 ```
 Read: docs/DESIGN_SYSTEM.md          → authoritative token reference (colors, fonts, spacing, radius)
-Glob: Cove/Views/**/*.swift          → find similar screens for structural reference
-Glob: Cove/View Models/*.swift       → find existing ViewModels that may cover data needs
-Glob: Cove/Components/**/*.swift     → find reusable components (buttons, cards, headers, etc.)
+Glob: apps/ios/Cove/Views/**/*.swift          → find similar screens for structural reference
+Glob: apps/ios/Cove/View Models/*.swift       → find existing ViewModels that may cover data needs
+Glob: apps/ios/Cove/Components/**/*.swift     → find reusable components (buttons, cards, headers, etc.)
 Grep: "Color.Colors"                 → confirm available color token names in use
 Grep: "Font.custom"                  → confirm available font names and sizes
 ```
@@ -78,7 +78,7 @@ Identify:
 
 ### 4. Implement the View
 
-Write the SwiftUI view to `Cove/Views/<ScreenName>View.swift`. If a new ViewModel is required, write it to `Cove/View Models/<ScreenName>ViewModel.swift`.
+Write the SwiftUI view to `apps/ios/Cove/Views/<ScreenName>View.swift`. If a new ViewModel is required, write it to `apps/ios/Cove/View Models/<ScreenName>ViewModel.swift`.
 
 Follow these conventions exactly:
 
@@ -208,9 +208,9 @@ This agent runs in an isolated git worktree — the branch was already renamed i
 | Extract design tokens / variables | `mcp__be768108-4036-4a54-bf42-1167f0b466f2__get_variable_defs` |
 | Inspect node structure | `mcp__be768108-4036-4a54-bf42-1167f0b466f2__get_metadata` |
 | Search component libraries | `mcp__be768108-4036-4a54-bf42-1167f0b466f2__search_design_system` |
-| Find existing views | `Glob` → `Cove/Views/**/*.swift` |
-| Find existing ViewModels | `Glob` → `Cove/View Models/*.swift` |
-| Find reusable components | `Glob` → `Cove/Components/**/*.swift` |
+| Find existing views | `Glob` → `apps/ios/Cove/Views/**/*.swift` |
+| Find existing ViewModels | `Glob` → `apps/ios/Cove/View Models/*.swift` |
+| Find reusable components | `Glob` → `apps/ios/Cove/Components/**/*.swift` |
 | Search for token usage | `Grep` for `Color.Colors` or `Font.custom` |
 | Write new files | `Write` |
 | Edit existing files | `Edit` |
@@ -225,9 +225,9 @@ This agent runs in an isolated git worktree — the branch was already renamed i
 **Repository**: `owner: "danicajiao"`, `repo: "cove-ios"`
 
 **Project structure:**
-- Views: `Cove/Views/<Name>View.swift`
-- ViewModels: `Cove/View Models/<Name>ViewModel.swift`
-- Components: `Cove/Components/`
+- Views: `apps/ios/Cove/Views/<Name>View.swift`
+- ViewModels: `apps/ios/Cove/View Models/<Name>ViewModel.swift`
+- Components: `apps/ios/Cove/Components/`
 - Models: protocol-based — `any Product`, `CoffeeProduct`, `MusicProduct`, `ApparelProduct`
 - App state: `AppState` passed as `@EnvironmentObject`
 

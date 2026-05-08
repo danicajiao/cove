@@ -159,7 +159,7 @@ Sub-issues will be linked to this epic.
 - [ ] ...
 
 ## Technical Notes
-- Pattern to follow / files to reference: `Cove/...`
+- Pattern to follow / files to reference: `apps/ios/Cove/...`
 - **Figma**: <url>  ← include only when a frame link was provided; omit the line entirely if not
 
 ## Dependencies
@@ -238,6 +238,6 @@ Vague issues produce vague implementations. The more precise the issue, the bett
 ## Project Context
 
 Swift/SwiftUI iOS app with Firebase backend:
-- ViewModels: `ObservableObject` + `@MainActor`, in `Cove/View Models/`
+- ViewModels: `ObservableObject` + `@MainActor`, in `apps/ios/Cove/View Models/`
 - Backend: Firestore, Auth, Storage — follow existing ViewModel fetch patterns
 - Models: protocol-based product system (`any Product`, `CoffeeProduct`, `MusicProduct`, etc.)

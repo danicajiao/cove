@@ -9,7 +9,20 @@ Cove is a curated marketplace of conscious businesses and quality producers — 
 
 The project also serves as a testbed for agentic development: using AI agents to automate parts of the development process, such as implementing Figma designs directly into SwiftUI and orchestrating multi-step coding tasks from GitHub issues.
 
-## Tech Stack
+## Repository layout
+
+This is a monorepo. Apps, services, and shared packages live under their respective top-level directories:
+
+```
+cove/
+├── apps/
+│   └── ios/                # Swift / SwiftUI iOS app (this is what runs in Xcode)
+├── services/               # Backend services (planned)
+├── packages/               # Shared schemas, design tokens (planned)
+└── docs/                   # Cross-cutting product/architecture docs
+```
+
+## Tech Stack (iOS app)
 
 | Layer | Technology |
 |---|---|
@@ -33,8 +46,8 @@ The project also serves as a testbed for agentic development: using AI agents to
 git clone https://github.com/danicajiao/cove-ios.git
 cd cove-ios
 
-# 2. Open the project
-open Cove.xcodeproj
+# 2. Open the iOS project
+open apps/ios/Cove.xcodeproj
 ```
 
 Dependencies are managed via Swift Package Manager and resolve automatically when you open the project in Xcode.
@@ -44,7 +57,7 @@ Dependencies are managed via Swift Package Manager and resolve automatically whe
 The app requires a `GoogleService-Info.plist` to connect to Firebase. This file is not committed to the repository. Request access by opening an issue or contacting the project owner, then place it at:
 
 ```
-Cove/Supporting Files/GoogleService-Info.plist
+apps/ios/Cove/Supporting Files/GoogleService-Info.plist
 ```
 
 ### Build and Run
@@ -53,10 +66,10 @@ Select a simulator or connected device in Xcode and press **⌘R**.
 
 For CI/CD setup, see [CI/CD Workflows Documentation](docs/CI_CD_WORKFLOWS.md).
 
-## Project Structure
+## iOS app structure
 
 ```
-Cove/
+apps/ios/Cove/
 ├── Supporting Files/   # App entry point (CoveApp.swift), Info.plist
 ├── Models/             # Data models and global state (AppState, Bag, FavoritesStore)
 ├── View Models/        # Business logic and Firestore access

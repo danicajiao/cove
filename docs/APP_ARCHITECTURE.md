@@ -11,7 +11,7 @@ Cove uses **MVVM (Model-View-ViewModel)** with SwiftUI. State is managed through
 ## Project Structure
 
 ```
-Cove/
+apps/ios/Cove/
 ├── Supporting Files/     # App entry point (CoveApp.swift), Info.plist
 ├── Models/               # Data models and global state (AppState, VisitList, Product types)
 │                         #   Also defines Path, AuthState, AuthMethod enums (in AppState.swift)

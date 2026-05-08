@@ -19,7 +19,7 @@ cd cove-ios
 ### 2. Open the project
 
 ```bash
-open Cove.xcodeproj
+open apps/ios/Cove.xcodeproj
 ```
 
 Dependencies are managed via Swift Package Manager. Xcode will resolve and download all packages automatically on first open.
@@ -33,7 +33,7 @@ The app requires a `GoogleService-Info.plist` file to connect to Firebase. This 
 Once you have the file, place it at:
 
 ```
-Cove/Supporting Files/GoogleService-Info.plist
+apps/ios/Cove/Supporting Files/GoogleService-Info.plist
 ```
 
 ### 4. Build and run

@@ -1,4 +1,4 @@
-name: CD - Release to App Store
+name: CD - Release to App Store (iOS)
 
 on:
   workflow_dispatch:
@@ -9,6 +9,9 @@ jobs:
     runs-on: macos-26
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
+    defaults:
+      run:
+        working-directory: apps/ios
 
     steps:
       - name: Checkout code
@@ -22,11 +25,11 @@ jobs:
         run: |
           # Extract tag from ref (e.g., refs/tags/v0.1.0-1)
           TAG=${GITHUB_REF#refs/tags/}
-          
+
           # Extract version and build from tag (e.g., v0.1.0-1)
           VERSION=$(echo "$TAG" | sed -E 's/^v([0-9]+\.[0-9]+\.[0-9]+)-[0-9]+$/\1/')
           BUILD=$(echo "$TAG" | sed -E 's/^v[0-9]+\.[0-9]+\.[0-9]+-([0-9]+)$/\1/')
-          
+
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "build=$BUILD" >> $GITHUB_OUTPUT
           echo "tag=$TAG" >> $GITHUB_OUTPUT
@@ -37,6 +40,7 @@ jobs:
         with:
           ruby-version: '4.0.1'
           bundler-cache: true
+          working-directory: apps/ios
 
       - name: Configure git for version bumps
         run: |
@@ -85,15 +89,15 @@ jobs:
             const testflightTag = process.env.TESTFLIGHT_TAG;
             const version = process.env.VERSION;
             const build = process.env.BUILD;
-            
+
             // Find the TestFlight release with this tag
             const releases = await github.rest.repos.listReleases({
               owner: context.repo.owner,
               repo: context.repo.repo
             });
-            
+
             const testflightRelease = releases.data.find(r => r.tag_name === testflightTag);
-            
+
             if (testflightRelease) {
               // Update TestFlight release
               const body = testflightRelease.body || '';
@@ -126,4 +130,4 @@ jobs:
           name: release-logs
           path: |
             ~/Library/Logs/gym
-            *.log
+            apps/ios/*.log

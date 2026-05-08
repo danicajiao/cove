@@ -262,6 +262,12 @@ SPM packages are resolved automatically by xcodebuild — no separate dependency
 
 ## Local Development
 
+All commands below must be run from `apps/ios/`:
+
+```bash
+cd apps/ios
+```
+
 ### Building the App
 Using Fastlane (recommended):
 ```bash
