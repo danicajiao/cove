@@ -13,12 +13,12 @@ Cove uses **MVVM (Model-View-ViewModel)** with SwiftUI. State is managed through
 ```
 Cove/
 ├── Supporting Files/     # App entry point (CoveApp.swift), Info.plist
-├── Models/               # Data models and global state (AppState, Bag, Product types)
+├── Models/               # Data models and global state (AppState, VisitList, Product types)
 │                         #   Also defines Path, AuthState, AuthMethod enums (in AppState.swift)
 ├── View Models/          # Business logic and Firestore access
 ├── Views/                # SwiftUI views organized by feature
 │   ├── Profile/          # ProfileHeaderView, StatsRowView, ProfileRowView
-│   └── ...               # HomeView, BagView, ProductDetailView, auth views
+│   └── ...               # HomeView, VisitListView, ProductDetailView, auth views
 ├── Components/           # Reusable UI components (ProductCardView, LikeButton, etc.)
 ├── Styles/               # Custom button styles and shadow modifiers
 ├── Enums/                # ProductTypes
@@ -82,7 +82,7 @@ enum Path: Hashable {
 |-----|------|--------|
 | Home | `HomeView` | Implemented |
 | Browse | Placeholder | Not implemented |
-| Bag | `BagView` | Implemented |
+| Visit List | `VisitListView` | In progress |
 | Favorites | `FavoritesView` | Implemented |
 | Profile | `ProfileView` | Implemented |
 
@@ -96,8 +96,8 @@ Serves `HomeView`. Fetches all products and brands from Firestore on first load.
 ### ProductDetailViewModel
 Serves `ProductDetailView`. Initialized with a `productId`, it runs three async fetches on init: the product itself, its type-specific details, and up to 5 similar products (same `categoryId`). Also manages `detailSelection` — the currently active tab (Description / Origin / Tracklist / Specifications / About), which varies by product type.
 
-### BagViewModel
-Serves `BagView`. Fetches similar product recommendations based on the categories of items currently in the bag. Caches the last queried category list to avoid redundant Firestore calls.
+### VisitListViewModel
+Serves `VisitListView`. Manages the user's Visit List — vendors and products they intend to visit in person. Tracks visit status (`pending`, `visited`) and whether a purchase was made. Fetches similar product recommendations based on the categories of items in the list.
 
 ### FavoritesViewModel
 Serves `FavoritesView`. Fetches the current user's favorited products from Firestore in batches of 30 (Firestore `in` query limit). Reads the `users/{uid}/favorites` subcollection to get product IDs, then fetches the corresponding product documents and decodes them by `categoryId` into the correct concrete type. Publishes `favorites: [any Product]` and `isLoading`.
@@ -114,11 +114,10 @@ Injected at the root via `.environmentObject`. Owns:
 - `authState` — drives the root UI split between auth flow and main app
 - All sign-in/sign-out methods for every auth provider
 
-### Bag
+### VisitList
 Injected into `MainView` and its children via `.environmentObject`. Owns:
-- `bagProducts: [BagProduct]` — items in the cart with quantities
-- `total: Int` — running total price
-- `categories: [String]` — categoryIds of items in the bag, used to fetch recommendations
+- `items: [VisitListItem]` — vendors and products the user wants to visit in person
+- `categories: [String]` — categoryIds of items in the list, used to fetch recommendations
 
 ### FavoritesStore
 Injected at the root (`CoveApp`) via `.environmentObject` and available throughout the entire app. Owns:
@@ -230,15 +229,15 @@ Product images are stored in Firebase Storage. `ProductCardView` fetches them as
 5. UI renders with type-specific tabs
 ```
 
-### Add to Bag
+### Add to Visit List
 
 ```
-1. User taps "Add to Bag" in ProductDetailView
-2. Check if product already in bag.bagProducts
-   ├── Yes → increment existing BagProduct.quantity
-   └── No  → append new BagProduct
-3. bag.categories updated with product's categoryId
-4. BagView onChange → BagViewModel.fetchSimilarProducts(categories:)
+1. User taps "Add to Visit List" in ProductDetailView or vendor page
+2. Check if item already in visitList.items
+   ├── Yes → no-op (already tracked)
+   └── No  → append new VisitListItem with status = .pending
+3. visitList.categories updated with product's categoryId
+4. VisitListView onChange → VisitListViewModel.fetchSimilarProducts(categories:)
 ```
 
 ### Sign Out
@@ -259,7 +258,7 @@ Product images are stored in Firebase Storage. `ProductCardView` fetches them as
 |---------|----------|
 | Browse tab | Placeholder `Text` in MainView |
 | Search | TextField in HomeView is present but not connected |
-| Checkout | "Proceed to checkout" button in BagView has no action |
+| Visit status update | Mark a visit as completed / purchased in VisitListView |
 | Reviews | NavigationLink exists in ProductDetailView but no destination |
 | Profile editing | ProfileRowView items are not wired up |
 | Notifications | Bell icon in HomeView has no action |
