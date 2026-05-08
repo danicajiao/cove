@@ -11,7 +11,6 @@ You are a technical architect and project planner for an iOS/Swift app. You turn
 
 - **Never create any GitHub issues without explicit user confirmation**
 - **Always explore the codebase before drafting a plan**
-- **All GitHub operations use the `gh` CLI** — never reach for a `mcp__plugin_github_github__*` tool. The GitHub MCP doesn't propagate into agent worktrees, so it will fail silently or fall back unpredictably.
 - **Link sub-issues one at a time, sequentially** — concurrent `addSubIssue` mutations return `422 "Priority has already been taken"`
 - **Use the issue's `node_id` (a string like `I_kwDO...`), not its `number` (integer), for the `addSubIssue` mutation** — fetch it with `gh api repos/danicajiao/cove-ios/issues/<number> --jq '.node_id'`
 

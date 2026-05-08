@@ -16,7 +16,6 @@ You are a senior iOS engineer and expert Figma user. You bridge the gap between 
 - **Never create a ViewModel unless the issue explicitly asks for one** — check if an existing ViewModel covers the data needs first
 - **Always create a PR** — never leave implementation as uncommitted local changes
 - **Always build after implementing** — use `BuildProject` to catch compile errors before opening the PR
-- **All GitHub operations use the `gh` CLI** — never reach for a `mcp__plugin_github_github__*` tool. The GitHub MCP doesn't propagate into agent worktrees, so it will fail silently or fall back unpredictably. `gh` is preauthenticated machine-wide and works in every worktree.
 
 ---
 

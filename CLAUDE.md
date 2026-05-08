@@ -153,6 +153,14 @@ Every epic gets an integration branch created by `github-project-planner` at pla
 - The integration branch is created from `main` at the time the epic is planned
 - A PR from the integration branch to `main` is opened once all sub-issues are merged and tested
 
+### GitHub operations: use `gh`, not the MCP
+
+All GitHub interactions in this project — issue reads/writes, PR creation, sub-issue linking, label lookups, GraphQL mutations — must go through the `gh` CLI. **Never call a `mcp__plugin_github_github__*` tool.**
+
+Why: the GitHub MCP doesn't propagate into agent worktrees. Even when the parent Claude Code session has the plugin authenticated, agents spawned in worktrees see only the OAuth-stub tools (`authenticate` / `complete_authentication`) and silently fall back to `gh`, which produces inconsistent behavior across runs. Making `gh` the explicit and only path removes that ambiguity. `gh` is preauthenticated machine-wide, works in every worktree, and survives session restarts.
+
+This rule applies to every agent **and** to the main session. If the MCP propagation gets fixed in a future Claude Code release, revisit — but until then, `gh` is the path.
+
 ### When you are running as an agent in a worktree
 
 - You are already on an isolated branch (initially named `claude/<worktree-name>`) — do not run `git checkout -b`
