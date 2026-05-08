@@ -83,7 +83,7 @@ Each phase is independently shippable. The iOS app is updated incrementally — 
 ### Phase 3 — Data Services
 
 - Deploy `cove-product-svc` and `cove-user-svc` pods
-- Postgres for structured data (products, users, orders)
+- Postgres for structured data (products, vendors, users)
 - iOS app calls `gateway/products` and `gateway/users`
 - Firestore retired
 

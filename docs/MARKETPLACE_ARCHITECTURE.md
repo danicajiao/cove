@@ -1,29 +1,30 @@
-# Marketplace Architecture: Hybrid SQL, NoSQL & GraphQL
+# Marketplace Architecture: SQL & GraphQL
 
-> **Note:** This is a planned backend architecture, not the current implementation. The app currently uses Firebase (Firestore + Auth + Storage) exclusively. This document describes the target design as Cove scales beyond Firebase.
+> **Note:** This is a planned backend architecture, not the current implementation. The app currently uses Firebase (Firestore + Auth + Storage) exclusively. This document describes the target design as Cove migrates to a custom backend — see [Backend Infrastructure](BACKEND_INFRASTRUCTURE.md) for the migration phases. Firestore is retired in Phase 3.
 
 ## Overview
 
-This architecture is for a marketplace app with commerce (transactional) and social (user-generated content) features, supporting both iOS and Web clients. It leverages:
-- **SQL backend** for structured, transactional data (products, orders, users).
-- **NoSQL backend** for flexible, rapidly evolving social data (reviews, comments, feeds).
+This architecture is for a local marketplace discovery app where users browse vendors and products, track places they want to visit, and share social content. Purchases happen in person — there is no order management or payment processing in v1. It uses:
+- **SQL backend (PostgreSQL)** for all data — products, vendors, users, visit lists, reviews, and social content.
 - **GraphQL API layer** for unifying data queries and flexible client consumption.
+
+> **Out of scope for v1:** Orders, payments, and fulfillment. Purchases happen in person — the app tracks visit intent and outcomes, not transactions.
 
 ---
 
-## When to Use SQL vs. NoSQL
+## Data Model
 
-| Feature                       | Backend   | Notes                                                           |
-|-------------------------------|-----------|-----------------------------------------------------------------|
-| User accounts/profiles        | SQL       | Structured, relational, secure, supports ACID transactions.     |
-| Product listings              | SQL       | Structured, support for relationships (vendor, category, etc).  |
-| Orders/payments               | SQL       | Complex transactions, critical for commerce reliability.        |
-| Vendor management             | SQL       | Relational data, strong consistency.                            |
-| Social posts/feeds            | NoSQL     | Flexible schema, high-volume, schema-less, horizontal scaling.  |
-| Reviews/comments              | NoSQL     | Rapid writes, unstructured or semi-structured.                  |
-| Likes/follows/notifications   | NoSQL     | High frequency, event-driven, scalable.                         |
-| Chat/messaging                | NoSQL     | Real-time, fast ingestion, loose schema.                        |
-| Analytics/logs                | NoSQL     | High volume, ephemeral or aggregate data.                       |
+All entities live in PostgreSQL. The data is relational, consistency matters, and volume is well within what Postgres handles comfortably.
+
+| Entity                        | Notes                                                              |
+|-------------------------------|--------------------------------------------------------------------|
+| User accounts/profiles        | Structured, relational, supports ACID transactions.                |
+| Product listings              | Structured, supports relationships (vendor, category, etc).        |
+| Vendor management             | Relational data, strong consistency.                               |
+| Visit List                    | Per-user rows with status tracking (pending → visited).            |
+| Reviews/comments              | Relational to product and user; queryable by product or author.    |
+| Social posts/feeds            | Structured content with user and optional product references.      |
+| Likes/follows/notifications   | Event rows keyed to user; aggregates computed via SQL.             |
 
 ---
 
@@ -31,17 +32,17 @@ This architecture is for a marketplace app with commerce (transactional) and soc
 
 ### API Design
 
-Query a single product's data and its associated reviews/comments:
+All data for a product page comes from SQL via a single GraphQL query:
 
 - **SQL**: Fetch product details
-- **NoSQL**: Fetch reviews/comments
+- **SQL**: Fetch reviews for that product
 
 ### Example REST API Pseudocode
 
 ```python
 def get_product_page(product_id):
-    product = sql_query("SELECT * FROM products WHERE id = ?", [product_id])           # SQL
-    reviews = nosql_query({"productId": product_id}, collection="reviews")             # NoSQL
+    product = sql_query("SELECT * FROM products WHERE id = ?", [product_id])
+    reviews = sql_query("SELECT * FROM reviews WHERE product_id = ?", [product_id])
     return {
         "product": product,
         "reviews": reviews
@@ -52,13 +53,13 @@ def get_product_page(product_id):
 
 ## GraphQL Integration
 
-GraphQL acts as a unified data facade, letting clients request exactly what they need from both SQL and NoSQL (or any service):
+GraphQL acts as a unified data facade, letting clients request exactly what they need from the SQL backend:
 
 ### Why Use GraphQL?
 
-- One endpoint for aggregated resources
+- One endpoint for all resources
 - Precise and flexible data requests (avoid over- or under-fetching)
-- Cleanly merge relational (SQL) and document-based (NoSQL) data in queries
+- Cleanly compose relational data in a single query
 
 ### Example GraphQL Query
 
@@ -80,8 +81,8 @@ query GetProductAndReviews($id: ID!) {
 
 #### Resolvers
 
-- `product`: Resolver queries SQL backend.
-- `reviews`: Resolver queries NoSQL backend using `product.id`.
+- `product`: Queries the `products` table.
+- `reviews`: Queries the `reviews` table filtered by `product.id`.
 
 #### Example Response (GraphQL API)
 
@@ -130,7 +131,7 @@ struct ProductResponse: Codable {
 class ProductService {
     func fetchProductPage(productId: String, completion: @escaping (ProductResponse?) -> Void) {
         guard let url = URL(string: "https://api.cove.app/graphql") else { return }
-        
+
         let query = """
         query GetProductAndReviews($id: ID!) {
           product(id: $id) {
@@ -146,14 +147,14 @@ class ProductService {
           }
         }
         """
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
+
         let body: [String: Any] = ["query": query, "variables": ["id": productId]]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
-        
+
         URLSession.shared.dataTask(with: request) { data, response, error in
             guard let data = data else { return }
             let decoded = try? JSONDecoder().decode(ProductResponse.self, from: data)
@@ -165,9 +166,7 @@ class ProductService {
 
 ---
 
-## Database Schema Examples
-
-### SQL Database (PostgreSQL)
+## Database Schema (PostgreSQL)
 
 ```sql
 -- Users table
@@ -199,83 +198,62 @@ CREATE TABLE products (
     FOREIGN KEY (vendor_id) REFERENCES vendors(id)
 );
 
--- Orders table
-CREATE TABLE orders (
+-- Orders and payments are out of scope for v1.
+-- Purchases happen in person; the visit_list table tracks intent and outcomes.
+
+-- Visit list table
+CREATE TABLE visit_list (
     id SERIAL PRIMARY KEY,
     user_id INT NOT NULL,
-    total DECIMAL(10, 2),
-    status VARCHAR(50),
+    type VARCHAR(10) NOT NULL CHECK (type IN ('vendor', 'product')),
+    vendor_id INT,
+    product_id INT,
+    status VARCHAR(10) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'visited')),
+    purchased BOOLEAN NOT NULL DEFAULT FALSE,
+    notes TEXT,
+    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    visited_at TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (vendor_id) REFERENCES vendors(id),
+    FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+-- Reviews table
+CREATE TABLE reviews (
+    id SERIAL PRIMARY KEY,
+    product_id INT NOT NULL,
+    user_id INT NOT NULL,
+    rating INT CHECK (rating BETWEEN 1 AND 5),
+    comment TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES products(id),
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
--- Order items table
-CREATE TABLE order_items (
+-- Social posts table
+CREATE TABLE posts (
     id SERIAL PRIMARY KEY,
-    order_id INT NOT NULL,
-    product_id INT NOT NULL,
-    quantity INT,
-    price DECIMAL(10, 2),
-    FOREIGN KEY (order_id) REFERENCES orders(id),
+    user_id INT NOT NULL,
+    content TEXT,
+    image_url TEXT,
+    product_id INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (product_id) REFERENCES products(id)
 );
-```
 
-### NoSQL Database (Firestore Document Examples)
-
-#### Reviews Collection
-
-```json
-{
-  "reviews": [
-    {
-      "id": "review_001",
-      "productId": "p123",
-      "user": "jane",
-      "userId": "user_456",
-      "rating": 5,
-      "comment": "Great quality honey, highly recommend!",
-      "createdAt": "2025-11-22T10:30:00Z",
-      "likes": 12
-    }
-  ]
-}
-```
-
-#### Social Posts Collection
-
-```json
-{
-  "posts": [
-    {
-      "id": "post_001",
-      "userId": "user_456",
-      "content": "Just tried the best local honey from Sunrise Apiaries!",
-      "image": "url_to_image",
-      "createdAt": "2025-11-22T09:15:00Z",
-      "likes": 45,
-      "comments": 8
-    }
-  ]
-}
-```
-
-#### Notifications Collection
-
-```json
-{
-  "notifications": [
-    {
-      "id": "notif_001",
-      "userId": "user_456",
-      "type": "new_review",
-      "message": "jane left a review on your product",
-      "relatedProductId": "p123",
-      "read": false,
-      "createdAt": "2025-11-22T11:00:00Z"
-    }
-  ]
-}
+-- Notifications table
+CREATE TABLE notifications (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    message TEXT,
+    related_product_id INT,
+    read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (related_product_id) REFERENCES products(id)
+);
 ```
 
 ---
@@ -285,11 +263,10 @@ CREATE TABLE order_items (
 ### Architecture Overview
 
 1. **API Layer**: Host GraphQL or REST API on Cloud Run or App Engine
-2. **SQL Database**: Cloud SQL (PostgreSQL or MySQL)
-3. **NoSQL Database**: Firestore or MongoDB Atlas
-4. **Authentication**: Identity Platform or Firebase Auth
-5. **Storage**: Cloud Storage for images/files
-6. **CDN**: Cloud CDN for static assets
+2. **SQL Database**: Cloud SQL (PostgreSQL)
+3. **Authentication**: Firebase Auth (kept through migration — see [Backend Infrastructure](BACKEND_INFRASTRUCTURE.md))
+4. **Storage**: Cloud Storage for images/files
+5. **CDN**: Cloud CDN for static assets
 
 ### Deployment Steps
 
@@ -306,12 +283,7 @@ CREATE TABLE order_items (
      --tier db-f1-micro
    ```
 
-3. **Create Firestore Database**
-   ```bash
-   gcloud firestore databases create --region us-central1
-   ```
-
-4. **Deploy GraphQL API on Cloud Run**
+3. **Deploy GraphQL API on Cloud Run**
    ```bash
    gcloud run deploy marketplace-api \
      --source . \
@@ -324,8 +296,6 @@ CREATE TABLE order_items (
 
 ```bash
 DATABASE_URL=postgresql://user:password@ip:5432/marketplace
-FIRESTORE_PROJECT_ID=your-project-id
-FIRESTORE_KEY_PATH=/path/to/serviceAccountKey.json
 JWT_SECRET=your_jwt_secret_key
 ```
 
@@ -334,17 +304,16 @@ JWT_SECRET=your_jwt_secret_key
 ## Best Practices
 
 ### Data Consistency
-- Keep transactional data (orders, payments, user accounts) in SQL for ACID compliance.
-- Place eventually consistent data (social, reviews) in NoSQL.
+- All data lives in SQL — use transactions for multi-step writes (e.g., updating visit status + recording outcome).
+- Add database indexes on frequently queried fields (`product_id`, `user_id`, `vendor_id`, `status`).
 
 ### Security
 - Implement authentication in the API layer.
 - Use role-based access control (RBAC) for vendor/admin operations.
 - Validate and sanitize all user inputs.
-- Encrypt sensitive data (passwords, payment info) in transit and at rest.
+- Encrypt sensitive data (passwords, personal info) in transit and at rest.
 
 ### Performance
-- Add database indexes on frequently queried fields (productId, userId, etc.).
 - Cache frequently accessed data (product listings, popular reviews).
 - Use pagination for large result sets (reviews, posts, notifications).
 - Monitor query performance and optimize slow queries.
@@ -359,11 +328,11 @@ JWT_SECRET=your_jwt_secret_key
 - Log all API requests and errors.
 - Set up alerts for database performance issues.
 - Monitor API latency and response times.
-- Track business metrics (orders, revenue, active users).
+- Track business metrics (visits, active users, popular vendors, conversion to purchase).
 
 ---
 
-## Example: Building a Reviews/Comments Feature
+## Example: Building a Reviews Feature
 
 ### Backend Resolver (Node.js/Apollo GraphQL)
 
@@ -371,14 +340,12 @@ JWT_SECRET=your_jwt_secret_key
 const resolvers = {
   Product: {
     reviews: async (product, args) => {
-      const db = admin.firestore();
-      const snapshot = await db
-        .collection('reviews')
-        .where('productId', '==', product.id)
-        .limit(args.limit || 10)
-        .get();
-      
-      return snapshot.docs.map(doc => doc.data());
+      const pool = getPostgresPool();
+      const result = await pool.query(
+        'SELECT * FROM reviews WHERE product_id = $1 LIMIT $2',
+        [product.id, args.limit || 10]
+      );
+      return result.rows;
     }
   },
   Query: {
@@ -394,12 +361,11 @@ const resolvers = {
 ### Adding a Review (Mutation)
 
 ```graphql
-mutation AddReview($productId: ID!, $user: String!, $rating: Int!, $comment: String!) {
-  addReview(productId: $productId, user: $user, rating: $rating, comment: $comment) {
+mutation AddReview($productId: ID!, $userId: ID!, $rating: Int!, $comment: String!) {
+  addReview(productId: $productId, userId: $userId, rating: $rating, comment: $comment) {
     id
     rating
     comment
-    user
     createdAt
   }
 }
@@ -409,19 +375,13 @@ mutation AddReview($productId: ID!, $user: String!, $rating: Int!, $comment: Str
 
 ```javascript
 const Mutation = {
-  addReview: async (_, { productId, user, rating, comment }) => {
-    const db = admin.firestore();
-    const review = {
-      productId,
-      user,
-      rating,
-      comment,
-      createdAt: new Date(),
-      likes: 0
-    };
-    
-    const docRef = await db.collection('reviews').add(review);
-    return { id: docRef.id, ...review };
+  addReview: async (_, { productId, userId, rating, comment }) => {
+    const pool = getPostgresPool();
+    const result = await pool.query(
+      'INSERT INTO reviews (product_id, user_id, rating, comment) VALUES ($1, $2, $3, $4) RETURNING *',
+      [productId, userId, rating, comment]
+    );
+    return result.rows[0];
   }
 };
 ```
@@ -430,7 +390,7 @@ const Mutation = {
 
 ## References & Further Reading
 
-- SQL vs NoSQL in Web Applications
+- PostgreSQL Documentation
 - GraphQL Best Practices and Architecture
 - Google Cloud Platform Database Patterns
 - Marketplace Database Design Patterns
@@ -441,8 +401,14 @@ const Mutation = {
 ## Revision History
 
 - **Version 1.0** - Initial architecture document (November 2025)
-  - Defined SQL vs NoSQL split for marketplace app
+  - Defined hybrid SQL + NoSQL split for marketplace app
   - Added GraphQL integration examples
   - Included GCP deployment guidance
   - Added client implementation examples for iOS and Web
   - Provided database schema examples and best practices
+- **Version 2.0** - Pivoted to SQL-only backend (May 2026)
+  - All data (products, vendors, users, visit lists, reviews, posts, notifications) moved to PostgreSQL
+  - Removed NoSQL (Firestore) from target architecture — aligns with Phase 3 of [Backend Infrastructure](BACKEND_INFRASTRUCTURE.md)
+  - Added `visit_list`, `reviews`, `posts`, and `notifications` SQL table schemas
+  - Updated GraphQL resolvers to use PostgreSQL throughout
+  - Removed orders/payments (out of scope for v1 — purchases happen in person)
