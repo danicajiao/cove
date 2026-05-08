@@ -46,7 +46,6 @@
 /* Begin PBXFrameworksBuildPhase section */
 		D02B2FAF27BD7E61004732CB /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 				D00DB72D2FAB015100D56700 /* FirebaseCore in Frameworks */,
 				D00DB7342FAB02D000D56700 /* FacebookCore in Frameworks */,
@@ -58,7 +57,6 @@
 				D00DB72F2FAB015100D56700 /* FirebaseFirestore in Frameworks */,
 				D00DB7392FAB034900D56700 /* GoogleSignIn in Frameworks */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
@@ -93,8 +91,6 @@
 				A2C4E6F8B0D2E4F6A8C0E2F4 /* SwiftLint */,
 			);
 			buildRules = (
-			);
-			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
 				D0DA904D2D697BFE0079DDEB /* Cove */,
@@ -144,6 +140,7 @@
 				D00DB7372FAB034900D56700 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				D00DB73C2FAB03FD00D56700 /* XCRemoteSwiftPackageReference "rive-ios" */,
 			);
+			preferredProjectObjectVersion = 100;
 			productRefGroup = D02B2FB327BD7E61004732CB /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -156,10 +153,8 @@
 /* Begin PBXResourcesBuildPhase section */
 		D02B2FB027BD7E61004732CB /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
@@ -167,33 +162,35 @@
 		A2C4E6F8B0D2E4F6A8C0E2F4 /* SwiftLint */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
 			name = SwiftLint;
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if [ -f /opt/homebrew/bin/swiftlint ]; then\n  /opt/homebrew/bin/swiftlint\nelif which swiftlint > /dev/null; then\n  swiftlint\nelse\n  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi\n";
+			shellScript = (
+				"if [ -f /opt/homebrew/bin/swiftlint ]; then",
+				"  /opt/homebrew/bin/swiftlint",
+				"elif which swiftlint > /dev/null; then",
+				"  swiftlint",
+				"else",
+				"  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"",
+				"fi",
+				"",
+			);
 			showEnvVarsInLog = 0;
 		};
 		B4D6F8A0C2E4F6A8B0D2E4F6 /* SwiftFormat */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
 			name = SwiftFormat;
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if [ -f /opt/homebrew/bin/swiftformat ]; then\n  /opt/homebrew/bin/swiftformat .\nelif which swiftformat > /dev/null; then\n  swiftformat .\nelse\n  echo \"warning: SwiftFormat not installed, download from https://github.com/nicklockwood/SwiftFormat\"\nfi\n";
+			shellScript = (
+				"if [ -f /opt/homebrew/bin/swiftformat ]; then",
+				"  /opt/homebrew/bin/swiftformat .",
+				"elif which swiftformat > /dev/null; then",
+				"  swiftformat .",
+				"else",
+				"  echo \"warning: SwiftFormat not installed, download from https://github.com/nicklockwood/SwiftFormat\"",
+				"fi",
+				"",
+			);
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
@@ -201,15 +198,13 @@
 /* Begin PBXSourcesBuildPhase section */
 		D02B2FAE27BD7E61004732CB /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		D02B2FBE27BD7E62004732CB /* Debug */ = {
+		D02B2FBE27BD7E62004732CB /* Debug configuration for PBXProject "Cove" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -276,7 +271,7 @@
 			};
 			name = Debug;
 		};
-		D02B2FBF27BD7E62004732CB /* Release */ = {
+		D02B2FBF27BD7E62004732CB /* Release configuration for PBXProject "Cove" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -337,7 +332,7 @@
 			};
 			name = Release;
 		};
-		D02B2FC127BD7E62004732CB /* Debug */ = {
+		D02B2FC127BD7E62004732CB /* Debug configuration for PBXNativeTarget "Cove" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = Cove;
@@ -368,7 +363,7 @@
 			};
 			name = Debug;
 		};
-		D02B2FC227BD7E62004732CB /* Release */ = {
+		D02B2FC227BD7E62004732CB /* Release configuration for PBXNativeTarget "Cove" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = Cove;
@@ -405,19 +400,17 @@
 		D02B2FAD27BD7E61004732CB /* Build configuration list for PBXProject "Cove" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D02B2FBE27BD7E62004732CB /* Debug */,
-				D02B2FBF27BD7E62004732CB /* Release */,
+				D02B2FBE27BD7E62004732CB /* Debug configuration for PBXProject "Cove" */,
+				D02B2FBF27BD7E62004732CB /* Release configuration for PBXProject "Cove" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 		D02B2FC027BD7E62004732CB /* Build configuration list for PBXNativeTarget "Cove" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D02B2FC127BD7E62004732CB /* Debug */,
-				D02B2FC227BD7E62004732CB /* Release */,
+				D02B2FC127BD7E62004732CB /* Debug configuration for PBXNativeTarget "Cove" */,
+				D02B2FC227BD7E62004732CB /* Release configuration for PBXNativeTarget "Cove" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
