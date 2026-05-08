@@ -35,7 +35,7 @@ This document is the authoritative reference for Cove's design system. It maps F
 Colors live in two places that must stay in sync:
 
 - **Figma:** `Color` variable collection (semantic tokens aliased from `Primitives`)
-- **Swift:** Asset catalog at `Cove/Resources/Assets.xcassets/Colors/`
+- **Swift:** Asset catalog at `apps/ios/Cove/Resources/Assets.xcassets/Colors/`
 
 The asset catalog folder structure maps directly to Swift: `Colors/Fills/primary.colorset` → `Color.Colors.Fills.primary`.
 
@@ -155,7 +155,7 @@ Used for alerts, banners, and status indicators. Each state has three roles:
 
 ## Typography
 
-Font files live in `Cove/Resources/`. Always use `Font.custom()` — never use system fonts for content text.
+Font files live in `apps/ios/Cove/Resources/`. Always use `Font.custom()` — never use system fonts for content text.
 
 ### Type Scale
 
@@ -181,7 +181,7 @@ Font files live in `Cove/Resources/`. Always use `Font.custom()` — never use s
 
 ## Spacing
 
-Based on a **4pt grid**. Defined in `Cove/Constants/Spacing.swift` — use the named constants instead of raw values.
+Based on a **4pt grid**. Defined in `apps/ios/Cove/Constants/Spacing.swift` — use the named constants instead of raw values.
 
 | Figma token | Swift constant | Value | Primary use |
 |---|---|---|---|
@@ -204,7 +204,7 @@ VStack(spacing: Spacing.md) { ... }
 
 ## Corner Radius
 
-Based on a **2pt step** at smaller sizes. Defined in `Cove/Constants/Radius.swift` — use the named constants instead of raw values.
+Based on a **2pt step** at smaller sizes. Defined in `apps/ios/Cove/Constants/Radius.swift` — use the named constants instead of raw values.
 
 | Figma token | Swift constant | Value | Primary use |
 |---|---|---|---|
@@ -225,7 +225,7 @@ Based on a **2pt step** at smaller sizes. Defined in `Cove/Constants/Radius.swif
 
 ## Shadow
 
-A 5-layer compound shadow defined in `Cove/Styles/CustomShadow.swift`. Apply with the `.customShadow()` modifier.
+A 5-layer compound shadow defined in `apps/ios/Cove/Styles/CustomShadow.swift`. Apply with the `.customShadow()` modifier.
 
 **Figma:** Effect style `Shadow/Custom`
 
@@ -252,21 +252,21 @@ All components are defined in the **Components page** of the Figma file. Views s
 
 | Figma component | Swift file(s) | Notes |
 |---|---|---|
-| Buttons / Primary | `Cove/Styles/PrimaryButton.swift` | `PrimitiveButtonStyle`, uses `fills/primary` + `fills/inverse` |
-| Buttons / Secondary | `Cove/Styles/SecondaryButton.swift` | Outlined style, uses `strokes/primary` |
-| Buttons / Banner | `Cove/Components/BannerButton.swift` | Used inside promotional banners |
-| Buttons / Social Login | `Cove/Components/` | Google, Facebook, Apple variants |
-| Text Field | `Cove/Components/` | Email, password, search, text area variants |
-| Section Header | `Cove/Components/` | Title + optional "See all →" in `brand/accent` |
-| Divider | `Cove/Components/` | Plain line and "OR" variants |
-| Card / Product | `Cove/Components/ProductCardView.swift` | Product image, name, roaster, price |
-| Card / Category | `Cove/Components/CoffeeCategoryButton.swift` | Uses `category/*` fill colors |
-| Bag Item | `Cove/Components/` | Quantity stepper in `brand/accent`, price in `text/primary` |
-| Store Card | `Cove/Components/` | Circular logo + store name |
-| Promotional Banner | `Cove/Components/` | Two variants: full-bleed image and compact |
-| Hero Art | `Cove/Resources/` | Illustrative identity tiles — fixed colors by design |
-| Tiles | `Cove/Resources/` | Decorative loading indicator tiles — fixed colors by design |
-| Icons | `Cove/Resources/` | Social auth icons — third-party brand colors, intentionally fixed |
+| Buttons / Primary | `apps/ios/Cove/Styles/PrimaryButton.swift` | `PrimitiveButtonStyle`, uses `fills/primary` + `fills/inverse` |
+| Buttons / Secondary | `apps/ios/Cove/Styles/SecondaryButton.swift` | Outlined style, uses `strokes/primary` |
+| Buttons / Banner | `apps/ios/Cove/Components/BannerButton.swift` | Used inside promotional banners |
+| Buttons / Social Login | `apps/ios/Cove/Components/` | Google, Facebook, Apple variants |
+| Text Field | `apps/ios/Cove/Components/` | Email, password, search, text area variants |
+| Section Header | `apps/ios/Cove/Components/` | Title + optional "See all →" in `brand/accent` |
+| Divider | `apps/ios/Cove/Components/` | Plain line and "OR" variants |
+| Card / Product | `apps/ios/Cove/Components/ProductCardView.swift` | Product image, name, roaster, price |
+| Card / Category | `apps/ios/Cove/Components/CoffeeCategoryButton.swift` | Uses `category/*` fill colors |
+| Bag Item | `apps/ios/Cove/Components/` | Quantity stepper in `brand/accent`, price in `text/primary` |
+| Store Card | `apps/ios/Cove/Components/` | Circular logo + store name |
+| Promotional Banner | `apps/ios/Cove/Components/` | Two variants: full-bleed image and compact |
+| Hero Art | `apps/ios/Cove/Resources/` | Illustrative identity tiles — fixed colors by design |
+| Tiles | `apps/ios/Cove/Resources/` | Decorative loading indicator tiles — fixed colors by design |
+| Icons | `apps/ios/Cove/Resources/` | Social auth icons — third-party brand colors, intentionally fixed |
 
 ---
 
@@ -295,9 +295,9 @@ All components are defined in the **Components page** of the Figma file. Views s
 
 | Area | Status | Notes |
 |---|---|---|
-| Spacing constants | ✅ Done | `Cove/Constants/Spacing.swift` |
-| Radius constants | ✅ Done | `Cove/Constants/Radius.swift` |
-| Support colors | ✅ Done | `Cove/Resources/Assets.xcassets/Colors/Support/` |
+| Spacing constants | ✅ Done | `apps/ios/Cove/Constants/Spacing.swift` |
+| Radius constants | ✅ Done | `apps/ios/Cove/Constants/Radius.swift` |
+| Support colors | ✅ Done | `apps/ios/Cove/Resources/Assets.xcassets/Colors/Support/` |
 | Color naming drift | ✅ Done | Asset catalog renamed to match Figma variable names |
 | Codebase realignment | ✅ Done | All Views and Components use `Color.Colors.*`, `Spacing.*`, `Radius.*`, and `Lato` fonts |
 | `BagView` realignment | ⏳ Pending | Excluded from realignment pass — scheduled for full rework |

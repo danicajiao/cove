@@ -60,16 +60,16 @@ Before writing a single line of SwiftUI, understand what already exists:
 
 ```
 read/readFile: docs/DESIGN_SYSTEM.md              → authoritative token reference (colors, fonts, spacing, radius)
-search/fileSearch: Cove/Views/**/*.swift          → find similar screens for structural reference
-search/fileSearch: Cove/View Models/*.swift       → find existing ViewModels that may cover data needs
-search/fileSearch: Cove/Components/**/*.swift     → find reusable components
+search/fileSearch: apps/ios/Cove/Views/**/*.swift          → find similar screens for structural reference
+search/fileSearch: apps/ios/Cove/View Models/*.swift       → find existing ViewModels that may cover data needs
+search/fileSearch: apps/ios/Cove/Components/**/*.swift     → find reusable components
 search/textSearch: "Color.Colors"                 → confirm available color token names in use
 search/textSearch: "Font.custom"                  → confirm available font names and sizes
 ```
 
 ### 4. Implement the View
 
-Write the SwiftUI view to `Cove/Views/<ScreenName>View.swift`. If a new ViewModel is required, write it to `Cove/View Models/<ScreenName>ViewModel.swift`.
+Write the SwiftUI view to `apps/ios/Cove/Views/<ScreenName>View.swift`. If a new ViewModel is required, write it to `apps/ios/Cove/View Models/<ScreenName>ViewModel.swift`.
 
 **View structure:**
 ```swift
@@ -166,9 +166,9 @@ Use `github/issue_write` with `method: "update"` to write the updated body back.
 **Repository**: `owner: "danicajiao"`, `repo: "cove-ios"`
 
 **Project structure:**
-- Views: `Cove/Views/<Name>View.swift`
-- ViewModels: `Cove/View Models/<Name>ViewModel.swift`
-- Components: `Cove/Components/`
+- Views: `apps/ios/Cove/Views/<Name>View.swift`
+- ViewModels: `apps/ios/Cove/View Models/<Name>ViewModel.swift`
+- Components: `apps/ios/Cove/Components/`
 - Models: protocol-based — `any Product`, `CoffeeProduct`, `MusicProduct`, `ApparelProduct`
 - App state: `AppState` passed as `@EnvironmentObject`
 

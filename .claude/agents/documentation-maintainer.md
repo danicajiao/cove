@@ -28,7 +28,7 @@ Read each doc and check verifiable claims against the actual code:
 | Claim Type | Where to Check |
 |---|---|
 | Workflow triggers/steps/secrets | `Glob` → `.github/workflows/*.yml` → `Read` |
-| Fastlane lanes and commands | `Read` → `fastlane/Fastfile` |
+| Fastlane lanes and commands | `Read` → `apps/ios/fastlane/Fastfile` |
 | Ruby/gem versions | `Read` → `Gemfile`, `Gemfile.lock` |
 | CocoaPods versions | `Read` → `Podfile`, `Podfile.lock` |
 | Command syntax | `Grep` for actual usage across scripts and workflows |
