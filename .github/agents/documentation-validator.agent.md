@@ -40,12 +40,12 @@ Look up the actual implementation for each claim:
 | Claim Type | Where to Check |
 |---|---|
 | Workflow triggers/steps/secrets | `search/fileSearch` → `.github/workflows/*.yml` → `read/readFile` |
-| Fastlane lanes and commands | `read/readFile` → `fastlane/Fastfile` |
+| Fastlane lanes and commands | `read/readFile` → `apps/ios/fastlane/Fastfile` |
 | Ruby/gem versions | `read/readFile` → `Gemfile`, `Gemfile.lock` |
 | CocoaPods versions | `read/readFile` → `Podfile`, `Podfile.lock` |
 | Command syntax | `search/textSearch` for actual usage across scripts and workflows |
 | File paths | `search/fileSearch` to verify the path exists |
-| Config values | `read/readFile` the actual config file (`.swiftlint.yml`, etc.) |
+| Config values | `read/readFile` the actual config file (`apps/ios/.swiftlint.yml`, etc.) |
 | Secret names | `search/textSearch` pattern `secrets\.` across workflow files |
 | Git history for staleness | `execute/runInTerminal` → `git log --oneline -10 -- <file>` |
 
