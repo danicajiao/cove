@@ -54,8 +54,6 @@
 </array>
 <key>UIAppFonts</key>
 <array>
-<string>Poppins-Regular.ttf</string>
-<string>Poppins-SemiBold.ttf</string>
 <string>Gazpacho-Black.otf</string>
 <string>Gazpacho-Bold.otf</string>
 <string>Gazpacho-Heavy.otf</string>
