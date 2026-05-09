@@ -39,7 +39,8 @@ platform :ios do
       configuration: "Debug",
       export_method: "development",
       skip_codesigning: true,
-      skip_package_ipa: true
+      skip_package_ipa: true,
+      xcargs: "-skipPackagePluginValidation"
     )
   end
 
@@ -64,6 +65,7 @@ platform :ios do
       scheme: SCHEME,
       configuration: "Release",
       export_method: "app-store",
+      xcargs: "-skipPackagePluginValidation",
       export_options: {
         provisioningProfiles: {
           BUNDLE_ID => ENV["PROVISIONING_PROFILE_SPECIFIER"]
@@ -115,6 +117,7 @@ platform :ios do
       scheme: SCHEME,
       configuration: "Release",
       export_method: "app-store",
+      xcargs: "-skipPackagePluginValidation",
       export_options: {
         provisioningProfiles: {
           BUNDLE_ID => ENV["PROVISIONING_PROFILE_SPECIFIER"]

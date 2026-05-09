@@ -87,10 +87,11 @@
 				D02B2FAE27BD7E61004732CB /* Sources */,
 				D02B2FAF27BD7E61004732CB /* Frameworks */,
 				D02B2FB027BD7E61004732CB /* Resources */,
-				B4D6F8A0C2E4F6A8B0D2E4F6 /* SwiftFormat */,
-				A2C4E6F8B0D2E4F6A8C0E2F4 /* SwiftLint */,
 			);
 			buildRules = (
+			);
+			dependencies = (
+				D0429CEB2FAEDCCF004F25C1 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				D0DA904D2D697BFE0079DDEB /* Cove */,
@@ -139,6 +140,7 @@
 				D00DB7322FAB02D000D56700 /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */,
 				D00DB7372FAB034900D56700 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				D00DB73C2FAB03FD00D56700 /* XCRemoteSwiftPackageReference "rive-ios" */,
+				D0429CE92FAEDC03004F25C1 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */,
 			);
 			preferredProjectObjectVersion = 100;
 			productRefGroup = D02B2FB327BD7E61004732CB /* Products */;
@@ -158,43 +160,6 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
-/* Begin PBXShellScriptBuildPhase section */
-		A2C4E6F8B0D2E4F6A8C0E2F4 /* SwiftLint */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			name = SwiftLint;
-			shellPath = /bin/sh;
-			shellScript = (
-				"if [ -f /opt/homebrew/bin/swiftlint ]; then",
-				"  /opt/homebrew/bin/swiftlint",
-				"elif which swiftlint > /dev/null; then",
-				"  swiftlint",
-				"else",
-				"  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"",
-				"fi",
-				"",
-			);
-			showEnvVarsInLog = 0;
-		};
-		B4D6F8A0C2E4F6A8B0D2E4F6 /* SwiftFormat */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			name = SwiftFormat;
-			shellPath = /bin/sh;
-			shellScript = (
-				"if [ -f /opt/homebrew/bin/swiftformat ]; then",
-				"  /opt/homebrew/bin/swiftformat .",
-				"elif which swiftformat > /dev/null; then",
-				"  swiftformat .",
-				"else",
-				"  echo \"warning: SwiftFormat not installed, download from https://github.com/nicklockwood/SwiftFormat\"",
-				"fi",
-				"",
-			);
-			showEnvVarsInLog = 0;
-		};
-/* End PBXShellScriptBuildPhase section */
-
 /* Begin PBXSourcesBuildPhase section */
 		D02B2FAE27BD7E61004732CB /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -202,6 +167,13 @@
 			);
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D0429CEB2FAEDCCF004F25C1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			productRef = D0429CEA2FAEDCCF004F25C1 /* SwiftLintBuildToolPlugin */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		D02B2FBE27BD7E62004732CB /* Debug configuration for PBXProject "Cove" */ = {
@@ -448,6 +420,14 @@
 				minimumVersion = 6.20.0;
 			};
 		};
+		D0429CE92FAEDC03004F25C1 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SimplyDanny/SwiftLintPlugins";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.63.2;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -495,6 +475,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D00DB73C2FAB03FD00D56700 /* XCRemoteSwiftPackageReference "rive-ios" */;
 			productName = RiveRuntime;
+		};
+		D0429CEA2FAEDCCF004F25C1 /* SwiftLintBuildToolPlugin */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D0429CE92FAEDC03004F25C1 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */;
+			productName = "plugin:SwiftLintBuildToolPlugin";
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

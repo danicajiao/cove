@@ -1,0 +1,7 @@
+#!/bin/sh
+if which swiftformat > /dev/null 2>&1; then
+  swiftformat .
+  git add -u apps/ios/
+else
+  echo "warning: SwiftFormat not installed — skipping. Install with: brew install swiftformat"
+fi
