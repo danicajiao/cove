@@ -46,7 +46,6 @@
 /* Begin PBXFrameworksBuildPhase section */
 		D02B2FAF27BD7E61004732CB /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 				D00DB72D2FAB015100D56700 /* FirebaseCore in Frameworks */,
 				D00DB7342FAB02D000D56700 /* FacebookCore in Frameworks */,
@@ -58,7 +57,6 @@
 				D00DB72F2FAB015100D56700 /* FirebaseFirestore in Frameworks */,
 				D00DB7392FAB034900D56700 /* GoogleSignIn in Frameworks */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
@@ -93,6 +91,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				D0429CEB2FAEDCCF004F25C1 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				D0DA904D2D697BFE0079DDEB /* Cove */,
@@ -141,7 +140,9 @@
 				D00DB7322FAB02D000D56700 /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */,
 				D00DB7372FAB034900D56700 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				D00DB73C2FAB03FD00D56700 /* XCRemoteSwiftPackageReference "rive-ios" */,
+				D0429CE92FAEDC03004F25C1 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */,
 			);
+			preferredProjectObjectVersion = 100;
 			productRefGroup = D02B2FB327BD7E61004732CB /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -154,26 +155,28 @@
 /* Begin PBXResourcesBuildPhase section */
 		D02B2FB027BD7E61004732CB /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
-
 
 /* Begin PBXSourcesBuildPhase section */
 		D02B2FAE27BD7E61004732CB /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		D0429CEB2FAEDCCF004F25C1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			productRef = D0429CEA2FAEDCCF004F25C1 /* SwiftLintBuildToolPlugin */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
-		D02B2FBE27BD7E62004732CB /* Debug */ = {
+		D02B2FBE27BD7E62004732CB /* Debug configuration for PBXProject "Cove" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -240,7 +243,7 @@
 			};
 			name = Debug;
 		};
-		D02B2FBF27BD7E62004732CB /* Release */ = {
+		D02B2FBF27BD7E62004732CB /* Release configuration for PBXProject "Cove" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -301,7 +304,7 @@
 			};
 			name = Release;
 		};
-		D02B2FC127BD7E62004732CB /* Debug */ = {
+		D02B2FC127BD7E62004732CB /* Debug configuration for PBXNativeTarget "Cove" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = Cove;
@@ -332,7 +335,7 @@
 			};
 			name = Debug;
 		};
-		D02B2FC227BD7E62004732CB /* Release */ = {
+		D02B2FC227BD7E62004732CB /* Release configuration for PBXNativeTarget "Cove" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = Cove;
@@ -369,19 +372,17 @@
 		D02B2FAD27BD7E61004732CB /* Build configuration list for PBXProject "Cove" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D02B2FBE27BD7E62004732CB /* Debug */,
-				D02B2FBF27BD7E62004732CB /* Release */,
+				D02B2FBE27BD7E62004732CB /* Debug configuration for PBXProject "Cove" */,
+				D02B2FBF27BD7E62004732CB /* Release configuration for PBXProject "Cove" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 		D02B2FC027BD7E62004732CB /* Build configuration list for PBXNativeTarget "Cove" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D02B2FC127BD7E62004732CB /* Debug */,
-				D02B2FC227BD7E62004732CB /* Release */,
+				D02B2FC127BD7E62004732CB /* Debug configuration for PBXNativeTarget "Cove" */,
+				D02B2FC227BD7E62004732CB /* Release configuration for PBXNativeTarget "Cove" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
@@ -417,6 +418,14 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 6.20.0;
+			};
+		};
+		D0429CE92FAEDC03004F25C1 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SimplyDanny/SwiftLintPlugins";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.63.2;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -466,6 +475,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D00DB73C2FAB03FD00D56700 /* XCRemoteSwiftPackageReference "rive-ios" */;
 			productName = RiveRuntime;
+		};
+		D0429CEA2FAEDCCF004F25C1 /* SwiftLintBuildToolPlugin */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D0429CE92FAEDC03004F25C1 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */;
+			productName = "plugin:SwiftLintBuildToolPlugin";
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
