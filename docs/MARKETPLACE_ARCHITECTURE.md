@@ -47,11 +47,11 @@ All v1 services share one CNPG `Cluster` (`cove-db`) and one database (`cove`), 
 
 | Schema | Owning service | Tables |
 |---|---|---|
-| `product` | `cove-product` | `categories`, `products`, `product_variants`, `product_details` |
+| `product` | `cove-product` | `categories`, `products`, `product_variants`, `product_details`, `product_media` |
 | `vendor` | `cove-vendor` (future, see below) | `vendors` |
 | `user` | `cove-user` | `users`, `favorites`, `follows` |
 
-`cove-image` is stateless — it reads and writes Garage directly and stores no metadata of its own. The `image_key` column on `products` is the system of record for which image belongs to which product.
+`cove-image` is stateless — it writes uploaded images to Garage but stores no metadata of its own. The `product_media` table is the system of record for which images belong to which product, their roles (primary vs gallery), and their carousel order. The full image storage, transformation, and serving pipeline is documented in [Media Architecture](MEDIA_ARCHITECTURE.md).
 
 ### `vendor` schema: pre-positioned for cove-vendor
 
@@ -109,16 +109,25 @@ This means:
 ```sql
 -- The whole Favorites view: list of favorited products with everything
 -- the UI needs to render product cards. One query, one round trip.
+-- LATERAL JOIN pulls the primary image (see Media Architecture).
 SELECT
     p.id,
     p.name,
     p.price_cents,
-    p.image_key,
     v.name AS vendor_name,
+    m.media_key  AS primary_image_key,
+    m.width      AS primary_image_width,
+    m.height     AS primary_image_height,
     f.created_at AS favorited_at
 FROM "user".favorites f
 JOIN product.products  p ON p.id = f.product_id
 JOIN vendor.vendors    v ON v.id = p.vendor_id
+LEFT JOIN LATERAL (
+    SELECT media_key, width, height
+    FROM product.product_media
+    WHERE product_id = p.id AND role = 'primary'
+    LIMIT 1
+) m ON TRUE
 WHERE f.uid = $1
 ORDER BY f.created_at DESC;
 ```
@@ -131,9 +140,10 @@ ORDER BY f.created_at DESC;
 |---|---|---|---|
 | Vendors | `vendor` | `cove-vendor` (future) — read-only from other services in Phase 3 | Producer or business that owns one or more products. Seeded once during Phase 3 migration. |
 | Categories | `product` | `cove-product` | Hierarchical via `ltree` (e.g. `produce.dairy.cheese`). |
-| Products | `product` | `cove-product` | Catalog entries with name, description, price, image key, full-text search vector. FK to `vendor.vendors`. |
+| Products | `product` | `cove-product` | Catalog entries with name, description, price, full-text search vector. FK to `vendor.vendors`. |
 | Product variants | `product` | `cove-product` | SKU-level variations (size, color, weight). One product → many variants. |
 | Product details | `product` | `cove-product` | Polymorphic extended attributes that vary by category (e.g. `flower_source` for honey, `material` for clothing). Stored as JSONB. |
+| Product media | `product` | `cove-product` | Images attached to a product. Exactly one `primary` (used in all list views) and zero or more `gallery` (detail carousel). See [Media Architecture](MEDIA_ARCHITECTURE.md). |
 | Users | `user` | `cove-user` | Profile data. `uid` matches the Firebase Auth UID — no separate identity layer. |
 | Favorites | `user` | `cove-user` | Per-user product saves. Real FK to `product.products(id)`. |
 | Follows | `user` | `cove-user` | Per-user vendor follows. Real FK to `vendor.vendors(id)`. |
@@ -214,7 +224,6 @@ CREATE TABLE product.products (
     name        text        NOT NULL,
     description text,
     price_cents integer     NOT NULL,
-    image_key   text,                                -- Garage cove-media object key
     attributes  jsonb       NOT NULL DEFAULT '{}',   -- gender, brand, tags, etc.
     search_vec  tsvector    GENERATED ALWAYS AS (
         to_tsvector('english', coalesce(name, '') || ' ' || coalesce(description, ''))
@@ -249,6 +258,24 @@ CREATE TABLE product.product_details (
 );
 
 CREATE INDEX ON product.product_details USING GIN (payload);
+
+-- Product images. One row per uploaded image; role distinguishes the
+-- primary (shown in every list view) from gallery images (detail carousel).
+-- See docs/MEDIA_ARCHITECTURE.md for the full image storage + serving pipeline.
+CREATE TABLE product.product_media (
+    id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    product_id  uuid        NOT NULL REFERENCES product.products(id) ON DELETE CASCADE,
+    media_key   text        NOT NULL,                 -- Garage cove-media object key (content-addressed)
+    role        text        NOT NULL CHECK (role IN ('primary', 'gallery')),
+    sort_order  integer     NOT NULL DEFAULT 0,
+    alt_text    text,                                 -- accessibility / future SEO
+    width       integer     NOT NULL,                 -- source dimensions (for layout hints on the client)
+    height      integer     NOT NULL,
+    created_at  timestamptz NOT NULL DEFAULT now(),
+    UNIQUE (product_id, role) DEFERRABLE INITIALLY DEFERRED  -- exactly one primary per product
+);
+
+CREATE INDEX ON product.product_media (product_id, sort_order);
 ```
 
 ### `user` schema
@@ -302,8 +329,8 @@ cove-gateway
    │
    ▼
 cove-product
-   │  Queries the `product` schema (products + product_variants + product_details JOIN)
-   │  Builds response payload with image URL constructed from image_key via imgproxy
+   │  Queries the `product` schema (products + product_variants + product_details + product_media JOINs)
+   │  Builds response payload with image URLs constructed via signed imgproxy URLs (see MEDIA_ARCHITECTURE.md)
    │
    ▼
 HTTP 200 → iOS app
@@ -361,6 +388,7 @@ See [Backend Infrastructure](BACKEND_INFRASTRUCTURE.md) for the cluster topology
 
 - [Backend Infrastructure](BACKEND_INFRASTRUCTURE.md) — cluster topology, deployment, phases
 - [Category & Product Architecture](CATEGORY_AND_PRODUCT_ARCHITECTURE.md) — category hierarchy, gender as attribute, product filtering details
+- [Media Architecture](MEDIA_ARCHITECTURE.md) — image storage, transformation, serving, vendor upload, signed URLs
 - [Postgres Primer](POSTGRES_PRIMER.md) — schemas, indexes, JSONB, full-text search, ltree
 - [App Architecture](APP_ARCHITECTURE.md) — iOS app structure, ViewModels, repository protocol layer
 
@@ -373,3 +401,4 @@ See [Backend Infrastructure](BACKEND_INFRASTRUCTURE.md) for the cluster topology
 - **Version 3.0** — Phase 0 implementation alignment (May 2026). Updated to reflect Garage (not MinIO) for object storage, monorepo service locations under `apps/<service>/`, added `product_variants` and `product_details` tables, removed Visit List (out of scope for v1).
 - **Version 3.1** — Database topology revision (May 2026). Switched from per-service Postgres clusters (`product-db` / `user-db`) to a single shared cluster (`cove-db`) with schemas-per-service (`product`, `user`). Cross-schema foreign keys preserve referential integrity for cross-service references like favorites and follows. Trade-off rationale documented inline.
 - **Version 3.2** — Vendor schema pre-positioned (May 2026). Split `vendors` out of the `product` schema into its own `vendor` schema in anticipation of a near-term `cove-vendor` service (vendor onboarding flow + dashboard). Phase 3 introduces the schema with read-only access from `cove-product` and `cove-user`; the future service takes ownership via a permissions flip, no data migration required.
+- **Version 3.3** — Product media split (May 2026). Replaced the single `products.image_key` column with a `product_media` child table supporting multiple images per product (one `primary` + many `gallery`), source dimensions, alt text, and carousel ordering. Full image storage/transformation/serving architecture moved to `docs/MEDIA_ARCHITECTURE.md`.
