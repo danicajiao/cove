@@ -12,10 +12,13 @@ Cove runs one CNPG `Cluster` (`cove-db`) hosting a single database (`cove`). Ins
 
 | Schema | Owning service | Primary tables |
 |---|---|---|
-| `product` | `cove-product` | `vendors`, `categories`, `products`, `product_variants`, `product_details` |
+| `product` | `cove-product` | `categories`, `products`, `product_variants`, `product_details` |
+| `vendor` | `cove-vendor` (future) | `vendors` |
 | `user` | `cove-user` | `users`, `favorites`, `follows` |
 
-Each service connects with a Postgres role whose `search_path` is set to its own schema, so application queries stay unqualified — `SELECT * FROM products` inside `cove-product` works without ever typing `product.products`. Cross-schema references (e.g., `user.favorites` → `product.products`) use real foreign keys, since both schemas live in the same database.
+The `vendor` schema is pre-positioned in Phase 3 — it exists at the database level but no service formally owns it yet. `cove-product` and `cove-user` get read-only + FK reference grants; vendor data is seeded once during the Firestore migration and stays static until the `cove-vendor` service ships in a follow-up phase. See [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md) for the rationale.
+
+Each service connects with a Postgres role whose `search_path` is set to its own schema, so application queries stay unqualified — `SELECT * FROM products` inside `cove-product` works without ever typing `product.products`. Cross-schema references (e.g., `user.favorites` → `product.products`, `product.products.vendor_id` → `vendor.vendors`) use real foreign keys, since all schemas live in the same database.
 
 ### Why one cluster, not one per service
 
@@ -50,23 +53,34 @@ SHOW search_path;
 -- "$user", public
 ```
 
-**When this matters for Cove:** CNPG provisions the `cove` database, then bootstrap migrations create the `product` and `user` schemas plus a service role for each (`cove_product`, `cove_user`). Each role's `search_path` is set to its own schema, so application queries stay unqualified. The `ltree` extension lives in `public` (the chart default) so it's reachable from any schema.
+**When this matters for Cove:** CNPG provisions the `cove` database, then bootstrap migrations create the `product`, `vendor`, and `user` schemas plus service roles for the services that exist (`cove_product`, `cove_user`). The `cove_vendor` role isn't created yet — the schema exists but no service owns it until the future `cove-vendor` service ships. The `ltree` extension lives in `public` (the chart default) so it's reachable from any schema.
 
 ```sql
 -- Bootstrap sketch — runs once after the cluster comes up
+
+-- Schemas first
 CREATE SCHEMA product;
+CREATE SCHEMA vendor;
 CREATE SCHEMA "user";
 
+-- Roles for services that exist in Phase 3
 CREATE ROLE cove_product LOGIN PASSWORD :'product_password';
 CREATE ROLE cove_user    LOGIN PASSWORD :'user_password';
 
+-- Each role owns its schema
 GRANT USAGE ON SCHEMA product TO cove_product;
 GRANT USAGE ON SCHEMA "user"  TO cove_user;
 
--- cove_user needs to validate FK targets against product.products and
--- product.vendors at INSERT time, but should never SELECT data it doesn't own
-GRANT USAGE ON SCHEMA product TO cove_user;
-GRANT REFERENCES ON product.products, product.vendors TO cove_user;
+-- cove_product reads vendor.vendors for product responses + FK validation
+GRANT USAGE      ON SCHEMA vendor TO cove_product;
+GRANT SELECT     ON vendor.vendors TO cove_product;
+GRANT REFERENCES ON vendor.vendors TO cove_product;
+
+-- cove_user reads product.products and vendor.vendors for JOIN reads
+-- and FK validation (favorites + follows)
+GRANT USAGE      ON SCHEMA product, vendor TO cove_user;
+GRANT SELECT     ON product.products, vendor.vendors TO cove_user;
+GRANT REFERENCES ON product.products, vendor.vendors TO cove_user;
 
 ALTER ROLE cove_product SET search_path = product, public;
 ALTER ROLE cove_user    SET search_path = "user", public;

@@ -35,6 +35,7 @@ The marketplace surface is split across four services. Each lives in this monore
 | `cove-product` | `apps/product/` | Vendors, categories, products, variants, details, search. |
 | `cove-user` | `apps/user/` | User profiles and favorites. |
 | `cove-image` | `apps/image/` | Authenticated image uploads to Garage and signed-URL fetch via imgproxy. |
+| `cove-vendor` | `apps/vendor/` (future) | Vendor onboarding flow, profile management, vendor dashboard API. Schema is pre-positioned in Phase 3; service is built in a follow-up phase. |
 
 The iOS app uses `swift-openapi-generator` to produce a typed Swift client per service. ViewModels never construct URLs or call `URLSession` directly — they consume repository protocols backed by the generated clients (see [App Architecture](APP_ARCHITECTURE.md)).
 
@@ -46,10 +47,32 @@ All v1 services share one CNPG `Cluster` (`cove-db`) and one database (`cove`), 
 
 | Schema | Owning service | Tables |
 |---|---|---|
-| `product` | `cove-product` | `vendors`, `categories`, `products`, `product_variants`, `product_details` |
+| `product` | `cove-product` | `categories`, `products`, `product_variants`, `product_details` |
+| `vendor` | `cove-vendor` (future, see below) | `vendors` |
 | `user` | `cove-user` | `users`, `favorites`, `follows` |
 
 `cove-image` is stateless — it reads and writes Garage directly and stores no metadata of its own. The `image_key` column on `products` is the system of record for which image belongs to which product.
+
+### `vendor` schema: pre-positioned for cove-vendor
+
+The `vendor` schema exists from Phase 3 even though no service formally owns it yet. Vendors are distinct enough from the catalog (business onboarding flow, vendor dashboard, future KYC and Stripe Connect integration) to warrant their own service, but that service isn't built in Phase 3.
+
+For Phase 3:
+- `cove-product` has SELECT and REFERENCES on `vendor.vendors` — enough to display vendor names on product pages and validate FK targets from `product.products.vendor_id`.
+- `cove-user` has the same grants — `user.follows` FKs into `vendor.vendors(id)`.
+- **No service writes to `vendor.vendors` during Phase 3.** The 4 existing vendors are seeded via a one-off migration script with admin credentials, alongside the product import (#260).
+- The `cove_vendor` role isn't created until the service actually exists.
+
+When `cove-vendor` lands in a future phase, the transition is a permissions flip — no schema migration, no data move:
+
+```sql
+CREATE ROLE cove_vendor LOGIN PASSWORD :'vendor_password';
+GRANT USAGE  ON SCHEMA vendor TO cove_vendor;
+GRANT ALL    ON ALL TABLES IN SCHEMA vendor TO cove_vendor;
+ALTER ROLE cove_vendor SET search_path = vendor, public;
+```
+
+`cove-product` keeps its SELECT on `vendor.vendors` so product responses can still include vendor names without service-to-service calls. `cove-vendor` becomes the writer (onboarding, profile updates, etc.); `cove-product` and `cove-user` remain readers.
 
 ### Why one cluster, not one per service
 
@@ -59,12 +82,20 @@ One cluster with schemas keeps logical service ownership (each service connects 
 
 ### Cross-schema foreign keys
 
-Cross-schema references are enforced at the database level. The `favorites` table in the `user` schema has a real FK pointing at `product.products(id)`:
+Cross-schema references are enforced at the database level. The relational graph spans all three schemas:
+
+```
+user.favorites.product_id  ──►  product.products(id)
+user.follows.vendor_id     ──►  vendor.vendors(id)
+product.products.vendor_id ──►  vendor.vendors(id)
+```
+
+Each is a real FK with `ON DELETE CASCADE`:
 
 ```sql
-CREATE TABLE user.favorites (
-    uid        text NOT NULL REFERENCES user.users(uid)        ON DELETE CASCADE,
-    product_id uuid NOT NULL REFERENCES product.products(id)   ON DELETE CASCADE,
+CREATE TABLE "user".favorites (
+    uid        text NOT NULL REFERENCES "user".users(uid)        ON DELETE CASCADE,
+    product_id uuid NOT NULL REFERENCES product.products(id)     ON DELETE CASCADE,
     created_at timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (uid, product_id)
 );
@@ -85,9 +116,9 @@ SELECT
     p.image_key,
     v.name AS vendor_name,
     f.created_at AS favorited_at
-FROM user.favorites f
-JOIN product.products p ON p.id = f.product_id
-JOIN product.vendors  v ON v.id = p.vendor_id
+FROM "user".favorites f
+JOIN product.products  p ON p.id = f.product_id
+JOIN vendor.vendors    v ON v.id = p.vendor_id
 WHERE f.uid = $1
 ORDER BY f.created_at DESC;
 ```
@@ -98,14 +129,14 @@ ORDER BY f.created_at DESC;
 
 | Entity | Schema | Owner | Notes |
 |---|---|---|---|
-| Vendors | `product` | `cove-product` | Producer or business that owns one or more products. |
+| Vendors | `vendor` | `cove-vendor` (future) — read-only from other services in Phase 3 | Producer or business that owns one or more products. Seeded once during Phase 3 migration. |
 | Categories | `product` | `cove-product` | Hierarchical via `ltree` (e.g. `produce.dairy.cheese`). |
-| Products | `product` | `cove-product` | Catalog entries with name, description, price, image key, full-text search vector. |
+| Products | `product` | `cove-product` | Catalog entries with name, description, price, image key, full-text search vector. FK to `vendor.vendors`. |
 | Product variants | `product` | `cove-product` | SKU-level variations (size, color, weight). One product → many variants. |
 | Product details | `product` | `cove-product` | Polymorphic extended attributes that vary by category (e.g. `flower_source` for honey, `material` for clothing). Stored as JSONB. |
 | Users | `user` | `cove-user` | Profile data. `uid` matches the Firebase Auth UID — no separate identity layer. |
 | Favorites | `user` | `cove-user` | Per-user product saves. Real FK to `product.products(id)`. |
-| Follows | `user` | `cove-user` | Per-user vendor follows. Real FK to `product.vendors(id)`. |
+| Follows | `user` | `cove-user` | Per-user vendor follows. Real FK to `vendor.vendors(id)`. |
 
 For category and product modeling specifics (gender as attribute vs category, hierarchy patterns, filtering), see [Category & Product Architecture](CATEGORY_AND_PRODUCT_ARCHITECTURE.md).
 
@@ -121,37 +152,52 @@ This is the v1 schema for the single `cove` database. Conventions (UUID PKs, `te
 CREATE EXTENSION IF NOT EXISTS ltree;
 
 CREATE SCHEMA product;
+CREATE SCHEMA vendor;
 CREATE SCHEMA "user";   -- quoted because `user` is a reserved word in some contexts
 
--- Service roles. Each service connects as its own role with search_path scoped
--- to its schema, so application queries stay unqualified.
+-- Service roles for Phase 3. `cove_vendor` is NOT created yet — the vendor
+-- schema exists but no service formally owns it until cove-vendor lands.
 CREATE ROLE cove_product LOGIN PASSWORD :'product_password';
 CREATE ROLE cove_user    LOGIN PASSWORD :'user_password';
 
+-- Each service owns its own schema
 GRANT USAGE ON SCHEMA product TO cove_product;
 GRANT USAGE ON SCHEMA "user"  TO cove_user;
 
--- Read-only cross-schema grants. `cove_user` needs to validate FK targets
--- against product.products and product.vendors at INSERT time, but should
--- never SELECT/UPDATE/DELETE data it doesn't own.
-GRANT USAGE ON SCHEMA product TO cove_user;
-GRANT REFERENCES ON product.products, product.vendors TO cove_user;
+-- Cross-schema reads + FK validation.
+-- cove_product needs to SELECT vendor names for product responses
+-- and validate vendor_id FK targets at INSERT time.
+GRANT USAGE      ON SCHEMA vendor                TO cove_product;
+GRANT SELECT     ON vendor.vendors               TO cove_product;
+GRANT REFERENCES ON vendor.vendors               TO cove_product;
+
+-- cove_user needs to validate FK targets against product.products (favorites)
+-- and vendor.vendors (follows) at INSERT time, plus SELECT for JOIN reads.
+GRANT USAGE      ON SCHEMA product, vendor       TO cove_user;
+GRANT SELECT     ON product.products             TO cove_user;
+GRANT SELECT     ON vendor.vendors               TO cove_user;
+GRANT REFERENCES ON product.products             TO cove_user;
+GRANT REFERENCES ON vendor.vendors               TO cove_user;
 
 ALTER ROLE cove_product SET search_path = product, public;
 ALTER ROLE cove_user    SET search_path = "user", public;
 ```
 
-### `product` schema
+### `vendor` schema
 
 ```sql
-CREATE TABLE product.vendors (
+CREATE TABLE vendor.vendors (
     id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-    owner_uid   text        NOT NULL,                -- Firebase UID, soft reference to user.users
+    owner_uid   text        NOT NULL,                -- Firebase UID, soft reference to "user".users
     name        text        NOT NULL,
     description text,
     created_at  timestamptz NOT NULL DEFAULT now()
 );
+```
 
+### `product` schema
+
+```sql
 CREATE TABLE product.categories (
     id   uuid  PRIMARY KEY DEFAULT gen_random_uuid(),
     name text  NOT NULL,
@@ -163,7 +209,7 @@ CREATE INDEX ON product.categories USING BTREE (path);
 
 CREATE TABLE product.products (
     id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-    vendor_id   uuid        NOT NULL REFERENCES product.vendors(id),
+    vendor_id   uuid        NOT NULL REFERENCES vendor.vendors(id),     -- cross-schema FK
     category_id uuid        NOT NULL REFERENCES product.categories(id),
     name        text        NOT NULL,
     description text,
@@ -226,10 +272,10 @@ CREATE TABLE "user".favorites (
 
 CREATE INDEX ON "user".favorites (uid, created_at DESC);
 
--- Same pattern as favorites — cross-schema FK to product.vendors
+-- Same pattern as favorites — cross-schema FK to vendor.vendors
 CREATE TABLE "user".follows (
     uid        text        NOT NULL REFERENCES "user".users(uid)        ON DELETE CASCADE,
-    vendor_id  uuid        NOT NULL REFERENCES product.vendors(id)      ON DELETE CASCADE,
+    vendor_id  uuid        NOT NULL REFERENCES vendor.vendors(id)       ON DELETE CASCADE,
     created_at timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (uid, vendor_id)
 );
@@ -326,3 +372,4 @@ See [Backend Infrastructure](BACKEND_INFRASTRUCTURE.md) for the cluster topology
 - **Version 2.0** — Locked stack from Phase 0 epic (May 2026). Replaced GraphQL with REST, moved all data to Postgres, added repository abstraction, scoped to v1 entities.
 - **Version 3.0** — Phase 0 implementation alignment (May 2026). Updated to reflect Garage (not MinIO) for object storage, monorepo service locations under `apps/<service>/`, added `product_variants` and `product_details` tables, removed Visit List (out of scope for v1).
 - **Version 3.1** — Database topology revision (May 2026). Switched from per-service Postgres clusters (`product-db` / `user-db`) to a single shared cluster (`cove-db`) with schemas-per-service (`product`, `user`). Cross-schema foreign keys preserve referential integrity for cross-service references like favorites and follows. Trade-off rationale documented inline.
+- **Version 3.2** — Vendor schema pre-positioned (May 2026). Split `vendors` out of the `product` schema into its own `vendor` schema in anticipation of a near-term `cove-vendor` service (vendor onboarding flow + dashboard). Phase 3 introduces the schema with read-only access from `cove-product` and `cove-user`; the future service takes ownership via a permissions flip, no data migration required.
