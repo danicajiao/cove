@@ -1,13 +1,13 @@
 # Backend Infrastructure
 
-> **Status:** Planned. The app currently uses Firebase exclusively. This document describes the target infrastructure as Cove migrates to a custom backend.
+> **Status:** Phase 0 complete. The cluster is fully bootstrapped and running. The iOS app still uses Firebase directly — backend services come online in Phases 1–3 one at a time. Firebase Auth is kept throughout.
 
 ## Goals
 
-- Remove reliance on Firebase for data and storage (Auth migrated last)
-- Host compute on a personal machine to minimize cost
-- Use Kubernetes (K3s) to build transferable skills — manifests are compatible with GKE if scale demands a cloud migration later
-- Keep GCP API Gateway as the single cloud entry point
+- Remove reliance on Firebase for data and storage (Auth stays — it's the hardest to replace and provides the most value)
+- Host compute on a personal K3s machine to eliminate backend costs during development
+- GitOps everything — every infrastructure change is a PR, Argo CD reconciles from `main`
+- Manifests written for K3s run on GKE unchanged if the cluster ever needs to move to the cloud
 
 ---
 
@@ -16,109 +16,210 @@
 ```
 iOS App
     │
-    │  Firebase Auth SDK (kept throughout migration)
-    │  Firebase ID Token passed as Bearer on every request
+    │  Firebase Auth SDK (kept throughout all phases)
+    │  Firebase ID Token in Authorization: Bearer header
     │
     ▼
-GCP API Gateway                          ← cloud, managed, pay-per-request
+api.coveapp.dev  (Cloudflare Tunnel — no open ports on the home machine)
     │
-    │  Validates Firebase ID Token
-    │  (Firebase Admin SDK, single auth check)
+    ▼
+cove-gateway  (K3s pod, cove-staging / cove-prod namespace)
+    │  Validates Firebase ID Token via Firebase Admin SDK
+    │  Routes to backend services by path prefix
     │
-    └── Cloudflare Tunnel ──► K3s on home machine
-                                  ├── api-gateway pod (BFF / internal router)
-                                  ├── product-service pod
-                                  ├── user-service pod
-                                  └── image-service pod
+    ├── /images/*  ──►  cove-image   (Phase 2)
+    ├── /products/* ──►  cove-product (Phase 3)
+    └── /users/*   ──►  cove-user    (Phase 3)
 ```
 
-### Why each component
+Firebase Auth is the only GCP dependency in the request path. There is no GCP API Gateway, no Cloud Run, no Cloud SQL.
 
-| Component | Role | Why |
+---
+
+## Platform layer (installed, Phase 0)
+
+The cluster runs on a single-node K3s machine (AMD Ryzen 9600X, 64 GB RAM). Every operator is managed by Argo CD watching the [`homelab`](https://github.com/danicajiao/homelab) repo.
+
+| Operator | Purpose | Namespace |
 |---|---|---|
-| Firebase Auth | Identity, SSO (Google, Facebook) | Hardest to replace — kept last |
-| GCP API Gateway | Public entry point, token validation | Managed, cheap, GCP learning |
-| Cloudflare Tunnel | Secure home machine exposure | No open ports, no dynamic IP issues, free tier |
-| K3s | Container orchestration on home machine | Full K8s API, low resource overhead, zero compute cost |
-| Google Artifact Registry | Container image storage | Same registry when migrating to GKE later |
+| Argo CD | GitOps reconciler — watches `homelab` repo, applies changes | `argocd` |
+| External Secrets Operator | Syncs GCP Secret Manager → K8s Secrets | `external-secrets` |
+| CloudNativePG (CNPG) | Manages Postgres `Cluster` CRDs | `cnpg-system` |
+| Garage | S3-compatible object storage (`cove-media`, `postgres-backups`, `loki` buckets) | `garage` |
+| kube-prometheus-stack | Prometheus + Grafana + Alertmanager | `monitoring` |
+| Loki + Alloy | Log aggregation (Alloy tails pod logs → Loki, 14d retention) | `monitoring` |
+| Cloudflare Tunnel | Exposes `api.coveapp.dev` → cluster without open ports | `cloudflare-tunnel` |
+
+### Secrets
+
+All real secret values live in **GCP Secret Manager**, split across two projects:
+
+| Project | Secrets for |
+|---|---|
+| `cove-6a685` | Cove workloads — Garage `cove-media` credentials, service API keys |
+| `homelab-495921` | Homelab infra — Grafana admin password, Cloudflare Tunnel credentials, Loki Garage credentials |
+
+**Consumer-owns rule:** a secret lives in the GCP project of whatever workload consumes it. The ESO `ClusterSecretStore` for each project (`gcp-cove`, `gcp-homelab`) bridges GCP SM to K8s Secrets via `ExternalSecret` manifests in the relevant namespace.
 
 ---
 
-## Repo Structure (Polyrepo)
+## Repo structure
 
-Each service lives in its own repo with independent versioning and release cycles. Infrastructure config is centralized.
+All buildable units live in this repo (`danicajiao/cove`). Deployment manifests live in a separate repo (`danicajiao/homelab`) that Argo CD watches.
 
 ```
-cove-ios/           ← this repo (iOS app)
-cove-gateway/       ← BFF, Firebase token validation, internal routing
-cove-product-svc/   ← product catalog, favorites, search
-cove-user-svc/      ← user profiles, social features
-cove-image-svc/     ← image upload, processing, CDN delivery
-cove-infra/         ← K8s manifests (Helm/Kustomize), Terraform, GCP config
+danicajiao/cove                 ← all source code and docs
+│
+├── apps/
+│   ├── ios/                    ← Swift / SwiftUI iOS app
+│   ├── gateway/                ← cove-gateway service (Phase 1)
+│   ├── image/                  ← cove-image service (Phase 2)
+│   ├── product/                ← cove-product service (Phase 3)
+│   └── user/                   ← cove-user service (Phase 3)
+│
+├── packages/                   ← shared code (API schema, types — as needed)
+└── docs/
+
+danicajiao/homelab              ← cluster infra (GitOps source for Argo CD)
+│
+├── infra/                      ← platform operators (one directory per operator)
+│   ├── argocd/
+│   ├── external-secrets/
+│   ├── cnpg/
+│   ├── garage/
+│   ├── kube-prometheus-stack/
+│   ├── loki/
+│   ├── alloy/
+│   └── cloudflare-tunnel/
+│
+├── apps/cove/                  ← Cove K8s manifests
+│   ├── base/                   ← shared Deployments, Services, etc.
+│   └── overlays/
+│       ├── staging/            ← cove-staging namespace, staging image tags
+│       └── prod/               ← cove-prod namespace, prod image tags
+│
+└── argocd/                     ← Argo CD Application manifests (app-of-apps)
 ```
 
-`cove-infra` is the release coordination layer — it defines which version of each service is deployed to which environment. Cross-service dependency management lives here, not scattered across service repos.
+### Build approach
+
+Each service is built independently — no unified build tool required at this scale. The pattern:
+
+- **Each service has its own `Dockerfile`** at `apps/<service>/Dockerfile`
+- **GitHub Actions** builds and pushes each service's image on changes to its path (path filters prevent rebuilding unrelated services)
+- **iOS** keeps its existing Fastlane CI lane
+- **A root `Makefile`** provides convenience targets for local use:
+
+```makefile
+build-gateway:
+    docker build -t cove-gateway apps/gateway/
+
+build-all:
+    docker build -t cove-gateway  apps/gateway/
+    docker build -t cove-image    apps/image/
+    docker build -t cove-product  apps/product/
+    docker build -t cove-user     apps/user/
+```
+
+This avoids the significant setup cost of a polyglot build system (Bazel, etc.) while keeping the door open — if build times become a problem as the repo grows, the groundwork is already in place to adopt one.
+
+The key property a unified build system would buy is incremental builds (only rebuild what changed) and a single CI invocation across all languages. GitHub Actions path filters give you the former cheaply; the latter can be added later.
 
 ---
 
-## Migration Phases
+## Service naming
 
-Each phase is independently shippable. The iOS app is updated incrementally — it never calls a service that isn't ready.
+Services drop the `-svc` suffix. The pod, K8s Service, and image name are all the same:
 
-### Phase 1 — Foundation
+| Service | What it does | Phase |
+|---|---|---|
+| `cove-gateway` | BFF — validates Firebase token, routes to backend services | Phase 1 |
+| `cove-image` | Image upload, resizing, CDN delivery via Garage | Phase 2 |
+| `cove-product` | Product catalog, categories, search | Phase 3 |
+| `cove-user` | User profiles, follows, producer accounts | Phase 3 |
 
-- Provision K3s on home machine
-- Set up Cloudflare Tunnel
-- Deploy GCP API Gateway
-- iOS app sends Firebase ID Token to gateway on all requests
-- Firebase Firestore and Storage still called directly by the app for now
+In Kubernetes, each service runs as a `Deployment` in `cove-staging` or `cove-prod`, with a matching `Service` of the same name.
 
-### Phase 2 — Image Service
+---
 
-- Deploy `cove-image-svc` pod on K3s
-- Handles image uploads, resizing, and CDN delivery
-- iOS app calls `gateway/images` instead of Firebase Storage
+## Container images
+
+Images are stored in Google Artifact Registry under the `cove-6a685` project:
+
+```
+us-central1-docker.pkg.dev/cove/services/cove-gateway:sha-abc1234
+us-central1-docker.pkg.dev/cove/services/cove-image:sha-abc1234
+us-central1-docker.pkg.dev/cove/services/cove-product:sha-abc1234
+us-central1-docker.pkg.dev/cove/services/cove-user:sha-abc1234
+```
+
+Tags use the Git commit SHA (not `latest`) so every deployed version is traceable. The staging overlay pins the `sha-*` tag from the most recent CI build; the prod overlay promotes the same tag after staging validation.
+
+---
+
+## Migration phases
+
+Each phase is independently shippable. The iOS app is updated incrementally — it never calls a service that isn't deployed.
+
+### Phase 0 — Foundations ✅ complete
+
+- K3s cluster running with Argo CD, ESO, CNPG, Garage, kube-prometheus-stack, Loki, Alloy, Cloudflare Tunnel
+- `api.coveapp.dev` resolves to a placeholder response
+- `cove-staging` and `cove-prod` namespaces exist, Argo CD overlays wired up
+- iOS app still calls Firebase directly — no behavior change
+
+### Phase 1 — Gateway
+
+- Deploy `cove-gateway` to `cove-staging`
+- iOS `APIClient` sends Firebase ID Token on all requests
+- Gateway validates token, returns placeholder responses for all routes
+- iOS app routes all backend calls through `APIClient` (Firestore/Storage still called directly for data)
+- Smoke test: authenticated request to `api.coveapp.dev/health` returns 200
+
+### Phase 2 — Image service
+
+- Deploy `cove-image` to `cove-staging`
+- Handles image uploads, resizing, and delivery from Garage `cove-media` bucket
+- iOS app calls `api.coveapp.dev/images/*` instead of Firebase Storage
 - Firebase Storage retired for new uploads
 
-### Phase 3 — Data Services
+### Phase 3 — Data services
 
-- Deploy `cove-product-svc` and `cove-user-svc` pods
-- Postgres for structured data (products, vendors, users)
-- iOS app calls `gateway/products` and `gateway/users`
+- Provision CNPG `Cluster` resources (`product-db`, `user-db`)
+- Deploy `cove-product` and `cove-user` to `cove-staging`
+- Postgres replaces Firestore for all structured data
+- iOS app calls `api.coveapp.dev/products/*` and `api.coveapp.dev/users/*`
 - Firestore retired
 
-### Phase 4 — Auth (when ready)
-
-- Replace Firebase Auth with an OIDC provider
-- Swap token validation in GCP API Gateway (one change, all services benefit)
-- iOS app auth flow updated (sign-in screens, token handling)
-
 ---
 
-## K3s to GKE Migration Path
+## Manifest conventions
 
-K3s uses the same Kubernetes API as GKE — manifests written today run on GKE with minimal changes. The migration path when home machine compute is no longer sufficient:
+Follow these in every service manifest:
 
-1. Push images to Google Artifact Registry (already the registry from day one)
-2. Provision GKE cluster
-3. Apply existing Helm charts / Kustomize configs with environment overrides for GKE
-4. Swap Cloudflare Tunnel endpoint for a GCP Load Balancer in GCP API Gateway config
-5. Decommission K3s
-
----
-
-## Manifest Conventions
-
-To keep the K3s → GKE migration smooth, follow these conventions from the start:
-
-- **Always set resource requests and limits** — required by GKE Autopilot, good practice everywhere
+- **Always set resource requests and limits** — required for Prometheus to track resource usage; also required by GKE Autopilot if the cluster ever migrates
 - **Externalize all config** via `ConfigMap` and `Secret` — no hardcoded endpoints or credentials in images
-- **Use Helm charts or Kustomize** for environment-specific overrides (local vs staging vs prod)
-- **Store all images in Google Artifact Registry** — `us-central1-docker.pkg.dev/cove/services/<name>`
+- **Use Kustomize overlays** for environment differences (image tag, replica count, resource limits)
+- **Never hardcode namespace** in base manifests — Kustomize overlays set `namespace:` at the overlay level
+- **One Deployment per service** — no sidecars except where explicitly justified (e.g., a metrics exporter)
+
+---
+
+## K3s → GKE migration path
+
+K3s uses the same Kubernetes API as GKE — manifests written today run on GKE unchanged. If the cluster ever needs to move:
+
+1. Images are already in Google Artifact Registry — no changes
+2. Provision a GKE cluster
+3. Apply existing Kustomize configs with a new `overlays/gke/` overlay
+4. Update Cloudflare Tunnel to point at the GKE cluster's internal Service
+5. Decommission K3s
 
 ---
 
 ## References
 
-- [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md) — data layer design (SQL vs NoSQL, GraphQL)
+- [Postgres Primer](POSTGRES_PRIMER.md) — indexes, JSONB, full-text search, ltree
+- [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md) — data layer design
+- [Category & Product Architecture](CATEGORY_AND_PRODUCT_ARCHITECTURE.md) — category hierarchy and filtering
 - [App Architecture](APP_ARCHITECTURE.md) — current iOS app structure and Firebase usage
