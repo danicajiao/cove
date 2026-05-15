@@ -34,6 +34,9 @@ Welcome to the documentation for the Cove iOS app.
 - **[Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md)** - Planned data layer: hybrid SQL, NoSQL & GraphQL backend
 - **[Category & Product Architecture](CATEGORY_AND_PRODUCT_ARCHITECTURE.md)** - Planned category hierarchy and filtering system
 
+### Backend Reference
+- **[Postgres Primer](POSTGRES_PRIMER.md)** - Schemas, indexes, EXPLAIN ANALYZE, transactions, JSONB, full-text search, and ltree — the concepts Cove's backend depends on
+
 ### Feature Planning
 - **[LLM Integration Ideas](LLM_INTEGRATION_IDEAS.md)** - Potential ways to incorporate LLMs as production features
 
@@ -65,6 +68,9 @@ Welcome to the documentation for the Cove iOS app.
 
 ### I want to understand the planned data layer
 → Read [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md)
+
+### I'm starting Phase 3 schema work and need to ramp on Postgres
+→ Read [Postgres Primer](POSTGRES_PRIMER.md)
 
 ---
 
