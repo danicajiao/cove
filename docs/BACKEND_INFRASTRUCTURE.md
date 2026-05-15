@@ -185,9 +185,9 @@ Each phase is independently shippable. The iOS app is updated incrementally — 
 
 ### Phase 3 — Data services
 
-- Provision CNPG `Cluster` resources (`product-db`, `user-db`)
+- Provision a single CNPG `Cluster` (`cove-db`) hosting the `cove` database, with `product` and `user` schemas for the two services
 - Deploy `cove-product` and `cove-user` to `cove-staging`
-- Postgres replaces Firestore for all structured data
+- Postgres replaces Firestore for all structured data; cross-schema foreign keys preserve referential integrity for user-centric features (favorites, follows)
 - iOS app calls `api.coveapp.dev/products/*` and `api.coveapp.dev/users/*`
 - Firestore retired
 

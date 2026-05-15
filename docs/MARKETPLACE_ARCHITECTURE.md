@@ -40,28 +40,63 @@ The iOS app uses `swift-openapi-generator` to produce a typed Swift client per s
 
 ---
 
-## Per-service Postgres clusters
+## Single Postgres cluster, schemas per service
 
-Per the convention locked in [Postgres Primer](POSTGRES_PRIMER.md), each service that needs persistence gets its own CNPG `Cluster`:
+All v1 services share one CNPG `Cluster` (`cove-db`) and one database (`cove`), with each service owning its own schema. This is documented as the standard for Cove in [Postgres Primer](POSTGRES_PRIMER.md).
 
-| CNPG Cluster | Database | Owning service | Tables |
-|---|---|---|---|
-| `product-db` | `product` | `cove-product` | `vendors`, `categories`, `products`, `product_variants`, `product_details` |
-| `user-db` | `user` | `cove-user` | `users`, `favorites` |
+| Schema | Owning service | Tables |
+|---|---|---|
+| `product` | `cove-product` | `vendors`, `categories`, `products`, `product_variants`, `product_details` |
+| `user` | `cove-user` | `users`, `favorites`, `follows` |
 
 `cove-image` is stateless — it reads and writes Garage directly and stores no metadata of its own. The `image_key` column on `products` is the system of record for which image belongs to which product.
 
-### Cross-database references
+### Why one cluster, not one per service
 
-`favorites.product_id` is a UUID that refers to a row in `product-db.products`, but **there is no foreign key** across databases — Postgres doesn't support cross-cluster FKs, and the services are intentionally decoupled. The product service is the authority on product existence; `cove-user` treats `product_id` as opaque.
+The microservices orthodoxy is "one database per service" for failure isolation, independent scaling, and team autonomy. None of those preconditions apply at Cove's v1 scale (one developer, single-node K3s, single product surface, no compliance boundaries). What does apply is the cost of giving up referential integrity, JOINs, and atomic writes — every user-centric feature (favorites, follows, etc.) becomes a distributed systems problem when those data references cross cluster boundaries.
 
-When a product is deleted in `cove-product`, the corresponding favorites rows are cleaned up via a background sweep (or accepted as soft-broken pointers — clients can ignore favorites that 404 when fetched). This trade-off is documented per-service in their respective `apps/<service>/README.md`.
+One cluster with schemas keeps logical service ownership (each service connects with a role scoped to its own schema via `search_path`) while preserving Postgres's relational guarantees across the whole graph. If Cove ever grows to the point where the trade-off flips, splitting one cluster into many is a known, low-risk migration.
+
+### Cross-schema foreign keys
+
+Cross-schema references are enforced at the database level. The `favorites` table in the `user` schema has a real FK pointing at `product.products(id)`:
+
+```sql
+CREATE TABLE user.favorites (
+    uid        text NOT NULL REFERENCES user.users(uid)        ON DELETE CASCADE,
+    product_id uuid NOT NULL REFERENCES product.products(id)   ON DELETE CASCADE,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (uid, product_id)
+);
+```
+
+This means:
+- A favorite cannot exist for a product that doesn't exist — Postgres rejects the INSERT.
+- When a product is deleted, all favorites for it are removed automatically via `ON DELETE CASCADE`. No background cleanup jobs, no orphan handling at read time.
+- The Favorites view query is a single JOIN across schemas — no `?expand=` API patterns, no gateway composition, no service-to-service calls.
+
+```sql
+-- The whole Favorites view: list of favorited products with everything
+-- the UI needs to render product cards. One query, one round trip.
+SELECT
+    p.id,
+    p.name,
+    p.price_cents,
+    p.image_key,
+    v.name AS vendor_name,
+    f.created_at AS favorited_at
+FROM user.favorites f
+JOIN product.products p ON p.id = f.product_id
+JOIN product.vendors  v ON v.id = p.vendor_id
+WHERE f.uid = $1
+ORDER BY f.created_at DESC;
+```
 
 ---
 
 ## Entities (v1)
 
-| Entity | Database | Owner | Notes |
+| Entity | Schema | Owner | Notes |
 |---|---|---|---|
 | Vendors | `product` | `cove-product` | Producer or business that owns one or more products. |
 | Categories | `product` | `cove-product` | Hierarchical via `ltree` (e.g. `produce.dairy.cheese`). |
@@ -69,7 +104,8 @@ When a product is deleted in `cove-product`, the corresponding favorites rows ar
 | Product variants | `product` | `cove-product` | SKU-level variations (size, color, weight). One product → many variants. |
 | Product details | `product` | `cove-product` | Polymorphic extended attributes that vary by category (e.g. `flower_source` for honey, `material` for clothing). Stored as JSONB. |
 | Users | `user` | `cove-user` | Profile data. `uid` matches the Firebase Auth UID — no separate identity layer. |
-| Favorites | `user` | `cove-user` | Per-user product saves. `product_id` is a soft reference to `product-db.products`. |
+| Favorites | `user` | `cove-user` | Per-user product saves. Real FK to `product.products(id)`. |
+| Follows | `user` | `cove-user` | Per-user vendor follows. Real FK to `product.vendors(id)`. |
 
 For category and product modeling specifics (gender as attribute vs category, hierarchy patterns, filtering), see [Category & Product Architecture](CATEGORY_AND_PRODUCT_ARCHITECTURE.md).
 
@@ -77,34 +113,58 @@ For category and product modeling specifics (gender as attribute vs category, hi
 
 ## Database schema
 
-This is the v1 schema. Conventions (UUID PKs, `text` over `varchar`, `timestamptz`, snake_case plural tables, JSONB for varying attributes, generated `tsvector` for FTS, `ltree` for hierarchies) come from [Postgres Primer](POSTGRES_PRIMER.md).
+This is the v1 schema for the single `cove` database. Conventions (UUID PKs, `text` over `varchar`, `timestamptz`, snake_case plural tables, JSONB for varying attributes, generated `tsvector` for FTS, `ltree` for hierarchies) come from [Postgres Primer](POSTGRES_PRIMER.md).
 
-### `product` database
+### Setup: schemas and extensions
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS ltree;
 
-CREATE TABLE vendors (
+CREATE SCHEMA product;
+CREATE SCHEMA "user";   -- quoted because `user` is a reserved word in some contexts
+
+-- Service roles. Each service connects as its own role with search_path scoped
+-- to its schema, so application queries stay unqualified.
+CREATE ROLE cove_product LOGIN PASSWORD :'product_password';
+CREATE ROLE cove_user    LOGIN PASSWORD :'user_password';
+
+GRANT USAGE ON SCHEMA product TO cove_product;
+GRANT USAGE ON SCHEMA "user"  TO cove_user;
+
+-- Read-only cross-schema grants. `cove_user` needs to validate FK targets
+-- against product.products and product.vendors at INSERT time, but should
+-- never SELECT/UPDATE/DELETE data it doesn't own.
+GRANT USAGE ON SCHEMA product TO cove_user;
+GRANT REFERENCES ON product.products, product.vendors TO cove_user;
+
+ALTER ROLE cove_product SET search_path = product, public;
+ALTER ROLE cove_user    SET search_path = "user", public;
+```
+
+### `product` schema
+
+```sql
+CREATE TABLE product.vendors (
     id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-    owner_uid   text        NOT NULL,                -- Firebase UID, soft reference to user-db
+    owner_uid   text        NOT NULL,                -- Firebase UID, soft reference to user.users
     name        text        NOT NULL,
     description text,
     created_at  timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE categories (
+CREATE TABLE product.categories (
     id   uuid  PRIMARY KEY DEFAULT gen_random_uuid(),
     name text  NOT NULL,
     path ltree NOT NULL UNIQUE                       -- e.g. 'produce.dairy.cheese'
 );
 
-CREATE INDEX ON categories USING GIST (path);
-CREATE INDEX ON categories USING BTREE (path);
+CREATE INDEX ON product.categories USING GIST (path);
+CREATE INDEX ON product.categories USING BTREE (path);
 
-CREATE TABLE products (
+CREATE TABLE product.products (
     id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-    vendor_id   uuid        NOT NULL REFERENCES vendors(id),
-    category_id uuid        NOT NULL REFERENCES categories(id),
+    vendor_id   uuid        NOT NULL REFERENCES product.vendors(id),
+    category_id uuid        NOT NULL REFERENCES product.categories(id),
     name        text        NOT NULL,
     description text,
     price_cents integer     NOT NULL,
@@ -117,52 +177,64 @@ CREATE TABLE products (
     created_at  timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX ON products USING GIN  (search_vec);
-CREATE INDEX ON products USING GIN  (attributes);
-CREATE INDEX ON products (category_id) WHERE is_active = true;
-CREATE INDEX ON products (vendor_id);
+CREATE INDEX ON product.products USING GIN  (search_vec);
+CREATE INDEX ON product.products USING GIN  (attributes);
+CREATE INDEX ON product.products (category_id) WHERE is_active = true;
+CREATE INDEX ON product.products (vendor_id);
 
 -- SKU-level variations (size/color/weight combinations)
-CREATE TABLE product_variants (
+CREATE TABLE product.product_variants (
     id          uuid    PRIMARY KEY DEFAULT gen_random_uuid(),
-    product_id  uuid    NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    product_id  uuid    NOT NULL REFERENCES product.products(id) ON DELETE CASCADE,
     sku         text    UNIQUE,
     options     jsonb   NOT NULL,                    -- {"size": "M", "color": "black"}
-    price_cents integer,                             -- nullable: NULL means use products.price_cents
+    price_cents integer,                             -- nullable: NULL means use product.products.price_cents
     is_active   boolean NOT NULL DEFAULT true
 );
 
-CREATE INDEX ON product_variants (product_id);
+CREATE INDEX ON product.product_variants (product_id);
 
 -- Polymorphic extended attributes — shape varies by category
 -- e.g. honey: {"flower_source": "wildflower", "weight_g": 500}
 --      clothing: {"material": "cotton", "care": "machine_wash"}
-CREATE TABLE product_details (
-    product_id uuid  PRIMARY KEY REFERENCES products(id) ON DELETE CASCADE,
+CREATE TABLE product.product_details (
+    product_id uuid  PRIMARY KEY REFERENCES product.products(id) ON DELETE CASCADE,
     payload    jsonb NOT NULL
 );
 
-CREATE INDEX ON product_details USING GIN (payload);
+CREATE INDEX ON product.product_details USING GIN (payload);
 ```
 
-### `user` database
+### `user` schema
 
 ```sql
-CREATE TABLE users (
+CREATE TABLE "user".users (
     uid        text        PRIMARY KEY,             -- Firebase Auth UID
     username   text        NOT NULL,
     email      text        NOT NULL UNIQUE,
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE favorites (
-    uid        text        NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
-    product_id uuid        NOT NULL,                -- soft reference to product-db.products
+-- Cross-schema FK: enforced at the database level. Cannot favorite a product
+-- that doesn't exist; deleting a product CASCADEs to remove its favorites.
+CREATE TABLE "user".favorites (
+    uid        text        NOT NULL REFERENCES "user".users(uid)        ON DELETE CASCADE,
+    product_id uuid        NOT NULL REFERENCES product.products(id)     ON DELETE CASCADE,
     created_at timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (uid, product_id)
 );
 
-CREATE INDEX ON favorites (uid, created_at DESC);
+CREATE INDEX ON "user".favorites (uid, created_at DESC);
+
+-- Same pattern as favorites — cross-schema FK to product.vendors
+CREATE TABLE "user".follows (
+    uid        text        NOT NULL REFERENCES "user".users(uid)        ON DELETE CASCADE,
+    vendor_id  uuid        NOT NULL REFERENCES product.vendors(id)      ON DELETE CASCADE,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (uid, vendor_id)
+);
+
+CREATE INDEX ON "user".follows (uid, created_at DESC);
 ```
 
 ---
@@ -184,7 +256,7 @@ cove-gateway
    │
    ▼
 cove-product
-   │  Queries product-db (products + product_variants + product_details JOIN)
+   │  Queries the `product` schema (products + product_variants + product_details JOIN)
    │  Builds response payload with image URL constructed from image_key via imgproxy
    │
    ▼
@@ -235,7 +307,7 @@ See [Backend Infrastructure](BACKEND_INFRASTRUCTURE.md) for the cluster topology
 - Argo CD reconciles all manifests from the `homelab` repo
 - Cloudflare Tunnel exposes the cluster at `api.coveapp.dev` without open ports
 - Secrets come from GCP Secret Manager via External Secrets Operator
-- Postgres clusters (`product-db`, `user-db`) are managed by CNPG, with daily backups to Garage `postgres-backups`
+- A single Postgres cluster (`cove-db`) managed by CNPG hosts the `cove` database, with daily backups to Garage `postgres-backups`
 
 ---
 
@@ -252,4 +324,5 @@ See [Backend Infrastructure](BACKEND_INFRASTRUCTURE.md) for the cluster topology
 
 - **Version 1.0** — Initial architecture document (November 2025). Defined hybrid SQL + NoSQL split with GraphQL API layer.
 - **Version 2.0** — Locked stack from Phase 0 epic (May 2026). Replaced GraphQL with REST, moved all data to Postgres, added repository abstraction, scoped to v1 entities.
-- **Version 3.0** — Phase 0 implementation alignment (May 2026). Updated to reflect Garage (not MinIO) for object storage, per-service Postgres clusters (`product-db` / `user-db`), monorepo service locations under `apps/<service>/`, added `product_variants` and `product_details` tables, removed Visit List (out of scope for v1).
+- **Version 3.0** — Phase 0 implementation alignment (May 2026). Updated to reflect Garage (not MinIO) for object storage, monorepo service locations under `apps/<service>/`, added `product_variants` and `product_details` tables, removed Visit List (out of scope for v1).
+- **Version 3.1** — Database topology revision (May 2026). Switched from per-service Postgres clusters (`product-db` / `user-db`) to a single shared cluster (`cove-db`) with schemas-per-service (`product`, `user`). Cross-schema foreign keys preserve referential integrity for cross-service references like favorites and follows. Trade-off rationale documented inline.

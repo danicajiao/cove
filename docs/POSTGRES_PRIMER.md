@@ -8,14 +8,18 @@ Assumed starting point: comfortable with Firestore, new to relational databases.
 
 ## The database layout
 
-Cove runs one CNPG `Cluster` per service. Each cluster gets its own Postgres instance with a single database:
+Cove runs one CNPG `Cluster` (`cove-db`) hosting a single database (`cove`). Inside that database, each service owns its own schema:
 
-| CNPG Cluster | Database | Primary tables |
+| Schema | Owning service | Primary tables |
 |---|---|---|
-| `product-db` | `product` | `products`, `categories`, `producers`, `media_assets` |
-| `user-db` | `user` | `users`, `addresses`, `follows` |
+| `product` | `cove-product` | `vendors`, `categories`, `products`, `product_variants`, `product_details` |
+| `user` | `cove-user` | `users`, `favorites`, `follows` |
 
-Within each database the default schema (`public`) is used — no schema prefixes needed. `SELECT * FROM products` just works inside the `product` database.
+Each service connects with a Postgres role whose `search_path` is set to its own schema, so application queries stay unqualified — `SELECT * FROM products` inside `cove-product` works without ever typing `product.products`. Cross-schema references (e.g., `user.favorites` → `product.products`) use real foreign keys, since both schemas live in the same database.
+
+### Why one cluster, not one per service
+
+The microservices-textbook answer is "one database per service." That trade-off is correct at FAANG scale where per-service teams, failure-isolation budgets, and compliance boundaries all matter. None of those conditions apply at Cove's v1 scale (one developer, one node, one product surface). What does apply is the cost of giving up referential integrity, JOINs, and atomic writes — every user-centric feature becomes a distributed systems problem when its references cross cluster boundaries. One cluster with schemas keeps logical service ownership while preserving Postgres's relational guarantees. See [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md) for the full rationale.
 
 Compare to Firestore:
 
@@ -46,12 +50,39 @@ SHOW search_path;
 -- "$user", public
 ```
 
-**When this matters for Cove:** CNPG provisions each database with a dedicated role. The `search_path` is set on that role so application queries never need to qualify schema names. The `ltree` and `pg_trgm` extensions land in `public` by default — no special path needed.
-
-If you ever create a second schema (e.g., to isolate admin tables from the API surface), you'd update `search_path` on the role:
+**When this matters for Cove:** CNPG provisions the `cove` database, then bootstrap migrations create the `product` and `user` schemas plus a service role for each (`cove_product`, `cove_user`). Each role's `search_path` is set to its own schema, so application queries stay unqualified. The `ltree` extension lives in `public` (the chart default) so it's reachable from any schema.
 
 ```sql
-ALTER ROLE product_app SET search_path = app, public;
+-- Bootstrap sketch — runs once after the cluster comes up
+CREATE SCHEMA product;
+CREATE SCHEMA "user";
+
+CREATE ROLE cove_product LOGIN PASSWORD :'product_password';
+CREATE ROLE cove_user    LOGIN PASSWORD :'user_password';
+
+GRANT USAGE ON SCHEMA product TO cove_product;
+GRANT USAGE ON SCHEMA "user"  TO cove_user;
+
+-- cove_user needs to validate FK targets against product.products and
+-- product.vendors at INSERT time, but should never SELECT data it doesn't own
+GRANT USAGE ON SCHEMA product TO cove_user;
+GRANT REFERENCES ON product.products, product.vendors TO cove_user;
+
+ALTER ROLE cove_product SET search_path = product, public;
+ALTER ROLE cove_user    SET search_path = "user", public;
+```
+
+Cross-schema foreign keys are the unlock that makes the single-cluster model practical:
+
+```sql
+-- A favorite that physically lives in the `user` schema but references
+-- a row in the `product` schema. Postgres enforces this — INSERT fails
+-- if the product doesn't exist; deleting the product CASCADEs the favorite.
+CREATE TABLE "user".favorites (
+    uid        text NOT NULL REFERENCES "user".users(uid)      ON DELETE CASCADE,
+    product_id uuid NOT NULL REFERENCES product.products(id)   ON DELETE CASCADE,
+    PRIMARY KEY (uid, product_id)
+);
 ```
 
 ---
