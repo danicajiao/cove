@@ -37,6 +37,7 @@ Welcome to the documentation for the Cove iOS app.
 
 ### Backend Reference
 - **[Postgres Primer](POSTGRES_PRIMER.md)** - Schemas, indexes, EXPLAIN ANALYZE, transactions, JSONB, full-text search, and ltree — the concepts Cove's backend depends on
+- **[Media Architecture](MEDIA_ARCHITECTURE.md)** - Image storage in Garage, on-the-fly transformation via imgproxy, the variant catalog, vendor upload normalization, signed-URL auth model, and Cloudflare caching
 
 ### Feature Planning
 - **[LLM Integration Ideas](LLM_INTEGRATION_IDEAS.md)** - Potential ways to incorporate LLMs as production features
@@ -72,6 +73,9 @@ Welcome to the documentation for the Cove iOS app.
 
 ### I'm starting Phase 3 schema work and need to ramp on Postgres
 → Read [Postgres Primer](POSTGRES_PRIMER.md)
+
+### I'm working on image uploads, serving, or anything imgproxy-related
+→ Read [Media Architecture](MEDIA_ARCHITECTURE.md)
 
 ---
 

@@ -196,7 +196,6 @@ CREATE TABLE product.products (
     name        text        NOT NULL,
     description text,
     price_cents integer     NOT NULL,
-    image_key   text,                                -- Garage cove-media object key
     attributes  jsonb       NOT NULL DEFAULT '{}',   -- filterable facets (see Facets section)
     search_vec  tsvector    GENERATED ALWAYS AS (
         to_tsvector('english', coalesce(name, '') || ' ' || coalesce(description, ''))
@@ -206,7 +205,7 @@ CREATE TABLE product.products (
 );
 ```
 
-Every product has a `price_cents` and `category_id`. Variations (different sizes, colors, weights) live in `product_variants` rather than as separate products. Type-specific extended attributes that don't make sense to filter on (ingredient lists, care instructions, brewing notes) live in `product_details`.
+Every product has a `price_cents` and `category_id`. Variations (different sizes, colors, weights) live in `product_variants` rather than as separate products. Type-specific extended attributes that don't make sense to filter on (ingredient lists, care instructions, brewing notes) live in `product_details`. Images live in `product_media` — exactly one `primary` image (shown in list views) and zero or more `gallery` images (detail carousel); see [Media Architecture](MEDIA_ARCHITECTURE.md) for the full storage + transformation + serving pipeline.
 
 ### Example rows
 
@@ -427,9 +426,19 @@ SELECT id, name FROM product.categories WHERE nlevel(path) = 1 ORDER BY name;
 ### Category browse → products in this subtree
 
 ```sql
-SELECT p.id, p.name, p.price_cents, p.image_key
+SELECT
+    p.id, p.name, p.price_cents,
+    m.media_key AS primary_image_key,
+    m.width  AS primary_image_width,
+    m.height AS primary_image_height
 FROM product.products p
 JOIN product.categories c ON c.id = p.category_id
+LEFT JOIN LATERAL (
+    SELECT media_key, width, height
+    FROM product.product_media
+    WHERE product_id = p.id AND role = 'primary'
+    LIMIT 1
+) m ON TRUE
 WHERE c.path <@ $1                     -- the selected category's path
   AND p.is_active
 ORDER BY p.created_at DESC
@@ -439,9 +448,19 @@ LIMIT 50;
 ### Apply filter facets
 
 ```sql
-SELECT p.id, p.name, p.price_cents, p.image_key
+SELECT
+    p.id, p.name, p.price_cents,
+    m.media_key AS primary_image_key,
+    m.width  AS primary_image_width,
+    m.height AS primary_image_height
 FROM product.products p
 JOIN product.categories c ON c.id = p.category_id
+LEFT JOIN LATERAL (
+    SELECT media_key, width, height
+    FROM product.product_media
+    WHERE product_id = p.id AND role = 'primary'
+    LIMIT 1
+) m ON TRUE
 WHERE c.path <@ $1                     -- category subtree
   AND p.attributes @> $2               -- e.g. '{"certifications": ["organic"]}'
   AND p.price_cents BETWEEN $3 AND $4
@@ -449,11 +468,13 @@ WHERE c.path <@ $1                     -- category subtree
 ORDER BY p.created_at DESC;
 ```
 
+In both queries the application layer (`cove-product`) turns each `primary_image_key` into a set of signed imgproxy variant URLs (`thumb`, `sm`, `md`) before returning the response — see [Media Architecture](MEDIA_ARCHITECTURE.md).
+
 ### Product detail page (single round trip)
 
 ```sql
 SELECT
-    p.id, p.name, p.description, p.price_cents, p.image_key, p.attributes,
+    p.id, p.name, p.description, p.price_cents, p.attributes,
     v.id AS vendor_id, v.name AS vendor_name,
     c.path AS category_path,
     pd.payload AS details,
@@ -464,7 +485,15 @@ SELECT
         ))
         FROM product.product_variants pv
         WHERE pv.product_id = p.id AND pv.is_active
-    ) AS variants
+    ) AS variants,
+    (
+        SELECT json_agg(json_build_object(
+            'media_key', pm.media_key, 'role', pm.role, 'sort_order', pm.sort_order,
+            'alt_text', pm.alt_text, 'width', pm.width, 'height', pm.height
+        ) ORDER BY pm.sort_order)
+        FROM product.product_media pm
+        WHERE pm.product_id = p.id
+    ) AS media
 FROM product.products p
 JOIN vendor.vendors        v  ON v.id = p.vendor_id
 JOIN product.categories    c  ON c.id = p.category_id
@@ -472,7 +501,7 @@ LEFT JOIN product.product_details pd ON pd.product_id = p.id
 WHERE p.id = $1;
 ```
 
-One query returns everything the detail screen needs.
+One query returns everything the detail screen needs. The `cove-product` handler post-processes the `media` array, signing the 5-variant set for each item before returning the JSON.
 
 ---
 
@@ -492,5 +521,6 @@ Each of these belongs in a future phase:
 ## References
 
 - [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md) — service layout, database topology, where this schema lives
+- [Media Architecture](MEDIA_ARCHITECTURE.md) — product image storage, transformation, serving, variant catalog, vendor upload pipeline
 - [Postgres Primer](POSTGRES_PRIMER.md) — `ltree` operators, JSONB syntax, FTS, indexes
 - [Backend Infrastructure](BACKEND_INFRASTRUCTURE.md) — cluster + deployment model
