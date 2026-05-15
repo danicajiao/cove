@@ -65,12 +65,24 @@ All real secret values live in **GCP Secret Manager**, split across two projects
 
 ## Repo structure
 
-Infrastructure and app code live in two repos:
+All buildable units live in this repo (`danicajiao/cove`). Deployment manifests live in a separate repo (`danicajiao/homelab`) that Argo CD watches.
 
 ```
-danicajiao/homelab          ← cluster infra (GitOps source for Argo CD)
+danicajiao/cove                 ← all source code and docs
 │
-├── infra/                  ← platform operators (one directory per operator)
+├── apps/
+│   ├── ios/                    ← Swift / SwiftUI iOS app
+│   ├── gateway/                ← cove-gateway service (Phase 1)
+│   ├── image/                  ← cove-image service (Phase 2)
+│   ├── product/                ← cove-product service (Phase 3)
+│   └── user/                   ← cove-user service (Phase 3)
+│
+├── packages/                   ← shared code (API schema, types — as needed)
+└── docs/
+
+danicajiao/homelab              ← cluster infra (GitOps source for Argo CD)
+│
+├── infra/                      ← platform operators (one directory per operator)
 │   ├── argocd/
 │   ├── external-secrets/
 │   ├── cnpg/
@@ -80,20 +92,38 @@ danicajiao/homelab          ← cluster infra (GitOps source for Argo CD)
 │   ├── alloy/
 │   └── cloudflare-tunnel/
 │
-├── apps/cove/              ← Cove application services
-│   ├── base/               ← shared manifests (Deployments, Services, etc.)
+├── apps/cove/                  ← Cove K8s manifests
+│   ├── base/                   ← shared Deployments, Services, etc.
 │   └── overlays/
-│       ├── staging/        ← cove-staging namespace, staging image tags
-│       └── prod/           ← cove-prod namespace, prod image tags
+│       ├── staging/            ← cove-staging namespace, staging image tags
+│       └── prod/               ← cove-prod namespace, prod image tags
 │
-└── argocd/                 ← Argo CD Application manifests (app-of-apps)
-
-danicajiao/cove             ← iOS app, docs, future web client
-├── apps/ios/
-└── docs/
+└── argocd/                     ← Argo CD Application manifests (app-of-apps)
 ```
 
-Backend services **do not have their own repos**. Service code will live under `apps/` in this repo (or a dedicated `services/` directory) when Phase 1 begins. The `homelab` repo handles all deployment manifests.
+### Build approach
+
+Each service is built independently — no unified build tool required at this scale. The pattern:
+
+- **Each service has its own `Dockerfile`** at `apps/<service>/Dockerfile`
+- **GitHub Actions** builds and pushes each service's image on changes to its path (path filters prevent rebuilding unrelated services)
+- **iOS** keeps its existing Fastlane CI lane
+- **A root `Makefile`** provides convenience targets for local use:
+
+```makefile
+build-gateway:
+    docker build -t cove-gateway apps/gateway/
+
+build-all:
+    docker build -t cove-gateway  apps/gateway/
+    docker build -t cove-image    apps/image/
+    docker build -t cove-product  apps/product/
+    docker build -t cove-user     apps/user/
+```
+
+This avoids the significant setup cost of a polyglot build system (Bazel, etc.) while keeping the door open — if build times become a problem as the repo grows, the groundwork is already in place to adopt one.
+
+The key property a unified build system would buy is incremental builds (only rebuild what changed) and a single CI invocation across all languages. GitHub Actions path filters give you the former cheaply; the latter can be added later.
 
 ---
 
