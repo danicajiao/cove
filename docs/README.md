@@ -33,6 +33,7 @@ Welcome to the documentation for the Cove iOS app.
 - **[Backend Infrastructure](BACKEND_INFRASTRUCTURE.md)** - Planned infrastructure: K3s, GCP API Gateway, Cloudflare Tunnel, migration phases
 - **[Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md)** - Planned data layer: hybrid SQL, NoSQL & GraphQL backend
 - **[Category & Product Architecture](CATEGORY_AND_PRODUCT_ARCHITECTURE.md)** - Planned category hierarchy and filtering system
+- **[Homelab Layout for Cove](homelab-cove-layout.md)** - Where Cove's backend services and platform operators live in the [`homelab`](https://github.com/danicajiao/homelab) repo
 
 ### Backend Reference
 - **[Postgres Primer](POSTGRES_PRIMER.md)** - Schemas, indexes, EXPLAIN ANALYZE, transactions, JSONB, full-text search, and ltree — the concepts Cove's backend depends on
