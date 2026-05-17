@@ -2,6 +2,25 @@
 
 > **Status:** Planned — built in Phase 2 alongside `cove-image`. v1 covers product images only; videos and documents are deferred. The bucket `cove-media` is already provisioned in Garage.
 
+## Contents
+
+- [Overview](#overview)
+- [The mental model](#the-mental-model)
+- [Data model](#data-model)
+- [Variant catalog](#variant-catalog)
+- [Serving variants](#serving-variants)
+- [Picking variants on iOS](#picking-variants-on-ios)
+- [Vendor upload flow](#vendor-upload-flow)
+- [The imgproxy URL — anatomy](#the-imgproxy-url--anatomy)
+- [Auth model](#auth-model)
+- [Caching](#caching)
+- [Pre-warming](#pre-warming)
+- [Garbage collection](#garbage-collection)
+- [What's deferred](#whats-deferred)
+- [References](#references)
+
+---
+
 ## Overview
 
 Every product in Cove has at least one image, and most have a small gallery. Those images need to:

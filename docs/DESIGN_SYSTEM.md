@@ -4,6 +4,18 @@ This document is the authoritative reference for Cove's design system. It maps F
 
 **Figma file:** [Cove](https://www.figma.com/design/PQWPBacMcEeXzDyi7aalZY/Cove)
 
+## Contents
+
+- [Figma File Structure](#figma-file-structure)
+- [Color System](#color-system)
+- [Typography](#typography)
+- [Spacing](#spacing)
+- [Corner Radius](#corner-radius)
+- [Shadow](#shadow)
+- [Components](#components)
+- [Rules & Anti-Patterns](#rules--anti-patterns)
+- [Roadmap & Known Gaps](#roadmap--known-gaps)
+
 ---
 
 ## Figma File Structure

@@ -2,6 +2,22 @@
 
 > **Status:** Planned design. The current app uses a flat, hardcoded category set. This document describes the post-migration model in Postgres — built alongside `cove-product` in Phase 3.
 
+## Contents
+
+- [Overview](#overview)
+- [Category hierarchy](#category-hierarchy)
+- [Facets and filters, not categories](#facets-and-filters-not-categories)
+- [Products](#products)
+- [Product variants](#product-variants)
+- [Product details (polymorphic)](#product-details-polymorphic)
+- [Full-text search](#full-text-search)
+- [Indexes by query pattern](#indexes-by-query-pattern)
+- [User-facing flows mapped to queries](#user-facing-flows-mapped-to-queries)
+- [What's deliberately not modeled](#whats-deliberately-not-modeled)
+- [References](#references)
+
+---
+
 ## Overview
 
 Cove's catalog has two related modeling problems that pull in different directions:
