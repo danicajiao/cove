@@ -2,6 +2,25 @@
 
 > **Status:** Planned — built in Phase 2 alongside `cove-image`. v1 covers product images only; videos and documents are deferred. The bucket `cove-media` is already provisioned in Garage.
 
+## Contents
+
+- [Overview](#overview)
+- [The mental model](#the-mental-model)
+- [Data model](#data-model)
+- [Variant catalog](#variant-catalog)
+- [Serving variants](#serving-variants)
+- [Picking variants on iOS](#picking-variants-on-ios)
+- [Vendor upload flow](#vendor-upload-flow)
+- [The imgproxy URL — anatomy](#the-imgproxy-url--anatomy)
+- [Auth model](#auth-model)
+- [Caching](#caching)
+- [Pre-warming](#pre-warming)
+- [Garbage collection](#garbage-collection)
+- [What's deferred](#whats-deferred)
+- [References](#references)
+
+---
+
 ## Overview
 
 Every product in Cove has at least one image, and most have a small gallery. Those images need to:
@@ -412,12 +431,25 @@ Because URLs are deterministic (same source key + same variant = same URL across
 
 ### Cache headers from imgproxy
 
+The Cloudflare edge cache doesn't kick in automatically for our URL pattern — the path ends in `@webp` (imgproxy's output format suffix), not `.webp`, so Cloudflare's static-asset extension heuristic doesn't match. What actually triggers caching is the **origin response headers** imgproxy sends:
+
 ```http
 Cache-Control: public, max-age=31536000, immutable
 ETag: "<sha256-of-bytes>"
 ```
 
-`immutable` tells Cloudflare (and browser caches) that the URL's response will never change — they can serve from cache without revalidation. This is safe because the URL itself encodes the content (via `media_key` = SHA-256 of source bytes). If the source changes, it gets a new key, which produces new URLs.
+Cloudflare's default "Respect Origin Headers" behavior on the Free plan caches based on these regardless of URL pattern. `immutable` tells Cloudflare (and browser caches) that the URL's response will never change — they can serve from cache without revalidation. This is safe because the URL itself encodes the content (via `media_key` = SHA-256 of source bytes). If the source changes, it gets a new key, which produces new URLs.
+
+### Cloudflare configuration
+
+The Free plan covers everything we need: edge caching, ~~unlimited~~ bandwidth, basic DDoS protection. The paid features (Argo Smart Routing, Tiered Cache, Cache Reserve) trim 20-30ms off transit and matter at much higher traffic — they're not load-bearing for Cove.
+
+Optionally, a single Cache Rule in the Cloudflare dashboard provides belt-and-suspenders coverage and lets you override TTL without redeploying imgproxy:
+
+- **Match:** Hostname is `api.coveapp.dev` AND URI Path matches `/i/*`
+- **Action:** Eligible for cache, Edge TTL 1 year
+
+Free plan allows up to 5 Cache Rules. With the origin headers above already doing the work, this rule is optional.
 
 ### When does the cache miss?
 

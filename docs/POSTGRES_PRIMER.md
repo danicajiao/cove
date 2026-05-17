@@ -4,6 +4,19 @@ A focused ramp-up on the Postgres concepts Cove's backend depends on. The goal i
 
 Assumed starting point: comfortable with Firestore, new to relational databases.
 
+## Contents
+
+- [The database layout](#the-database-layout)
+- [Schemas and search_path](#schemas-and-search_path)
+- [Indexes: B-tree, GIN, and partial](#indexes-b-tree-gin-and-partial)
+- [EXPLAIN ANALYZE](#explain-analyze)
+- [Transactions and isolation levels](#transactions-and-isolation-levels)
+- [JSONB](#jsonb)
+- [Full-text search with tsvector and tsquery](#full-text-search-with-tsvector-and-tsquery)
+- [Category hierarchy with ltree](#category-hierarchy-with-ltree)
+- [Quick reference](#quick-reference)
+- [Glossary](#glossary)
+
 ---
 
 ## The database layout
@@ -511,3 +524,46 @@ EXPLAIN ANALYZE SELECT ...
 -- Refresh statistics after large data loads
 ANALYZE products;
 ```
+
+---
+
+## Glossary
+
+Quick lookups for terms used throughout. For full context, see the corresponding sections above.
+
+**B-tree** — The default Postgres index type. Used for equality, range queries, and sorting on scalar columns. Created with a plain `CREATE INDEX`.
+
+**Cross-schema FK** — A foreign key whose target column lives in a different schema in the same database (e.g. `"user".favorites.product_id` → `product.products(id)`). Works natively; foundational to Cove's single-cluster-schemas-per-service topology.
+
+**EXPLAIN ANALYZE** — A Postgres command that runs a query and reports the actual execution plan with wall-clock timings. The first tool to reach for when a query is slower than expected.
+
+**Generated column** — A column whose value is computed by an expression over other columns in the same row. `STORED` keeps the result on disk so it can be indexed. Used for `search_vec` to keep it in sync with `name` + `description` automatically.
+
+**GIN** — Generalized Inverted Index. Indexes the *contents* of composite values: JSONB keys, array elements, tsvector lexemes. Required for `@>` containment, `?` key-exists, and `@@` full-text matches.
+
+**GiST** — Generalized Search Tree. The index type used by `ltree` for hierarchical operators (`<@`, `@>`, `~`).
+
+**JSONB** — Binary-stored, queryable, indexable JSON. Preferred over `json` for any column you'll query. Operators: `->` (get as JSONB), `->>` (get as text), `@>` (contains), `?` (key exists).
+
+**ltree** — Postgres extension that stores hierarchical labels as a single dot-separated column (`food.produce.honey`). Operators include `<@` (is descendant of), `@>` (is ancestor of), `~` (matches lquery pattern), `nlevel()` (depth).
+
+**Partial index** — An index with a `WHERE` clause covering only matching rows. Smaller, faster, and the right tool when most rows are irrelevant to most queries (e.g., active products only).
+
+**Read committed** — Postgres's default isolation level. Each statement sees a fresh snapshot of committed data. Two reads of the same row in one transaction may return different values if another transaction committed in between.
+
+**Repeatable read** — An isolation level where the entire transaction sees the snapshot taken at its start. Use when you need consistency across multiple reads in one transaction.
+
+**Role** — A Postgres "user" with login and permission grants. Services connect as their own role (`cove_product`, `cove_user`) so schema ownership is enforced at the database level.
+
+**Schema** — A namespace inside a Postgres database that groups tables, functions, and types. Cove uses one schema per service (`product`, `vendor`, `user`) within a single `cove` database.
+
+**search_path** — Ordered list of schemas Postgres checks for unqualified names. Each service's role has its own schema first, so application queries stay unqualified (`SELECT * FROM products` works inside `cove-product` because `search_path = product, public`).
+
+**Serializable** — The strictest isolation level — transactions behave as if they ran one at a time. Rarely needed; comes with occasional retry on conflict.
+
+**tsquery** — A search expression parsed from user input (via `to_tsquery` or `websearch_to_tsquery`). Combined with `@@` to match against a tsvector.
+
+**tsvector** — Pre-processed representation of a document (normalized lexemes + positions) used for full-text search. Typically stored as a generated column from `name` + `description` and indexed with GIN.
+
+**websearch_to_tsquery** — A forgiving tsquery parser for user-typed search input. Handles phrases (`"raw honey"`), negations (`organic -processed`), and never throws on invalid syntax. Use this for app search bars; use `to_tsquery` for programmatic queries.
+

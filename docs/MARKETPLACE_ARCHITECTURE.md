@@ -2,6 +2,21 @@
 
 > **Status:** Planned backend. The app currently uses Firebase (Firestore + Auth + Storage) exclusively. This document describes the target marketplace data layer Cove is migrating to — see [Backend Infrastructure](BACKEND_INFRASTRUCTURE.md) for the cluster and phase plan.
 
+## Contents
+
+- [Overview](#overview)
+- [Services](#services)
+- [Single Postgres cluster, schemas per service](#single-postgres-cluster-schemas-per-service)
+- [Entities (v1)](#entities-v1)
+- [Database schema](#database-schema)
+- [Request flow: fetching a product page](#request-flow-fetching-a-product-page)
+- [iOS networking layer](#ios-networking-layer)
+- [Deployment](#deployment)
+- [References](#references)
+- [Revision history](#revision-history)
+
+---
+
 ## Overview
 
 Cove is a discovery platform for local producers and businesses. Users browse vendors and their products and save favorites. Purchases happen in person — there is no order management or payment processing in v1.

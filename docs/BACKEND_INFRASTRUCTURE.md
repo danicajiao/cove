@@ -2,6 +2,21 @@
 
 > **Status:** Phase 0 complete. The cluster is fully bootstrapped and running. The iOS app still uses Firebase directly — backend services come online in Phases 1–3 one at a time. Firebase Auth is kept throughout.
 
+## Contents
+
+- [Goals](#goals)
+- [Architecture](#architecture)
+- [Platform layer (installed, Phase 0)](#platform-layer-installed-phase-0)
+- [Repo structure](#repo-structure)
+- [Service naming](#service-naming)
+- [Container images](#container-images)
+- [Migration phases](#migration-phases)
+- [Manifest conventions](#manifest-conventions)
+- [K3s → GKE migration path](#k3s--gke-migration-path)
+- [References](#references)
+
+---
+
 ## Goals
 
 - Remove reliance on Firebase for data and storage (Auth stays — it's the hardest to replace and provides the most value)
