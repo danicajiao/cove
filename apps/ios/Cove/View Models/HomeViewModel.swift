@@ -5,8 +5,7 @@
 //  Created by Daniel Cajiao on 12/6/22.
 //
 
-import FirebaseFirestore
-import FirebaseStorage
+import Foundation
 
 @MainActor
 class HomeViewModel: ObservableObject {
@@ -18,75 +17,39 @@ class HomeViewModel: ObservableObject {
 
     private var lastFetchTime: Date?
     private let cacheTimeout: TimeInterval = 300
+    private let productRepository: ProductRepository
 
-    private func decodeProduct(from document: QueryDocumentSnapshot) -> (any Product)? {
-        let categoryId = document["categoryId"] as? String
-        do {
-            if categoryId == ProductTypes.coffee.rawValue {
-                return try document.data(as: CoffeeProduct.self)
-            } else if categoryId == ProductTypes.music.rawValue {
-                return try document.data(as: MusicProduct.self)
-            } else if categoryId == ProductTypes.apparel.rawValue {
-                return try document.data(as: ApparelProduct.self)
-            }
-        } catch {
-            print(error)
-        }
-        return nil
+    init(productRepository: ProductRepository = FirebaseProductRepository()) {
+        self.productRepository = productRepository
     }
 
-    /// Fetches products from Firebase and populates the products array used in the HomeView
     func fetchProducts(forceRefresh: Bool = false) async throws {
         let cacheExpired = lastFetchTime.map { Date().timeIntervalSince($0) > cacheTimeout } ?? true
         guard products.isEmpty || forceRefresh || cacheExpired else { return }
 
         print("Fetching products...")
-        let firestore = Firestore.firestore()
+        let fetched = try await productRepository.fetchHome()
 
-        do {
-            let snapshot = try await firestore.collection("products").getDocuments()
-            let products: [any Product] = snapshot.documents.compactMap { decodeProduct(from: $0) }
-
-            if products.isEmpty {
-                print("No products returned from request")
-                return
-            }
-
-            self.products = products
-            lastFetchTime = Date()
-        } catch {
-            print(error)
-            throw error
+        if fetched.isEmpty {
+            print("No products returned from request")
+            return
         }
+
+        products = fetched
+        lastFetchTime = Date()
     }
 
     func fetchBrands() async throws {
         if !brands.isEmpty { return }
 
         print("Fetching brands...")
-        let firestore = Firestore.firestore()
+        let fetched = try await productRepository.fetchBrands()
 
-        do {
-            let snapshot = try await firestore.collection("brands").getDocuments()
-
-            let brands: [Brand] = snapshot.documents.compactMap { document in
-                do {
-                    return try document.data(as: Brand.self)
-                } catch {
-                    print(error)
-                    return nil
-                }
-            }
-
-            if brands.isEmpty {
-                print("No brands returned from request")
-                return
-            }
-
-            self.brands = brands
-        } catch {
-            print(error)
-            throw error
+        if fetched.isEmpty {
+            print("No brands returned from request")
+            return
         }
+
+        brands = fetched
     }
 }

@@ -81,6 +81,24 @@ final class FirebaseProductRepository: ProductRepository {
         return snapshot.documents.compactMap { decodeProduct(from: $0) }
     }
 
+    func fetchProducts(withIds ids: [String]) async throws -> [any Product] {
+        guard !ids.isEmpty else { return [] }
+
+        var products: [any Product] = []
+
+        // Firestore's `in` operator supports up to 30 values — batch if needed.
+        for batchStart in stride(from: 0, to: ids.count, by: 30) {
+            let batch = Array(ids[batchStart ..< min(batchStart + 30, ids.count)])
+            let snapshot = try await firestore
+                .collection("products")
+                .whereField(FieldPath.documentID(), in: batch)
+                .getDocuments()
+            products.append(contentsOf: snapshot.documents.compactMap { decodeProduct(from: $0) })
+        }
+
+        return products
+    }
+
     func fetchBrands() async throws -> [Brand] {
         let snapshot = try await firestore.collection("brands").getDocuments()
         return snapshot.documents.compactMap { try? $0.data(as: Brand.self) }
