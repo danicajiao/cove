@@ -22,14 +22,16 @@ import OSLog
 /// let result: MyResponse = try await client.send(APIRequest(path: "health"))
 /// ```
 ///
-/// > Note: Environment switching (staging vs. prod base URLs) is handled in issue #223.
+/// > Note: Use the no-argument `init()` for standard use — it reads `APIEnvironment.current`
+/// > automatically. Pass an explicit `baseURL` only in tests or to force a specific environment.
 final class APIClient: @unchecked Sendable {
     // MARK: Properties
 
     /// The base URL prepended to every request path.
     ///
-    /// Inject a staging URL during testing; prod URL in release builds.
-    /// Issue #223 will provide convenience factory properties for both environments.
+    /// Set automatically from `APIEnvironment.current` by the no-argument convenience
+    /// initializer. Pass an explicit URL to override (e.g. in unit tests or to force
+    /// a specific environment).
     let baseURL: URL
 
     private let session: URLSession
@@ -37,6 +39,21 @@ final class APIClient: @unchecked Sendable {
     private let tokenCache = TokenCache()
 
     // MARK: Init
+
+    /// Creates a client pointed at `APIEnvironment.current.baseURL`.
+    ///
+    /// This is the standard initializer for production and debug use.
+    /// Pass an explicit `baseURL` to target a different environment (e.g. in tests).
+    convenience init(
+        session: URLSession = .shared,
+        decoder: JSONDecoder = JSONDecoder()
+    ) {
+        self.init(
+            baseURL: APIEnvironment.current.baseURL,
+            session: session,
+            decoder: decoder
+        )
+    }
 
     init(
         baseURL: URL,
@@ -56,10 +73,13 @@ final class APIClient: @unchecked Sendable {
     /// avoids redundant `getIDTokenResult` calls in burst scenarios while ensuring tokens
     /// stay fresh (Firebase rotates them hourly; our TTL is well within that window).
     ///
-    /// - Throws: `APIError.unauthenticated` when no user is signed in,
-    ///           `APIError.httpError` for non-2xx responses,
-    ///           `APIError.decodingError` when the body cannot be decoded into `T`,
-    ///           `APIError.networkError` for transport failures.
+    /// - Throws: `APIError.tokenUnavailable` when no user is signed in or the token fetch fails,
+    ///           `APIError.unauthorized` for HTTP 401,
+    ///           `APIError.forbidden` for HTTP 403,
+    ///           `APIError.notFound` for HTTP 404,
+    ///           `APIError.server` for 5xx and other unexpected status codes,
+    ///           `APIError.transport` for network-level failures,
+    ///           `APIError.decoding` when the body cannot be decoded into `T`.
     func send<T: Decodable>(_ request: APIRequest) async throws -> T {
         let token = try await tokenCache.validToken()
 
@@ -73,26 +93,43 @@ final class APIClient: @unchecked Sendable {
         let (data, response): (Data, URLResponse)
         do {
             (data, response) = try await session.data(for: urlRequest)
+        } catch let error as URLError {
+            throw APIError.transport(error)
         } catch {
-            throw APIError.networkError(error)
+            throw APIError.transport(URLError(.unknown))
         }
 
         guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.networkError(URLError(.badServerResponse))
+            throw APIError.transport(URLError(.badServerResponse))
         }
 
         #if DEBUG
             APIClient.logResponse(httpResponse, data: data)
         #endif
 
-        guard (200 ..< 300).contains(httpResponse.statusCode) else {
-            throw APIError.httpError(statusCode: httpResponse.statusCode, data: data)
+        switch httpResponse.statusCode {
+        case 200 ..< 300:
+            break
+        case 401:
+            throw APIError.unauthorized
+        case 403:
+            throw APIError.forbidden
+        case 404:
+            throw APIError.notFound
+        default:
+            throw APIError.server(
+                statusCode: httpResponse.statusCode,
+                message: APIClient.errorMessage(from: data)
+            )
         }
 
         do {
             return try decoder.decode(T.self, from: data)
+        } catch let error as DecodingError {
+            throw APIError.decoding(error)
         } catch {
-            throw APIError.decodingError(error)
+            // JSONDecoder should always throw DecodingError; this branch is a safeguard.
+            throw APIError.server(statusCode: httpResponse.statusCode, message: error.localizedDescription)
         }
     }
 }
@@ -114,7 +151,7 @@ private actor TokenCache {
 
     func validToken() async throws -> String {
         guard let user = Auth.auth().currentUser else {
-            throw APIError.unauthenticated
+            throw APIError.tokenUnavailable
         }
 
         let now = Date()
@@ -127,9 +164,9 @@ private actor TokenCache {
         do {
             result = try await user.getIDTokenResult(forcingRefresh: false)
         } catch {
-            // #223 will add a dedicated .authError case; for now wrap as networkError
-            // so callers always receive an APIError.
-            throw APIError.networkError(error)
+            // Firebase SDK types are not exposed in APIError — any token fetch failure
+            // surfaces as .tokenUnavailable so callers stay decoupled from FirebaseAuth.
+            throw APIError.tokenUnavailable
         }
 
         cache[user.uid] = Entry(
@@ -137,6 +174,19 @@ private actor TokenCache {
             expiresAt: now.addingTimeInterval(Self.ttl)
         )
         return result.token
+    }
+}
+
+// MARK: - Response helpers
+
+private extension APIClient {
+    /// Attempts to extract a human-readable error message from a JSON response body.
+    /// Looks for top-level `"message"` or `"error"` string fields.
+    static func errorMessage(from data: Data) -> String? {
+        guard let json = try? JSONDecoder().decode([String: String].self, from: data) else {
+            return nil
+        }
+        return json["message"] ?? json["error"]
     }
 }
 
