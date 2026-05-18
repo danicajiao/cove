@@ -9,8 +9,14 @@ import FirebaseAuth
 
 @MainActor
 class ProfileViewModel: ObservableObject {
+    private let userRepository: UserRepository
+
     private var currentUser: User? {
         Auth.auth().currentUser
+    }
+
+    init(userRepository: UserRepository = FirebaseUserRepository()) {
+        self.userRepository = userRepository
     }
 
     var displayName: String {

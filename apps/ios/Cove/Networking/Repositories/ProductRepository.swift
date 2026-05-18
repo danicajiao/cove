@@ -50,6 +50,13 @@ protocol ProductRepository {
     /// bag items. Implementations may cap the result set internally.
     func fetchProducts(inCategories categoryIds: [String]) async throws -> [any Product]
 
+    /// Fetches products whose document IDs are in the provided set.
+    ///
+    /// Used by `FavoritesViewModel` to hydrate the favourites list from persisted
+    /// product IDs. Implementations must batch queries when `ids` exceeds 30 elements
+    /// to stay within Firestore's `in` operator limit (or the equivalent backend limit).
+    func fetchProducts(withIds ids: [String]) async throws -> [any Product]
+
     /// Fetches all brands.
     func fetchBrands() async throws -> [Brand]
 }
