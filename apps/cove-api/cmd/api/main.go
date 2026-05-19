@@ -22,35 +22,40 @@ import (
 var commitSHA = "dev"
 
 func main() {
-	credPath := os.Getenv("FIREBASE_CREDENTIALS_PATH")
-	if credPath == "" {
-		log.Fatal("FIREBASE_CREDENTIALS_PATH environment variable is required")
-	}
-
-	ctx := context.Background()
-
-	app, err := firebase.NewApp(ctx, nil, option.WithCredentialsFile(credPath))
-	if err != nil {
-		log.Fatalf("failed to initialise Firebase app: %v", err)
-	}
-
-	authClient, err := app.Auth(ctx)
-	if err != nil {
-		log.Fatalf("failed to initialise Firebase Auth client: %v", err)
-	}
-
 	r := chi.NewRouter()
 
-	// /health is unauthenticated — registered before the auth middleware group
-	// so Kubernetes liveness/readiness probes and the iOS smoke test (#236) can
-	// reach it without a token.
+	// /health is unauthenticated and registered first, before any Firebase
+	// initialisation, so it is always reachable — including during local
+	// development without credentials and by Kubernetes probes during startup.
 	r.Get("/health", healthHandler)
 
-	// All other routes are protected by Firebase ID-token validation.
-	r.Group(func(r chi.Router) {
-		r.Use(covauth.Middleware(authClient))
-		// Authenticated routes are added here in later sub-issues.
-	})
+	// Initialise Firebase and wire protected routes only when credentials are
+	// provided.  Without FIREBASE_CREDENTIALS_PATH the server still starts and
+	// /health works; all other routes return 401.
+	credPath := os.Getenv("FIREBASE_CREDENTIALS_PATH")
+	if credPath != "" {
+		ctx := context.Background()
+
+		app, err := firebase.NewApp(ctx, nil, option.WithCredentialsFile(credPath))
+		if err != nil {
+			log.Fatalf("failed to initialise Firebase app: %v", err)
+		}
+
+		authClient, err := app.Auth(ctx)
+		if err != nil {
+			log.Fatalf("failed to initialise Firebase Auth client: %v", err)
+		}
+
+		// All routes except /health are protected by Firebase ID-token validation.
+		r.Group(func(r chi.Router) {
+			r.Use(covauth.Middleware(authClient))
+			// Authenticated routes are added here in later sub-issues.
+		})
+
+		log.Println("Firebase Auth initialised — protected routes active")
+	} else {
+		log.Println("FIREBASE_CREDENTIALS_PATH not set — protected routes disabled (local dev mode)")
+	}
 
 	port := os.Getenv("PORT")
 	if port == "" {
