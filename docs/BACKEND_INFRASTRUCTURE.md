@@ -157,6 +157,90 @@ In Kubernetes, each service runs as a `Deployment` in `cove-staging` or `cove-pr
 
 ---
 
+## GitHub Actions → GCP authentication (Workload Identity Federation)
+
+GitHub Actions workflows that push container images to Artifact Registry authenticate to GCP using **Workload Identity Federation (WIF)** — no long-lived service account JSON key is stored anywhere.
+
+### How it works
+
+Instead of a key file, GCP trusts GitHub's identity provider directly. When a workflow job starts, GitHub issues it a signed JWT proving "I am a job in repo `danicajiao/cove`, on branch `main`". GCP verifies that signature against GitHub's public OIDC endpoint and exchanges it for a short-lived access token (1 hour). When the job ends the token is already expired — nothing to rotate or leak.
+
+```
+GitHub Actions job
+    │  OIDC token: "repo:danicajiao/cove, ref:refs/heads/main"
+    │  signed by GitHub's identity provider
+    ▼
+GCP Workload Identity Federation
+    │  verifies signature + checks attribute conditions
+    │  (only danicajiao/cove on main can impersonate this SA)
+    ▼
+Short-lived GCP access token (expires in 1 hour)
+    │
+    ▼
+Artifact Registry push (us-central1-docker.pkg.dev/cove/services/*)
+```
+
+### One-time GCP setup
+
+Run these commands once in your terminal (requires `gcloud` CLI authenticated as a project owner):
+
+```bash
+PROJECT_ID="cove-6a685"
+PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format="value(projectNumber)")
+POOL_ID="github-actions"
+PROVIDER_ID="github"
+SA_NAME="github-actions-ci"
+REPO="danicajiao/cove"
+
+# 1. Create the Workload Identity Pool
+gcloud iam workload-identity-pools create $POOL_ID \
+  --project=$PROJECT_ID \
+  --location=global \
+  --display-name="GitHub Actions"
+
+# 2. Add GitHub as an OIDC provider inside that pool
+gcloud iam workload-identity-pools providers create-oidc $PROVIDER_ID \
+  --project=$PROJECT_ID \
+  --location=global \
+  --workload-identity-pool=$POOL_ID \
+  --issuer-uri="https://token.actions.githubusercontent.com" \
+  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" \
+  --attribute-condition="assertion.repository=='${REPO}'"
+
+# 3. Create the service account CI will impersonate
+gcloud iam service-accounts create $SA_NAME \
+  --project=$PROJECT_ID \
+  --display-name="GitHub Actions CI"
+
+# 4. Grant the service account permission to push to Artifact Registry
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --role="roles/artifactregistry.writer"
+
+# 5. Allow the GitHub Actions identity to impersonate the service account
+gcloud iam service-accounts add-iam-policy-binding \
+  "${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --project=$PROJECT_ID \
+  --role="roles/iam.workloadIdentityUser" \
+  --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${POOL_ID}/attribute.repository/${REPO}"
+```
+
+### Get the values for GitHub repository variables
+
+After running the commands above, retrieve the two values needed by the workflow:
+
+```bash
+# WIF_PROVIDER — paste this into GitHub → Settings → Variables → WIF_PROVIDER
+echo "projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${POOL_ID}/providers/${PROVIDER_ID}"
+
+# WIF_SERVICE_ACCOUNT — paste this into GitHub → Settings → Variables → WIF_SERVICE_ACCOUNT
+echo "${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
+```
+
+These go in **Variables** (not Secrets) in GitHub → Settings → Secrets and variables → Actions → Variables tab. They are not sensitive — they identify the WIF pool, not a credential.
+
+---
+
 ## Token validation strategy
 
 **Decision: Option A — trust the gateway, propagate UID via header.**

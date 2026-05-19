@@ -1,0 +1,74 @@
+name: CI - Services (Go)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/cove-api/**'
+      - '.github/workflows/services-ci.yml'
+  pull_request:
+    paths:
+      - 'apps/cove-api/**'
+      - '.github/workflows/services-ci.yml'
+
+jobs:
+  # ── cove-api ──────────────────────────────────────────────────────────────
+  cove-api:
+    name: cove-api
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write   # Required for Workload Identity Federation
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/cove-api/go.mod
+          cache-dependency-path: apps/cove-api/go.sum
+
+      - name: Run tests
+        working-directory: apps/cove-api
+        run: go test ./...
+
+      - name: Run vet
+        working-directory: apps/cove-api
+        run: go vet ./...
+
+      # Authenticate to GCP using Workload Identity Federation.
+      # Only runs on pushes to main (not PRs) since only main pushes
+      # need to push images to Artifact Registry.
+      - name: Authenticate to Google Cloud
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.WIF_SERVICE_ACCOUNT }}
+
+      - name: Configure Docker for Artifact Registry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      - name: Build and push image (main)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/cove-api
+          push: true
+          tags: us-central1-docker.pkg.dev/cove/services/cove-api:sha-${{ github.sha }}
+          build-args: COMMIT_SHA=${{ github.sha }}
+
+      # On PRs: build only (no push) to verify the Dockerfile and that the
+      # service still compiles. The image is not tagged or stored.
+      - name: Build image (PR)
+        if: github.event_name == 'pull_request'
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/cove-api
+          push: false
+          build-args: COMMIT_SHA=${{ github.sha }}
