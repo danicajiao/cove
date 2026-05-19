@@ -6,16 +6,23 @@
 //
 
 import FirebaseAuth
-import FirebaseFirestore
 
+/// Global store that tracks which products the signed-in user has favourited.
+///
+/// `FavoritesStore` owns the in-memory `favoriteIds` set and handles optimistic
+/// UI updates (toggling the heart before the write completes). Durable reads and
+/// writes are delegated to a `FavoritesRepository` so the backing store can be
+/// swapped (Firebase → `cove-user` in Phase 3) without touching this class.
 @MainActor
 class FavoritesStore: ObservableObject {
     @Published private(set) var favoriteIds: Set<String> = []
     @Published private(set) var isTogglingFavorite: Bool = false
 
     private var authListener: AuthStateDidChangeListenerHandle?
+    private let repository: FavoritesRepository
 
-    init() {
+    init(repository: FavoritesRepository = FirebaseFavoritesRepository()) {
+        self.repository = repository
         authListener = Auth.auth().addStateDidChangeListener { [weak self] _, user in
             Task { @MainActor in
                 if user != nil {
@@ -39,11 +46,9 @@ class FavoritesStore: ObservableObject {
 
     func loadFavorites() async {
         guard let user = Auth.auth().currentUser else { return }
-        let firestore = Firestore.firestore()
         do {
-            let snapshot = try await firestore.collection("users").document(user.uid).collection("favorites").getDocuments()
-            let ids = snapshot.documents.compactMap { try? $0.data(as: FavoriteProduct.self).productId }
-            favoriteIds = Set(ids)
+            let favorites = try await repository.listFavorites(uid: user.uid)
+            favoriteIds = Set(favorites.map(\.productId))
         } catch {
             print("Error loading favorites: \(error)")
         }
@@ -67,17 +72,11 @@ class FavoritesStore: ObservableObject {
             favoriteIds.insert(productId)
         }
 
-        let favoritesRef = Firestore.firestore()
-            .collection("users").document(user.uid).collection("favorites")
-
         do {
             if wasFavorite {
-                let snapshot = try await favoritesRef.whereField("productId", isEqualTo: productId).getDocuments()
-                for document in snapshot.documents {
-                    try await document.reference.delete()
-                }
+                try await repository.remove(productId: productId, uid: user.uid)
             } else {
-                try favoritesRef.addDocument(from: FavoriteProduct(productId: productId, categoryId: categoryId))
+                try await repository.add(productId: productId, categoryId: categoryId, uid: user.uid)
             }
         } catch {
             print("Error toggling favorite: \(error)")
