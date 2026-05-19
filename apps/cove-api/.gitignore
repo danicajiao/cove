@@ -1,0 +1,13 @@
+# Go binaries
+/cove-api
+/bin/
+
+# Test output
+*.test
+*.out
+
+# Vendor directory (not used — modules are the source of truth)
+/vendor/
+
+# Local environment overrides
+.env
