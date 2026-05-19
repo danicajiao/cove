@@ -19,4 +19,4 @@ jobs:
         run: npm install -g @redocly/cli@latest
 
       - name: Lint openapi.yaml
-        run: redocly lint apps/cove-api/api/openapi.yaml
+        run: redocly lint --config apps/cove-api/redocly.yaml apps/cove-api/api/openapi.yaml
