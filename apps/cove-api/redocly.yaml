@@ -1,0 +1,6 @@
+rules:
+  # Not applicable — cove-api is a private internal service, not a public API.
+  info-license: off
+
+  # localhost:8080 is a legitimate local development server, not an example placeholder.
+  no-server-example.com: off
