@@ -184,6 +184,28 @@ This rule applies to every agent **and** to the main session. If the MCP propaga
 - Open a PR targeting the epic's integration branch (provided in your task prompt) or `main` if there is no epic
 - Include `Closes #<issue-id>` in the PR description
 
+### Pull request and issue linking
+
+GitHub's `Closes #<issue-id>` keyword in the PR body is the standard linking mechanism. When the PR targets `main` it auto-closes the issue and populates the Development sidebar automatically. When targeting an integration branch, the keyword is documentation only — the formal Development sidebar link requires a manual step in the GitHub UI (gear icon in the Development section of the PR).
+
+The REST API `issue` parameter (`gh api ... -F issue=<id>`) converts an issue into a PR (same number, title/body carry over), but GitHub blocks this for any issue that has a parent/sub-issue relationship — which is every issue in this repo. The GraphQL API has no mutation for setting Development links either. Manual UI linking or `Closes #X` against main are the only two mechanisms that work.
+
+### Issue dependency linking
+
+Use the GitHub issue dependencies API to formally mark which issues block which. This shows a "Blocked by #X" indicator in the issue sidebar — more visible than a line in the body, and machine-readable.
+
+Always use the internal issue `id` (not the issue number) for the `issue_id` parameter:
+
+```bash
+# Mark #225 as blocked by #224
+BLOCKING_ID=$(gh api repos/danicajiao/cove/issues/224 --jq '.id')
+gh api repos/danicajiao/cove/issues/225/dependencies/blocked_by \
+  --method POST \
+  -F issue_id=$BLOCKING_ID
+```
+
+The `github-project-planner` agent should wire these after creating sub-issues, reading dependencies from each issue's description to determine the correct relationships.
+
 ### Issue-to-agent routing
 
 | Sub-issue labels | Handled by |

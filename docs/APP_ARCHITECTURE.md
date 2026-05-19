@@ -2,6 +2,21 @@
 
 This document covers the Cove iOS app's architecture — how it's structured, how data flows, and how key systems work.
 
+## Contents
+
+- [Overview](#overview)
+- [Project Structure](#project-structure)
+- [Authentication & Navigation](#authentication--navigation)
+- [Tab Structure](#tab-structure)
+- [ViewModels](#viewmodels)
+- [Global State](#global-state)
+- [Product Type System](#product-type-system)
+- [Firebase Data Model](#firebase-data-model)
+- [Key Data Flows](#key-data-flows)
+- [Not Yet Implemented](#not-yet-implemented)
+
+---
+
 ## Overview
 
 Cove uses **MVVM (Model-View-ViewModel)** with SwiftUI. State is managed through a combination of `@StateObject`, `@EnvironmentObject`, and `@Published` properties. Firebase is the sole backend — Firestore for data, Firebase Auth for authentication, and Cloud Storage for images.
