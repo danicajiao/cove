@@ -1,5 +1,6 @@
-# Go binaries
+# Go binaries (match files only; /api/ directory is tracked source)
 /api
+!/api/
 /cove-api
 /bin/
 

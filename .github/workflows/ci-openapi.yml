@@ -1,0 +1,22 @@
+name: CI - OpenAPI Lint
+
+on:
+  pull_request:
+    paths:
+      - 'apps/cove-api/api/**'
+      - '.github/workflows/ci-openapi.yml'
+
+jobs:
+  lint:
+    name: Lint OpenAPI spec
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install Redocly CLI
+        run: npm install -g @redocly/cli@latest
+
+      - name: Lint openapi.yaml
+        run: redocly lint apps/cove-api/api/openapi.yaml
