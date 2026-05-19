@@ -1,0 +1,76 @@
+openapi: "3.1.0"
+
+info:
+  title: cove-api
+  version: "0.1.0"
+  description: |
+    Backend-for-frontend gateway for the Cove iOS app.
+    Validates Firebase ID tokens and routes traffic to internal services.
+
+servers:
+  - url: https://api.coveapp.dev
+    description: Production (Cloudflare Tunnel)
+  - url: http://localhost:8080
+    description: Local development
+
+# All routes require a Firebase ID token by default.
+# Individual operations can opt out with security: [].
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Health check
+      description: |
+        Returns the service name, status, and Git commit SHA of the running
+        build. Intentionally unauthenticated — used by Kubernetes
+        liveness/readiness probes and the iOS launch smoke test.
+      security: []
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "503":
+          description: Service is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Firebase ID token obtained from the Firebase Auth SDK.
+        Attach as "Authorization: Bearer <token>" on all requests except /health.
+
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - service
+        - status
+        - commit
+      properties:
+        service:
+          type: string
+          description: Service identifier.
+          example: cove-api
+        status:
+          type: string
+          description: Current status of the service.
+          example: ok
+        commit:
+          type: string
+          description: |
+            Git commit SHA of the running build.
+            Returns "dev" for local builds without ldflags injection.
+          example: a3f8c12

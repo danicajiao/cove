@@ -1,0 +1,15 @@
+# Go binaries (match files only; /api/ directory is tracked source)
+/api
+!/api/
+/cove-api
+/bin/
+
+# Test output
+*.test
+*.out
+
+# Vendor directory (not used — modules are the source of truth)
+/vendor/
+
+# Local environment overrides
+.env

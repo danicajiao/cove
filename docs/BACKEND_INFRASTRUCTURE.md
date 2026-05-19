@@ -157,6 +157,63 @@ In Kubernetes, each service runs as a `Deployment` in `cove-staging` or `cove-pr
 
 ---
 
+## Token validation strategy
+
+**Decision: Option A — trust the gateway, propagate UID via header.**
+
+`cove-api` is the only service that validates Firebase ID tokens. After successful validation it forwards the caller's UID to downstream services as an `X-Cove-Uid` HTTP header. Downstream services (`cove-image`, `cove-product`, `cove-user`) read the header and trust it — they do not re-validate the Bearer token.
+
+```
+iOS App
+  │  Authorization: Bearer <Firebase ID token>
+  ▼
+cove-api
+  │  validates token via Firebase Admin SDK
+  │  X-Cove-Uid: <uid>          ← injected, Bearer token stripped
+  ▼
+cove-image / cove-product / cove-user
+     reads X-Cove-Uid from header, no Firebase SDK required
+```
+
+### Why this is safe
+
+Downstream services are never exposed to public traffic. They are reachable only via in-cluster Kubernetes Service DNS (`cove-image.cove-staging.svc.cluster.local`). An attacker on the public internet cannot send a forged `X-Cove-Uid` header — they can only reach `cove-api` via Cloudflare Tunnel, and `cove-api` overwrites the header on every request regardless of what the client sent.
+
+NetworkPolicy manifests (added in #233) enforce this at the cluster level: downstream services only accept traffic from `cove-api`, not from arbitrary pods.
+
+### Implementation pattern
+
+`cove-api` reverse-proxy handler (added when routing is wired in Phase 2+):
+
+```go
+// Strip any client-supplied X-Cove-Uid header to prevent spoofing,
+// then inject the validated UID before forwarding the request.
+outboundReq.Header.Del("X-Cove-Uid")
+outboundReq.Header.Set("X-Cove-Uid", uid)
+```
+
+Downstream service middleware (each service implements this instead of the Firebase Admin SDK):
+
+```go
+uid := r.Header.Get("X-Cove-Uid")
+if uid == "" {
+    http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+    return
+}
+```
+
+### When to revisit
+
+Revisit if any of the following change:
+
+- A downstream service gains a public ingress (even temporarily)
+- The cluster moves to multi-tenant infrastructure (GKE, shared node pools)
+- A security audit flags lateral movement risk within the cluster
+
+At that point Option C (internal JWT signed with a cluster secret) provides defence-in-depth without the Firebase Admin SDK cost of Option B.
+
+---
+
 ## Container images
 
 Images are stored in Google Artifact Registry under the `cove-6a685` project:
