@@ -14,6 +14,13 @@ import (
 	covauth "github.com/danicajiao/cove/apps/cove-api/internal/auth"
 )
 
+// commitSHA is set at build time via ldflags:
+//
+//	go build -ldflags "-X main.commitSHA=$(git rev-parse --short HEAD)" ./cmd/api/
+//
+// It defaults to "dev" for local builds where the flag is not supplied.
+var commitSHA = "dev"
+
 func main() {
 	credPath := os.Getenv("FIREBASE_CREDENTIALS_PATH")
 	if credPath == "" {
@@ -56,13 +63,16 @@ func main() {
 	}
 }
 
-// healthHandler returns a minimal 200 response.
-// Build SHA injection via ldflags is added in #231.
+// healthHandler returns 200 with a JSON body identifying the service and the
+// Git commit SHA of the running build.  It is intentionally unauthenticated
+// so Kubernetes liveness/readiness probes and the iOS smoke test can reach it
+// without a token.
 func healthHandler(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(map[string]string{
 		"service": "cove-api",
 		"status":  "ok",
+		"commit":  commitSHA,
 	})
 }
