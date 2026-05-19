@@ -7,13 +7,13 @@ import (
 	"net/http"
 	"strings"
 
-	fbauth "firebase.google.com/go/v4/auth"
+	firebaseauth "firebase.google.com/go/v4/auth"
 )
 
 // TokenVerifier abstracts Firebase ID-token verification so the middleware
 // can be unit-tested without a live Firebase project.
 type TokenVerifier interface {
-	VerifyIDToken(ctx context.Context, idToken string) (*fbauth.Token, error)
+	VerifyIDToken(ctx context.Context, idToken string) (*firebaseauth.Token, error)
 }
 
 // contextKey is an unexported type for context keys in this package,
@@ -35,7 +35,7 @@ const (
 // On any failure (missing header, malformed header, invalid or expired token)
 // the middleware responds with 401 and a generic JSON error body.  Validation
 // details are intentionally omitted to avoid leaking information to callers.
-func Middleware(v TokenVerifier) func(http.Handler) http.Handler {
+func Middleware(verifier TokenVerifier) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			idToken, ok := bearerToken(r)
@@ -44,7 +44,7 @@ func Middleware(v TokenVerifier) func(http.Handler) http.Handler {
 				return
 			}
 
-			decoded, err := v.VerifyIDToken(r.Context(), idToken)
+			decoded, err := verifier.VerifyIDToken(r.Context(), idToken)
 			if err != nil {
 				writeUnauthorized(w)
 				return
@@ -75,22 +75,22 @@ func ClaimsFromContext(ctx context.Context) (map[string]interface{}, bool) {
 // "Authorization: Bearer <token>" header.  Returns ("", false) when the
 // header is absent, not in Bearer form, or the token part is empty.
 func bearerToken(r *http.Request) (string, bool) {
-	h := r.Header.Get("Authorization")
-	if h == "" {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
 		return "", false
 	}
 
-	parts := strings.SplitN(h, " ", 2)
+	parts := strings.SplitN(authHeader, " ", 2)
 	if len(parts) != 2 || !strings.EqualFold(parts[0], "bearer") {
 		return "", false
 	}
 
-	tok := strings.TrimSpace(parts[1])
-	if tok == "" {
+	token := strings.TrimSpace(parts[1])
+	if token == "" {
 		return "", false
 	}
 
-	return tok, true
+	return token, true
 }
 
 // writeUnauthorized writes a 401 response with a generic JSON error body.

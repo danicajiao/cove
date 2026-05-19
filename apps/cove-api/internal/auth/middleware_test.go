@@ -8,19 +8,19 @@ import (
 	"strings"
 	"testing"
 
-	fbauth "firebase.google.com/go/v4/auth"
+	firebaseauth "firebase.google.com/go/v4/auth"
 
 	"github.com/danicajiao/cove/apps/cove-api/internal/auth"
 )
 
 // mockVerifier implements TokenVerifier for use in unit tests.
 type mockVerifier struct {
-	token *fbauth.Token
+	token *firebaseauth.Token
 	err   error
 }
 
-func (m *mockVerifier) VerifyIDToken(_ context.Context, _ string) (*fbauth.Token, error) {
-	return m.token, m.err
+func (mock *mockVerifier) VerifyIDToken(_ context.Context, _ string) (*firebaseauth.Token, error) {
+	return mock.token, mock.err
 }
 
 // okHandler is a test handler that writes 200 OK.
@@ -84,7 +84,7 @@ func TestMiddleware_ValidToken_Passes(t *testing.T) {
 	const wantUID = "user-abc-123"
 
 	verifier := &mockVerifier{
-		token: &fbauth.Token{
+		token: &firebaseauth.Token{
 			UID:    wantUID,
 			Claims: map[string]interface{}{"role": "member"},
 		},
@@ -117,7 +117,7 @@ func TestMiddleware_ValidToken_Passes(t *testing.T) {
 
 func TestMiddleware_ValidToken_ClaimsInContext(t *testing.T) {
 	verifier := &mockVerifier{
-		token: &fbauth.Token{
+		token: &firebaseauth.Token{
 			UID:    "user-xyz",
 			Claims: map[string]interface{}{"email": "user@example.com"},
 		},
