@@ -53,9 +53,27 @@ jobs:
         if: steps.swift-changes.outputs.skip != 'true'
         run: brew install swiftlint
 
+      # Pin SwiftFormat to the version used locally instead of the runner's
+      # preinstalled copy, so runner image updates can't introduce new rules.
+      # Bump SWIFTFORMAT_VERSION and SWIFTFORMAT_SHA256 together when upgrading.
+      - name: Install SwiftFormat
+        if: steps.swift-changes.outputs.skip != 'true'
+        env:
+          SWIFTFORMAT_VERSION: 0.60.1
+          SWIFTFORMAT_SHA256: 23b50c75f4223c477e822833c4cf819a1c9abbb6d00e892900bda1c3a8231afd
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/swiftformat.zip" \
+            "https://github.com/nicklockwood/SwiftFormat/releases/download/${SWIFTFORMAT_VERSION}/swiftformat.zip"
+          echo "${SWIFTFORMAT_SHA256}  $RUNNER_TEMP/swiftformat.zip" | shasum -a 256 -c -
+          unzip -oq "$RUNNER_TEMP/swiftformat.zip" -d "$RUNNER_TEMP/swiftformat"
+          chmod +x "$RUNNER_TEMP/swiftformat/swiftformat"
+          echo "$RUNNER_TEMP/swiftformat" >> "$GITHUB_PATH"
+
       - name: Run SwiftFormat (lint only)
         if: steps.swift-changes.outputs.skip != 'true'
-        run: swiftformat --lint .
+        run: |
+          swiftformat --version
+          swiftformat --lint .
 
       - name: Run SwiftLint
         if: steps.swift-changes.outputs.skip != 'true'
