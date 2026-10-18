@@ -27,6 +27,13 @@ protocol ImageRepository: Sendable {
     /// - Throws: `RepositoryError.notFound` when no image exists for `key`,
     ///   or a transport error if the URL must be fetched from a remote source.
     func imageURL(for key: String) async throws -> URL
+    func imageURL(for key: String, width: Int, height: Int) async throws -> URL
+}
+
+extension ImageRepository {
+    func imageURL(for key: String, width: Int, height: Int) async throws -> URL {
+        try await imageURL(for: key)
+    }
 }
 
 // MARK: - Environment

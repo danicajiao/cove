@@ -68,7 +68,10 @@ struct HomeView: View {
                         ScrollView(.horizontal, showsIndicators: false) {
                             LazyHStack(spacing: Spacing.md) {
                                 ForEach(viewModel.categories, id: \.id) { category in
-                                    CategoryCard(category: category) {
+                                    CategoryCard(
+                                        category: category,
+                                        imageURL: viewModel.categoryImageURLs[category.path]
+                                    ) {
                                         viewModel.recordCategoryTap(category)
                                     }
                                 }

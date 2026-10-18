@@ -12,6 +12,7 @@ class HomeViewModel: ObservableObject {
     var items = [any Item]()
     @Published var brands = [Brand]()
     @Published var categories = [Components.Schemas.RecommendedCategory]()
+    @Published var categoryImageURLs: [String: URL] = [:]
     @Published var isLoadingCategories = false
 
     /// Number of category cards requested for the home shelf. Kept small so the
@@ -23,22 +24,48 @@ class HomeViewModel: ObservableObject {
     private let cacheTimeout: TimeInterval = 300
     private let itemRepository: ItemRepository
     private let api: CoveAPIClient
+    private let imageRepository: ImageRepository
 
-    init(itemRepository: ItemRepository = CoveAPIItemRepository(), api: CoveAPIClient = .shared) {
+    init(
+        itemRepository: ItemRepository = CoveAPIItemRepository(),
+        api: CoveAPIClient = .shared,
+        imageRepository: ImageRepository = CoveAPIImageRepository()
+    ) {
         self.itemRepository = itemRepository
         self.api = api
+        self.imageRepository = imageRepository
     }
 
-    /// Fetches personalized category cards from `GET /recommendations/categories`.
+    /// Fetches personalized category cards from `GET /recommendations/categories`,
+    /// then eagerly pre-fetches signed image URLs for all returned categories so
+    /// cards display immediately when they come into view.
     func fetchCategories() async {
         guard categories.isEmpty else { return }
         isLoadingCategories = true
         do {
             categories = try await api.recommendedCategories(limit: categoryLimit)
+            await prefetchCategoryImages(for: categories)
         } catch {
             print("❌ fetchCategories failed: \(error)")
         }
         isLoadingCategories = false
+    }
+
+    private func prefetchCategoryImages(for categories: [Components.Schemas.RecommendedCategory]) async {
+        await withTaskGroup(of: (String, URL?).self) { group in
+            for category in categories {
+                guard let key = category.image_key else { continue }
+                group.addTask {
+                    let url = try? await self.imageRepository.imageURL(for: key, width: 390, height: 180)
+                    return (category.path, url)
+                }
+            }
+            for await (path, url) in group {
+                if let url {
+                    categoryImageURLs[path] = url
+                }
+            }
+        }
     }
 
     /// Records a `category_tap` attention event. Fire-and-forget — a failure here

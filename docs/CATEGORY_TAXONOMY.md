@@ -19,7 +19,7 @@ Cove's category taxonomy is a **3-level tree** stored in Postgres using the `ltr
 
 Items may only be assigned to **leaf nodes** — the deepest node in a given branch. Non-leaf categories are browse/navigation nodes only; they cannot be set as an item's `category_id`.
 
-The v1 taxonomy has **9 top-level categories** and 242 nodes total, seeded via migration `000004`. Leaf enforcement is added by migrations `000005` and `000006`.
+The v1 taxonomy has **9 top-level categories** and 242 nodes total (9 top-level, 50 level-2, 183 level-3), seeded via migration `000004`. Every node has a category card image key (`images/categories/<path with dots as hyphens>.jpg`), seeded by `000012` and returned as `image_key` by both `GET /categories` and `GET /recommendations/categories`. Leaf enforcement is defined in `000003`.
 
 ---
 
@@ -88,7 +88,7 @@ food
 │   ├── jellies          — grape, pepper jelly, herb jelly
 │   ├── fruit_butters    — apple butter, pumpkin butter
 │   ├── chutneys         — mango chutney, onion chutney
-│   └── pickles          — dill pickles, bread and butter, fermented veg
+│   └── pickled          — dill pickles, bread and butter, fermented veg
 ├── snacks
 │   ├── granola          — clusters, granola bars, loose granola
 │   ├── jerky            — beef jerky, turkey jerky, bison jerky
@@ -113,7 +113,7 @@ food
 │   ├── mushrooms        — oyster, shiitake, lion's mane, foraged
 │   ├── herbs            — fresh cut herbs, herb bundles
 │   └── eggs             — farm eggs, duck eggs, quail eggs
-├── proteins
+├── protein
 │   ├── beef             — local ranch beef, ground beef, steaks
 │   ├── poultry          — whole chickens, heritage breed, duck
 │   ├── pork             — heritage pork, charcuterie, bacon
@@ -322,8 +322,8 @@ Create the next numbered migration file:
 
 ```bash
 # example: adding food.fresh.kimchi
-touch services/cove-item/migrations/000007_add_kimchi_category.up.sql
-touch services/cove-item/migrations/000007_add_kimchi_category.down.sql
+touch services/cove-item/migrations/000013_add_kimchi_category.up.sql
+touch services/cove-item/migrations/000013_add_kimchi_category.down.sql
 ```
 
 **up:**
@@ -409,8 +409,7 @@ Four triggers on `catalog.categories` and `catalog.items` enforce taxonomy integ
 The `RESTRICT` foreign key on `catalog.items.category_id` provides a fifth layer: Postgres itself will block deletion of any category that has items referencing it, before any trigger fires.
 
 Defined in:
-- `services/cove-item/migrations/000005_category_leaf_constraint.up.sql` — `is_leaf` column, backfill, insert trigger, item enforcement trigger
-- `services/cove-item/migrations/000006_category_delete_integrity.up.sql` — delete guard trigger, parent recheck trigger
+- `services/cove-item/migrations/000003_catalog.up.sql` — `is_leaf` column, insert trigger, delete guard and parent recheck triggers, item enforcement trigger
 
 ---
 

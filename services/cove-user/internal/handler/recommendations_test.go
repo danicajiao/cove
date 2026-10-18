@@ -317,3 +317,47 @@ func TestRecommendedCategoriesHandler_InvalidLimitFallsBackToDefault(t *testing.
 		t.Errorf("expected default limit %d, got %v", defaultCategoryLimit, interestLimit)
 	}
 }
+
+func TestRecommendedCategoriesHandler_ImageKey(t *testing.T) {
+	// image_key is passed through when set and omitted from the JSON when NULL.
+	catID1 := newCategoryUUID("11111111111111111111111111111111")
+	catID2 := newCategoryUUID("22222222222222222222222222222222")
+	key := "images/categories/food-baked_goods.jpg"
+
+	deps := &Deps{
+		DB: &mockStore{
+			queryRowFn: func(ctx context.Context, sql string, args ...any) Row {
+				return userUUIDRow()
+			},
+			queryFn: func(ctx context.Context, sql string, args ...any) (Rows, error) {
+				return &categoryRows{rows: []categoryRow{
+					{id: catID1, name: "Baked Goods", path: "food.baked_goods", imageKey: &key},
+					{id: catID2, name: "Tea", path: "food.tea"},
+				}}, nil
+			},
+		},
+		CommitSHA: "test",
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/recommendations/categories?limit=2", nil)
+	req.Header.Set("X-Cove-Uid", "uid-123")
+	rr := httptest.NewRecorder()
+
+	deps.RecommendedCategoriesHandler(rr, req)
+
+	var body struct {
+		Categories []map[string]any `json:"categories"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&body); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
+	if len(body.Categories) != 2 {
+		t.Fatalf("expected 2 categories, got %d", len(body.Categories))
+	}
+	if got := body.Categories[0]["image_key"]; got != key {
+		t.Errorf("first category image_key: got %v, want %q", got, key)
+	}
+	if _, ok := body.Categories[1]["image_key"]; ok {
+		t.Errorf("second category: expected image_key to be omitted when NULL")
+	}
+}

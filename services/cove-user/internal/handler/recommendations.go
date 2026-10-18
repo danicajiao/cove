@@ -16,9 +16,10 @@ const (
 )
 
 type recommendedCategory struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-	Path string `json:"path"`
+	ID       string  `json:"id"`
+	Name     string  `json:"name"`
+	Path     string  `json:"path"`
+	ImageKey *string `json:"image_key,omitempty"`
 }
 
 type recommendedCategoriesResponse struct {
@@ -67,7 +68,7 @@ func (d *Deps) RecommendedCategoriesHandler(w http.ResponseWriter, r *http.Reque
 		userID := formatUUID(userIDUUID)
 
 		const interestSQL = `
-SELECT c.id, c.name, c.path::text
+SELECT c.id, c.name, c.path::text, c.image_key
 FROM profile.interests i
 JOIN catalog.categories c ON c.id = i.category_id
 LEFT JOIN (
@@ -93,15 +94,17 @@ LIMIT $2`
 		for rows.Next() {
 			var id pgtype.UUID
 			var name, path string
-			if err := rows.Scan(&id, &name, &path); err != nil {
+			var imageKey *string
+			if err := rows.Scan(&id, &name, &path, &imageKey); err != nil {
 				log.Printf("ERROR RecommendedCategoriesHandler interest scan user_id=%s: %v", userID, err)
 				writeError(w, http.StatusInternalServerError, "recommendations scan failed")
 				return
 			}
 			categories = append(categories, recommendedCategory{
-				ID:   formatUUID(id),
-				Name: name,
-				Path: path,
+				ID:       formatUUID(id),
+				Name:     name,
+				Path:     path,
+				ImageKey: imageKey,
 			})
 		}
 		if err := rows.Err(); err != nil {
@@ -128,7 +131,7 @@ LIMIT $2`
 	}
 
 	const fallbackSQL = `
-SELECT c.id, c.name, c.path::text
+SELECT c.id, c.name, c.path::text, c.image_key
 FROM catalog.categories c
 LEFT JOIN (
     SELECT category_id, COUNT(*) AS engagement
@@ -153,15 +156,17 @@ LIMIT $1`
 	for fallbackRows.Next() {
 		var id pgtype.UUID
 		var name, path string
-		if err := fallbackRows.Scan(&id, &name, &path); err != nil {
+		var imageKey *string
+		if err := fallbackRows.Scan(&id, &name, &path, &imageKey); err != nil {
 			log.Printf("ERROR RecommendedCategoriesHandler fallback scan auth_uid=%s: %v", authUID, err)
 			writeError(w, http.StatusInternalServerError, "recommendations scan failed")
 			return
 		}
 		categories = append(categories, recommendedCategory{
-			ID:   formatUUID(id),
-			Name: name,
-			Path: path,
+			ID:       formatUUID(id),
+			Name:     name,
+			Path:     path,
+			ImageKey: imageKey,
 		})
 	}
 	if err := fallbackRows.Err(); err != nil {
