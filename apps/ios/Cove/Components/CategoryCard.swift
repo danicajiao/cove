@@ -103,27 +103,30 @@ private func previewImageURL(_ name: String) -> URL? {
 }
 
 #Preview {
-    ScrollView(.horizontal) {
-        HStack(spacing: Spacing.md) {
-            // With background images
-            CategoryCard(
-                category: .init(id: "1", name: "Beer", path: "alcohol.beer"),
-                imageURL: previewImageURL("alcohol-beer"),
-                onTap: {}
-            )
-            CategoryCard(
-                category: .init(id: "2", name: "Baked Goods", path: "food.baked_goods"),
-                imageURL: previewImageURL("food-baked_goods"),
-                onTap: {}
-            )
-            // Text-only fallback (no image_key)
-            CategoryCard(
-                category: .init(id: "3", name: "Accessories", path: "pets.dogs.accessories"),
-                imageURL: nil,
-                onTap: {}
-            )
+    // NavigationLink(value:) is disabled (and drawn dimmed) outside a NavigationStack.
+    NavigationStack {
+        ScrollView(.horizontal) {
+            HStack(spacing: Spacing.md) {
+                // With background images
+                CategoryCard(
+                    category: .init(id: "1", name: "Beer", path: "alcohol.beer"),
+                    imageURL: previewImageURL("alcohol-beer"),
+                    onTap: {}
+                )
+                CategoryCard(
+                    category: .init(id: "2", name: "Baked Goods", path: "food.baked_goods"),
+                    imageURL: previewImageURL("food-baked_goods"),
+                    onTap: {}
+                )
+                // Text-only fallback (no image_key)
+                CategoryCard(
+                    category: .init(id: "3", name: "Accessories", path: "pets.dogs.accessories"),
+                    imageURL: nil,
+                    onTap: {}
+                )
+            }
+            .padding()
         }
-        .padding()
+        .background(Color.Colors.Backgrounds.primary)
     }
-    .background(Color.Colors.Backgrounds.primary)
 }
