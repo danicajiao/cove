@@ -37,19 +37,6 @@ struct CategoryCard: View {
     private var cardContent: some View {
         ZStack(alignment: .topLeading) {
             backgroundLayer
-
-// Gradient overlay — disabled for now
-//            if imageLoaded {
-//                LinearGradient(
-//                    colors: [
-//                        Color.black.opacity(0.0),
-//                        Color.black.opacity(0.275)
-//                    ],
-//                    startPoint: .trailing,
-//                    endPoint: .leading
-//                )
-//            }
-
             foregroundContent
         }
         .frame(width: width, height: height)
@@ -91,8 +78,6 @@ struct CategoryCard: View {
 
     private var foregroundContent: some View {
         VStack(alignment: .leading, spacing: 2) {
-            // Spacer(minLength: 0)
-
             if let parent = parentLabel {
                 Text(parent)
                     .font(Font.custom("Lato-Regular", size: 10))

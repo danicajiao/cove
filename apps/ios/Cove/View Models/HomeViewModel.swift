@@ -54,7 +54,7 @@ class HomeViewModel: ObservableObject {
     private func prefetchCategoryImages(for categories: [Components.Schemas.RecommendedCategory]) async {
         await withTaskGroup(of: (String, URL?).self) { group in
             for category in categories {
-                let key = imageKey(for: category.path)
+                guard let key = category.image_key else { continue }
                 group.addTask {
                     let url = try? await self.imageRepository.imageURL(for: key, width: 390, height: 180)
                     return (category.path, url)
@@ -66,14 +66,6 @@ class HomeViewModel: ObservableObject {
                 }
             }
         }
-    }
-
-    private func imageKey(for path: String) -> String {
-        let slug = path
-            .replacingOccurrences(of: ".", with: "-")
-            .replacingOccurrences(of: "_", with: "-")
-            .lowercased()
-        return "images/categories/\(slug).jpg"
     }
 
     /// Records a `category_tap` attention event. Fire-and-forget — a failure here
