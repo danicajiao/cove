@@ -481,6 +481,13 @@ components:
           type: string
           description: ltree path (dot-delimited).
           example: food.coffee.whole_bean
+        image_key:
+          type: [string, "null"]
+          description: |
+            Garage object key for the category card background image,
+            e.g. "images/categories/food-coffee.jpg". Present only on
+            top-level and mid-level categories; absent on leaf sub-categories.
+          example: images/categories/food-coffee.jpg
         children:
           type: array
           items:

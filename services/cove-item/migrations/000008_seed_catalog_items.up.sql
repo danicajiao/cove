@@ -51,5 +51,5 @@ SELECT
     900,
     $j${"artist": "HOMESHAKE", "album": "Under The Weather", "format": "cassette"}$j$::jsonb,
     $j${"about": "Peter Sagar wrote the majority of Under the Weather in 2019, when he was going through a long, unrelenting period of sadness. The album captures that quiet and restraint.", "tracklist": [{"title": "Wake Up!", "durationSec": 22}, {"title": "Feel Better", "durationSec": 254}, {"title": "Vacuum", "durationSec": 182}]}$j$::jsonb
-FROM catalog.categories WHERE path = 'music.recorded'
+FROM catalog.categories WHERE path = 'music.recorded.cassette'
 ON CONFLICT (id) DO NOTHING;

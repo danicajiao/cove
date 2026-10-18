@@ -141,11 +141,12 @@ func (r *emptyRows) Err() error        { return nil }
 
 // ── categoryRows ─────────────────────────────────────────────────────────────
 
-// categoryRow holds one row of (id, name, path) for recommendations.
+// categoryRow holds one row of (id, name, path, image_key) for recommendations.
 type categoryRow struct {
-	id   pgtype.UUID
-	name string
-	path string
+	id       pgtype.UUID
+	name     string
+	path     string
+	imageKey *string
 }
 
 // categoryRows is a multi-row Rows for recommendations queries.
@@ -165,9 +166,9 @@ func (r *categoryRows) Next() bool {
 }
 
 func (r *categoryRows) Scan(dest ...any) error {
-	// Scans: *pgtype.UUID, *string, *string
-	if len(dest) != 3 {
-		return fmt.Errorf("categoryRows: expected 3 dest, got %d", len(dest))
+	// Scans: *pgtype.UUID, *string, *string, **string
+	if len(dest) != 4 {
+		return fmt.Errorf("categoryRows: expected 4 dest, got %d", len(dest))
 	}
 	if p, ok := dest[0].(*pgtype.UUID); ok {
 		*p = r.current.id
@@ -184,10 +185,15 @@ func (r *categoryRows) Scan(dest ...any) error {
 	} else {
 		return fmt.Errorf("categoryRows: dest[2] is %T, want *string", dest[2])
 	}
+	if p, ok := dest[3].(**string); ok {
+		*p = r.current.imageKey
+	} else {
+		return fmt.Errorf("categoryRows: dest[3] is %T, want **string", dest[3])
+	}
 	return nil
 }
 
-func (r *categoryRows) Close() {}
+func (r *categoryRows) Close()     {}
 func (r *categoryRows) Err() error { return nil }
 
 // newCategoryUUID builds a valid pgtype.UUID from a 32-hex-char string.
@@ -245,7 +251,7 @@ func (t *mockTx) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row 
 	return &errRow{err: pgx.ErrNoRows}
 }
 func (t *mockTx) SendBatch(ctx context.Context, b *pgx.Batch) pgx.BatchResults { return nil }
-func (t *mockTx) LargeObjects() pgx.LargeObjects                                { return pgx.LargeObjects{} }
+func (t *mockTx) LargeObjects() pgx.LargeObjects                               { return pgx.LargeObjects{} }
 func (t *mockTx) Prepare(ctx context.Context, name, sql string) (*pgconn.StatementDescription, error) {
 	return nil, nil
 }

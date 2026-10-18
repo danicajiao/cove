@@ -22,7 +22,14 @@ Cove uses [golang-migrate](https://github.com/golang-migrate/migrate) for schema
 | `cove-item` | `services/cove-item/migrations/` | `directory`, `catalog` |
 | `cove-user` | `services/cove-user/migrations/` | `profile` |
 
-Migrations are plain SQL files in numbered pairs (`000001_name.up.sql` / `000001_name.down.sql`). golang-migrate tracks the current version in a `schema_migrations` table it manages in the `public` schema of the `cove` database.
+Migrations are plain SQL files in numbered pairs (`000001_name.up.sql` / `000001_name.down.sql`). golang-migrate tracks the current version in a per-service table in the `public` schema of the `cove` database:
+
+| Service | Tracking table |
+|---|---|
+| `cove-item` | `public.schema_migrations_cove_item` |
+| `cove-user` | `public.schema_migrations_cove_user` |
+
+Both services share the same `cove` database, so a separate table per service is required — a single shared `schema_migrations` table would conflict when the two services are at different migration versions. The table name is passed to golang-migrate via `x-migrations-table` in the connection string (see [Running migrations](#running-migrations)).
 
 **cove-item migrations must run before cove-user** — the `profile` schema has cross-schema foreign keys into `catalog` and `directory`.
 
@@ -115,12 +122,12 @@ migrate \
 
 ```bash
 # List schemas
-kubectl exec -n cove-staging cove-db-1 -- psql -U postgres -d cove -c "\dn"
+kubectl exec -n cove-staging cove-db-1 -c postgres -- psql -U postgres -d cove -c "\dn"
 
 # List tables in a schema
-kubectl exec -n cove-staging cove-db-1 -- psql -U postgres -d cove -c "\dt directory.*"
-kubectl exec -n cove-staging cove-db-1 -- psql -U postgres -d cove -c "\dt catalog.*"
-kubectl exec -n cove-staging cove-db-1 -- psql -U postgres -d cove -c "\dt profile.*"
+kubectl exec -n cove-staging cove-db-1 -c postgres -- psql -U postgres -d cove -c "\dt directory.*"
+kubectl exec -n cove-staging cove-db-1 -c postgres -- psql -U postgres -d cove -c "\dt catalog.*"
+kubectl exec -n cove-staging cove-db-1 -c postgres -- psql -U postgres -d cove -c "\dt profile.*"
 ```
 
 ---
@@ -150,7 +157,7 @@ Roles are managed separately via the CNPG cluster bootstrap (`postInitApplicatio
 CNPG's `postgres` superuser uses **peer authentication** inside the pod — no password is needed when connecting from within the same process. Use `kubectl exec` to connect:
 
 ```bash
-kubectl exec -n cove-staging cove-db-1 -- psql -U postgres -d cove
+kubectl exec -n cove-staging cove-db-1 -c postgres -- psql -U postgres -d cove
 ```
 
 ### Superuser-only operations
@@ -162,7 +169,7 @@ Both `CREATE ROLE` and `ALTER ROLE` require superuser privileges. Neither can ru
 `postInitApplicationSQL` only runs at cluster creation time. For existing clusters, roles and search paths must be created once manually:
 
 ```bash
-kubectl exec -n <namespace> cove-db-1 -- psql -U postgres -d cove -c "
+kubectl exec -n <namespace> cove-db-1 -c postgres -- psql -U postgres -d cove -c "
 DO \$\$ BEGIN CREATE ROLE cove_item WITH LOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END \$\$;
 DO \$\$ BEGIN CREATE ROLE cove_user WITH LOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END \$\$;
 ALTER ROLE cove_item SET search_path = catalog, directory, public;
@@ -173,10 +180,10 @@ ALTER ROLE cove_user  SET search_path = profile, public;
 Verify roles exist and `search_path` defaults are set:
 ```bash
 # Lists roles and attributes (does not show search_path)
-kubectl exec -n <namespace> cove-db-1 -- psql -U postgres -c "\du"
+kubectl exec -n <namespace> cove-db-1 -c postgres -- psql -U postgres -c "\du"
 
 # Confirms search_path is set — search_path lives in pg_db_role_setting, not \du
-kubectl exec -n <namespace> cove-db-1 -- psql -U postgres -d cove -c \
+kubectl exec -n <namespace> cove-db-1 -c postgres -- psql -U postgres -d cove -c \
   "SELECT rolname, setconfig FROM pg_roles r LEFT JOIN pg_db_role_setting s ON r.oid = s.setrole WHERE rolname IN ('cove_item', 'cove_user');"
 ```
 
@@ -197,11 +204,11 @@ error: Dirty database version 1. Fix and force version.
 **Check the state** (use the service-specific table name):
 ```bash
 # cove-item
-kubectl exec -n cove-staging cove-db-1 -- psql -U postgres -d cove \
+kubectl exec -n cove-staging cove-db-1 -c postgres -- psql -U postgres -d cove \
   -c "SELECT * FROM schema_migrations_cove_item;"
 
 # cove-user
-kubectl exec -n cove-staging cove-db-1 -- psql -U postgres -d cove \
+kubectl exec -n cove-staging cove-db-1 -c postgres -- psql -U postgres -d cove \
   -c "SELECT * FROM schema_migrations_cove_user;"
 ```
 
@@ -211,7 +218,7 @@ If the migration failed cleanly (Postgres rolled back the transaction — most D
 
 ```bash
 # Clear the dirty record (safe if the transaction rolled back)
-kubectl exec -n cove-staging cove-db-1 -- psql -U postgres -d cove \
+kubectl exec -n cove-staging cove-db-1 -c postgres -- psql -U postgres -d cove \
   -c "DELETE FROM schema_migrations_cove_item;"  # or schema_migrations_cove_user
 
 # Then rerun

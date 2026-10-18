@@ -291,6 +291,10 @@ This rule applies to every agent **and** to the main session. If the MCP propaga
 
 Every PR body written to a `--body-file` must follow this layout. The `## Issue` section is required whenever the branch name contains `<REPO>-<ISSUE-NO>`; omit it for off-cycle branches with no associated issue.
 
+**PR title rules:**
+- Never include the issue reference in the title — no `(#373)`, `[#373]`, or similar suffix. The issue link belongs in the body (`## Issue` + `Closes #N`), not the title.
+- Keep it under 72 characters, imperative mood, sentence case (matches commit message style).
+
 ```bash
 cat > /tmp/pr-body.md << 'EOF'
 ## Issue
