@@ -49,9 +49,21 @@ jobs:
             echo "skip=false" >> $GITHUB_OUTPUT
           fi
 
+      # Pin SwiftLint to the version used locally instead of the latest
+      # Homebrew release, so new upstream rules can't break lint unannounced.
+      # Bump SWIFTLINT_VERSION and SWIFTLINT_SHA256 together when upgrading.
       - name: Install SwiftLint
         if: steps.swift-changes.outputs.skip != 'true'
-        run: brew install swiftlint
+        env:
+          SWIFTLINT_VERSION: 0.63.2
+          SWIFTLINT_SHA256: c59a405c85f95b92ced677a500804e081596a4cae4a6a485af76065557d6ed29
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/portable_swiftlint.zip" \
+            "https://github.com/realm/SwiftLint/releases/download/${SWIFTLINT_VERSION}/portable_swiftlint.zip"
+          echo "${SWIFTLINT_SHA256}  $RUNNER_TEMP/portable_swiftlint.zip" | shasum -a 256 -c -
+          unzip -oq "$RUNNER_TEMP/portable_swiftlint.zip" -d "$RUNNER_TEMP/swiftlint"
+          chmod +x "$RUNNER_TEMP/swiftlint/swiftlint"
+          echo "$RUNNER_TEMP/swiftlint" >> "$GITHUB_PATH"
 
       # Pin SwiftFormat to the version used locally instead of the runner's
       # preinstalled copy, so runner image updates can't introduce new rules.
@@ -77,7 +89,9 @@ jobs:
 
       - name: Run SwiftLint
         if: steps.swift-changes.outputs.skip != 'true'
-        run: swiftlint lint --strict
+        run: |
+          swiftlint version
+          swiftlint lint --strict
 
       - name: Check for merge conflict markers
         if: steps.swift-changes.outputs.skip != 'true'
