@@ -97,26 +97,28 @@ struct CategoryCard: View {
     }
 }
 
+/// Bundled 390×180 copies of real category images, from `Preview Content` (development-only, not shipped).
+private func previewImageURL(_ name: String) -> URL? {
+    Bundle.main.url(forResource: "category-preview-\(name)", withExtension: "jpg")
+}
+
 #Preview {
     ScrollView(.horizontal) {
         HStack(spacing: Spacing.md) {
+            // With background images
             CategoryCard(
                 category: .init(id: "1", name: "Beer", path: "alcohol.beer"),
-                imageURL: nil,
+                imageURL: previewImageURL("alcohol-beer"),
                 onTap: {}
             )
             CategoryCard(
                 category: .init(id: "2", name: "Baked Goods", path: "food.baked_goods"),
-                imageURL: nil,
+                imageURL: previewImageURL("food-baked_goods"),
                 onTap: {}
             )
+            // Text-only fallback (no image_key)
             CategoryCard(
-                category: .init(id: "3", name: "Food", path: "food"),
-                imageURL: nil,
-                onTap: {}
-            )
-            CategoryCard(
-                category: .init(id: "4", name: "Accessories", path: "pets.dogs.accessories"),
+                category: .init(id: "3", name: "Accessories", path: "pets.dogs.accessories"),
                 imageURL: nil,
                 onTap: {}
             )
