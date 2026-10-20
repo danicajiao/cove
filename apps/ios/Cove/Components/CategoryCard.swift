@@ -107,20 +107,20 @@ private func previewImageURL(_ name: String) -> URL? {
     NavigationStack {
         ScrollView(.horizontal) {
             HStack(spacing: Spacing.md) {
-                // With background images
+                // Level 1 categories, as on the home shelf (no parent label)
                 CategoryCard(
-                    category: .init(id: "1", name: "Beer", path: "alcohol.beer"),
-                    imageURL: previewImageURL("alcohol-beer"),
+                    category: .init(id: "1", name: "Food", path: "food"),
+                    imageURL: previewImageURL("food"),
                     onTap: {}
                 )
                 CategoryCard(
-                    category: .init(id: "2", name: "Baked Goods", path: "food.baked_goods"),
-                    imageURL: previewImageURL("food-baked_goods"),
+                    category: .init(id: "2", name: "Alcohol", path: "alcohol"),
+                    imageURL: previewImageURL("alcohol"),
                     onTap: {}
                 )
                 // Text-only fallback (no image_key)
                 CategoryCard(
-                    category: .init(id: "3", name: "Accessories", path: "pets.dogs.accessories"),
+                    category: .init(id: "3", name: "Music", path: "music"),
                     imageURL: nil,
                     onTap: {}
                 )

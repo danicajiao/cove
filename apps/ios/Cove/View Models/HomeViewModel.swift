@@ -15,11 +15,6 @@ class HomeViewModel: ObservableObject {
     @Published var categoryImageURLs: [String: URL] = [:]
     @Published var isLoadingCategories = false
 
-    /// Number of category cards requested for the home shelf. Kept small so the
-    /// horizontal scroller stays light even for users with no interests (whose
-    /// recommendations fall back to the full leaf-category set server-side).
-    private let categoryLimit = 5
-
     private var lastFetchTime: Date?
     private let cacheTimeout: TimeInterval = 300
     private let itemRepository: ItemRepository
@@ -36,14 +31,15 @@ class HomeViewModel: ObservableObject {
         self.imageRepository = imageRepository
     }
 
-    /// Fetches personalized category cards from `GET /recommendations/categories`,
-    /// then eagerly pre-fetches signed image URLs for all returned categories so
-    /// cards display immediately when they come into view.
+    /// Fetches the home shelf from `GET /recommendations/categories`: every level 1
+    /// category, with the user's picks first, in server order. Then eagerly
+    /// pre-fetches signed image URLs for all of them so cards display immediately
+    /// when they come into view.
     func fetchCategories() async {
         guard categories.isEmpty else { return }
         isLoadingCategories = true
         do {
-            categories = try await api.recommendedCategories(limit: categoryLimit)
+            categories = try await api.recommendedCategories()
             await prefetchCategoryImages(for: categories)
         } catch {
             print("❌ fetchCategories failed: \(error)")
