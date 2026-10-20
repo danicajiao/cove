@@ -470,12 +470,17 @@ paths:
       description: |
         Returns personalized category cards for the authenticated user.
 
-        Algorithm:
-        1. If the user has interests, return those categories ordered by
-           engagement count in profile.events (last 30 days) descending.
-        2. If the user has no interests, fall back to all leaf categories
-           ordered by total event count across all users (last 30 days).
-        3. If no events exist at all, order alphabetically by name.
+        Returns level 1 categories only (the home shelf), ranked as:
+        1. Level 1 categories the user selected as interests, ordered by the
+           user's own engagement, then global engagement, then name.
+        2. The remaining level 1 categories, ordered by global engagement,
+           then name.
+
+        Engagement is the profile.events count over the last 30 days, rolled
+        up to the level 1 ancestor (events on descendant categories, or on
+        items in them, count toward it). Users with no profile or no interests
+        get every level 1 category ordered by global engagement. Level 2
+        interests don't affect this list.
       parameters:
         - name: X-Cove-Uid
           in: header
