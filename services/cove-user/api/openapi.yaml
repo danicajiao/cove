@@ -697,10 +697,10 @@ components:
           type: [string, "null"]
           description: |
             Garage object key for the category card background image, e.g.
-            "images/categories/food-baked_goods.jpg". Pass to GET /images/{filename}/url
+            "images/categories/card/food-baked_goods.jpg". Pass to GET /images/{filename}/url
             (without the "images/" prefix) to get a signed imgproxy URL. Absent when
             the category has no image.
-          example: images/categories/food-baked_goods.jpg
+          example: images/categories/card/food-baked_goods.jpg
 
     RecommendedCategoriesResponse:
       type: object

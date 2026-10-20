@@ -1001,10 +1001,17 @@ components:
         image_key:
           type: [string, "null"]
           description: |
-            Garage object key for the category card background image,
-            e.g. "images/categories/food-coffee.jpg". Present only on
-            top-level and mid-level categories; absent on leaf sub-categories.
-          example: images/categories/food-coffee.jpg
+            Garage object key for the category card image (~13:6 crop),
+            e.g. "images/categories/card/food-coffee.jpg". Set on every
+            category; omitted when absent.
+          example: images/categories/card/food-coffee.jpg
+        wide_image_key:
+          type: [string, "null"]
+          description: |
+            Garage object key for the wide category image (4:1 crop) used by
+            the onboarding interest cards, e.g. "images/categories/wide/food.jpg".
+            Set only on top-level categories; omitted elsewhere.
+          example: images/categories/wide/food.jpg
         children:
           type: array
           items:
@@ -1358,10 +1365,10 @@ components:
           type: [string, "null"]
           description: |
             Garage object key for the category card background image, e.g.
-            "images/categories/food-baked_goods.jpg". Pass to GET /images/{filename}/url
+            "images/categories/card/food-baked_goods.jpg". Pass to GET /images/{filename}/url
             (without the "images/" prefix) to get a signed imgproxy URL. Absent when
             the category has no image.
-          example: images/categories/food-baked_goods.jpg
+          example: images/categories/card/food-baked_goods.jpg
 
     RecommendedCategoriesResponse:
       type: object
