@@ -99,7 +99,7 @@ A storefront may be operated by the maker themselves (a potter's studio, New Bel
 |---|---|---|
 | `cove-api` | `services/cove-api/` | Single ingress (BFF gateway). Validates Firebase ID tokens, routes to backend services, forwards UID via `X-Cove-Uid`. |
 | `cove-item` | `services/cove-item/` | Item ingestion, category catalog, and the discovery endpoint (`GET /discovery`). Reads the `catalog` and `directory` schemas. |
-| `cove-user` | `services/cove-user/` | User profiles, interest management, `GET /recommendations/categories` (top-up algorithm), `POST /users/me/events` (attention events). |
+| `cove-user` | `services/cove-user/` | User profiles, interest management, `GET /recommendations/categories` (level 1 home shelf ranking), `POST /users/me/events` (attention events). |
 | `cove-image` | `services/cove-image/` | Authenticated image uploads to Garage and signed-URL fetch via imgproxy. Stateless. |
 | `cove-directory` | `services/cove-directory/` (future) | Self-serve onboarding, maker/storefront profile management, signal verification. Takes over writes to the `directory` schema when it ships. |
 
@@ -429,12 +429,12 @@ See [Category Taxonomy](CATEGORY_TAXONOMY.md) for the full v1 tree and operation
 
 ### Category cards and personalization
 
-The homepage surfaces **category cards** — browse-mode entry points into the discovery surface. Cards are personalized per user via a two-phase model:
+The homepage surfaces **category cards** — browse-mode entry points into the discovery surface. The shelf shows the **level 1** categories only, personalized per user via a two-phase model:
 
-1. **Onboarding (explicit signal):** the user picks interest categories during first launch. Stored as `profile.interests` rows. Cards are seeded from these picks.
-2. **Behavioral (implicit signal):** as the user browses, attention events (taps, item views, dwell time) are recorded in `profile.events`. The recommendation query blends explicit interests + engagement count to reorder cards over time.
+1. **Onboarding (explicit signal):** the user picks level 1 categories during first launch, optionally refining each with level 2 picks. Every pick is stored as a `profile.interests` row. Selected level 1 categories lead the shelf; level 2 picks are kept for finer-grained recommendations later.
+2. **Behavioral (implicit signal):** as the user browses, attention events (taps, item views, dwell time) are recorded in `profile.events`. Engagement over the last 30 days is rolled up to the level 1 ancestor: events on descendant categories, or on items in them, count toward it.
 
-The iOS app fetches cards from `GET /recommendations/categories` (owned by `cove-user`). The endpoint returns the same shape regardless of phase — the ranking logic evolves without any iOS changes. Category-scoped discovery is triggered by tapping a card: `GET /discovery?category=food.coffee&lat=...`.
+`GET /recommendations/categories` (owned by `cove-user`) returns the user's selected level 1 categories first, ordered by their own engagement, then the rest by engagement across all users. Users with no interests get every level 1 category by global engagement. The response shape doesn't change as the ranking evolves, so iOS needs no changes. Category-scoped discovery is triggered by tapping a card: `GET /discovery?category=food&lat=...`.
 
 ### Facets and filters, not categories
 
