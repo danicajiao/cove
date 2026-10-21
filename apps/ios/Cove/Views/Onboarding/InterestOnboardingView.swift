@@ -33,7 +33,7 @@ struct InterestOnboardingView: View {
 
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 Text("What are you into?")
-                    .font(.custom("Lato-Bold", size: 28))
+                    .font(.custom("Gazpacho-Black", size: 28))
                     .foregroundStyle(Color.Colors.Text.primary)
                     .frame(maxWidth: .infinity, alignment: .leading)
 

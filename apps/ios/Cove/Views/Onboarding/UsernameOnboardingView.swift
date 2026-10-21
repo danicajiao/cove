@@ -23,7 +23,7 @@ struct UsernameOnboardingView: View {
 
                 VStack(alignment: .leading, spacing: Spacing.sm) {
                     Text("Choose a username")
-                        .font(.custom("Lato-Bold", size: 28))
+                        .font(.custom("Gazpacho-Black", size: 28))
                         .foregroundStyle(Color.Colors.Text.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
 

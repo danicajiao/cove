@@ -19,7 +19,7 @@ Cove's category taxonomy is a **3-level tree** stored in Postgres using the `ltr
 
 Items may only be assigned to **leaf nodes** — the deepest node in a given branch. Non-leaf categories are browse/navigation nodes only; they cannot be set as an item's `category_id`.
 
-The v1 taxonomy has **9 top-level categories** and 242 nodes total (9 top-level, 50 level-2, 183 level-3), seeded via migration `000004`. Leaf enforcement is defined in `000003`. Display names were last corrected in `000014` (Plantcare, Bodycare, Haircare).
+The v1 taxonomy has **9 top-level categories** and 242 nodes total (9 top-level, 50 level-2, 183 level-3), seeded via migration `000004`. Leaf enforcement is defined in `000003`. Display names were later corrected in `000014` (Plantcare, Bodycare, Haircare) and `000015` (Protein).
 
 ### Category images
 
@@ -333,8 +333,8 @@ Create the next numbered migration file:
 
 ```bash
 # example: adding food.fresh.kimchi
-touch services/cove-item/migrations/000015_add_kimchi_category.up.sql
-touch services/cove-item/migrations/000015_add_kimchi_category.down.sql
+touch services/cove-item/migrations/000016_add_kimchi_category.up.sql
+touch services/cove-item/migrations/000016_add_kimchi_category.down.sql
 ```
 
 **up:**
