@@ -8,15 +8,22 @@ import SwiftUI
 /// A full-width level 1 category card for interest onboarding.
 ///
 /// Shows the category's wide image (`wide_image_key`) with its name on top, and a
-/// sage checkmark badge when selected. The signed image URL is pre-fetched by
-/// `InterestOnboardingViewModel` so the image is ready when the card appears.
+/// sage checkmark badge when selected. The image is downloaded up front by
+/// `InterestOnboardingViewModel`; the card shimmers while `isLoadingImage` is
+/// true and falls back to a plain fill if there's no image.
 struct InterestCategoryCard: View {
     let name: String
-    let imageURL: URL?
+    let image: UIImage?
+    var isLoadingImage: Bool = false
     let isSelected: Bool
     let onTap: () -> Void
 
-    private let height: CGFloat = 90
+    /// Fixed card height; the width fills the parent.
+    static let height: CGFloat = 90
+    private var height: CGFloat {
+        Self.height
+    }
+
     private let badgeSize: CGFloat = 32
 
     var body: some View {
@@ -51,14 +58,13 @@ struct InterestCategoryCard: View {
 
     @ViewBuilder
     private var imageLayer: some View {
-        if let imageURL {
-            AsyncImage(url: imageURL) { phase in
-                if case let .success(image) = phase {
-                    image
-                        .resizable()
-                        .scaledToFill()
-                }
-            }
+        if isLoadingImage {
+            Color.clear.shimmer()
+        } else if let image {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .transition(.opacity)
         }
     }
 
@@ -83,14 +89,16 @@ private struct NoPressFeedbackButtonStyle: ButtonStyle {
 }
 
 /// Bundled 390×180 copy of the Food card image, from `Preview Content` (development-only, not shipped).
-private let previewImageURL = Bundle.main.url(forResource: "category-preview-food", withExtension: "jpg")
+private let previewImage = Bundle.main.path(forResource: "category-preview-food", ofType: "jpg").flatMap(UIImage.init(contentsOfFile:))
 
 #Preview {
     VStack(spacing: Spacing.lg) {
-        InterestCategoryCard(name: "Food", imageURL: previewImageURL, isSelected: false, onTap: {})
-        InterestCategoryCard(name: "Food", imageURL: previewImageURL, isSelected: true, onTap: {})
+        InterestCategoryCard(name: "Food", image: previewImage, isSelected: false, onTap: {})
+        InterestCategoryCard(name: "Food", image: previewImage, isSelected: true, onTap: {})
+        // Still loading
+        InterestCategoryCard(name: "Apparel", image: nil, isLoadingImage: true, isSelected: false, onTap: {})
         // Fallback without an image
-        InterestCategoryCard(name: "Music", imageURL: nil, isSelected: false, onTap: {})
+        InterestCategoryCard(name: "Music", image: nil, isSelected: false, onTap: {})
     }
     .padding(.horizontal, Spacing.xl)
     .background(Color.Colors.Backgrounds.primary)

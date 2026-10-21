@@ -7,6 +7,7 @@ import SwiftUI
 
 struct InterestOnboardingView: View {
     @StateObject private var viewModel: InterestOnboardingViewModel
+    @Environment(\.displayScale) private var displayScale
 
     init(appState: AppState) {
         _viewModel = StateObject(wrappedValue: InterestOnboardingViewModel(appState: appState))
@@ -65,21 +66,47 @@ struct InterestOnboardingView: View {
             .foregroundStyle(Color.Colors.Brand.accent)
             Spacer()
         } else {
-            ScrollView(showsIndicators: false) {
-                LazyVStack(spacing: Spacing.lg) {
-                    ForEach(viewModel.groups) { group in
-                        InterestGroupSection(
-                            group: group,
-                            imageURL: viewModel.groupImageURLs[group.id],
-                            isSelected: viewModel.selectedGroupIDs.contains(group.id),
-                            selectedOptionIDs: viewModel.selectedOptionIDs,
-                            onToggleGroup: { viewModel.toggleGroup(id: group.id) },
-                            onToggleOption: { viewModel.toggleOption(id: $0) }
-                        )
+            ScrollViewReader { proxy in
+                ScrollView(showsIndicators: false) {
+                    LazyVStack(spacing: Spacing.lg) {
+                        ForEach(viewModel.groups) { group in
+                            InterestGroupSection(
+                                group: group,
+                                image: viewModel.groupImages[group.id],
+                                isLoadingImage: viewModel.isLoadingImage(for: group),
+                                isSelected: viewModel.selectedGroupIDs.contains(group.id),
+                                selectedOptionIDs: viewModel.selectedOptionIDs,
+                                onToggleGroup: { viewModel.toggleGroup(id: group.id) },
+                                onToggleOption: { viewModel.toggleOption(id: $0) }
+                            )
+                            .id(group.id)
+                        }
                     }
+                    // The stack's width before padding is the card width.
+                    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width in
+                        let cardSize = CGSize(width: width, height: InterestCategoryCard.height)
+                        Task { await viewModel.cardSizeDidChange(cardSize, displayScale: displayScale) }
+                    }
+                    .padding(.horizontal, Spacing.xl)
+                    .padding(.bottom, Spacing.md)
                 }
-                .padding(.horizontal, Spacing.xl)
-                .padding(.bottom, Spacing.md)
+                .onChange(of: viewModel.selectedGroupIDs) { oldIDs, newIDs in
+                    guard let expandedID = newIDs.subtracting(oldIDs).first else { return }
+                    scrollSectionIntoView(expandedID, proxy: proxy)
+                }
+            }
+        }
+    }
+
+    /// Scrolls the minimum distance needed to show a newly expanded section, card
+    /// and pills, in full. A section that's already fully visible doesn't move.
+    private func scrollSectionIntoView(_ id: String, proxy: ScrollViewProxy) {
+        Task { @MainActor in
+            // Let the pill grid lay out first so the section has its expanded height.
+            try? await Task.sleep(for: .milliseconds(50))
+            withAnimation(.easeInOut(duration: 0.3)) {
+                // No anchor: scroll only as far as needed to make the view fully visible.
+                proxy.scrollTo(id)
             }
         }
     }
@@ -129,7 +156,8 @@ struct InterestOnboardingView: View {
 /// A level 1 card that expands into its level 2 pills while selected.
 private struct InterestGroupSection: View {
     let group: InterestGroup
-    let imageURL: URL?
+    let image: UIImage?
+    var isLoadingImage: Bool = false
     let isSelected: Bool
     let selectedOptionIDs: Set<String>
     let onToggleGroup: () -> Void
@@ -137,7 +165,12 @@ private struct InterestGroupSection: View {
 
     var body: some View {
         VStack(spacing: Spacing.md) {
-            InterestCategoryCard(name: group.name, imageURL: imageURL, isSelected: isSelected) {
+            InterestCategoryCard(
+                name: group.name,
+                image: image,
+                isLoadingImage: isLoadingImage,
+                isSelected: isSelected
+            ) {
                 withAnimation(.easeInOut(duration: 0.2)) { onToggleGroup() }
             }
 
@@ -148,7 +181,8 @@ private struct InterestGroupSection: View {
                     selectedFill: group.pillColor,
                     onTap: onToggleOption
                 )
-                .transition(.opacity.combined(with: .move(edge: .top)))
+                // Pills animate themselves in; the grid itself only fades out on collapse.
+                .transition(.asymmetric(insertion: .identity, removal: .opacity))
             }
         }
     }
@@ -162,19 +196,31 @@ private struct PillGrid: View {
     let selectedFill: Color
     let onTap: (String) -> Void
 
+    /// Flips on appear so each pill rises into place, staggered by its index.
+    @State private var hasAppeared = false
+
     private let columns = Array(repeating: GridItem(.flexible(), spacing: Spacing.sm), count: 3)
+    private let staggerDelay = 0.03
+    private let riseDistance: CGFloat = 12
 
     var body: some View {
         LazyVGrid(columns: columns, spacing: Spacing.sm) {
-            ForEach(options) { option in
+            ForEach(Array(options.enumerated()), id: \.element.id) { index, option in
                 CategoryPill(
                     name: option.name,
                     isSelected: selectedIDs.contains(option.id),
                     selectedFill: selectedFill
                 )
                 .onTapGesture { onTap(option.id) }
+                .opacity(hasAppeared ? 1 : 0)
+                .offset(y: hasAppeared ? 0 : riseDistance)
+                .animation(
+                    .easeOut(duration: 0.25).delay(Double(index) * staggerDelay),
+                    value: hasAppeared
+                )
             }
         }
+        .onAppear { hasAppeared = true }
     }
 }
 
@@ -223,17 +269,17 @@ private struct CategoryPill: View {
         id: "apparel", name: "Apparel", path: "apparel", wideImageKey: nil,
         options: [], pillColor: LevelOneCategories.color(for: "apparel")
     )
-    let foodImage = Bundle.main.url(forResource: "category-preview-food", withExtension: "jpg")
+    let foodImage = Bundle.main.path(forResource: "category-preview-food", ofType: "jpg").flatMap(UIImage.init(contentsOfFile:))
 
     ScrollView {
         VStack(spacing: Spacing.lg) {
             InterestGroupSection(
-                group: food, imageURL: foodImage, isSelected: true,
+                group: food, image: foodImage, isSelected: true,
                 selectedOptionIDs: ["Baked Goods", "Coffee"],
                 onToggleGroup: {}, onToggleOption: { _ in }
             )
             InterestGroupSection(
-                group: apparel, imageURL: nil, isSelected: false,
+                group: apparel, image: nil, isSelected: false,
                 selectedOptionIDs: [], onToggleGroup: {}, onToggleOption: { _ in }
             )
         }

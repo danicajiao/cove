@@ -10,6 +10,7 @@ import SwiftUI
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
     @EnvironmentObject private var favoritesStore: FavoritesStore
+    @Environment(\.displayScale) private var displayScale
 
     @State var search: String = ""
 
@@ -70,7 +71,8 @@ struct HomeView: View {
                                 ForEach(viewModel.categories, id: \.id) { category in
                                     CategoryCard(
                                         category: category,
-                                        imageURL: viewModel.categoryImageURLs[category.path]
+                                        image: viewModel.categoryImages[category.path],
+                                        isLoadingImage: viewModel.isLoadingImage(for: category)
                                     ) {
                                         viewModel.recordCategoryTap(category)
                                     }
@@ -148,7 +150,7 @@ struct HomeView: View {
         .onAppear {
             print("homeView appeared")
             Task {
-                await viewModel.fetchCategories()
+                await viewModel.fetchCategories(displayScale: displayScale)
                 try await viewModel.fetchItems()
                 try await viewModel.fetchBrands()
                 await favoritesStore.loadFavorites()

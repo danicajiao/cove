@@ -26,15 +26,15 @@ class InterestOnboardingViewModel: ObservableObject {
     @Published var groups: [InterestGroup] = []
     @Published var selectedGroupIDs: Set<String> = []
     @Published var selectedOptionIDs: Set<String> = []
-    @Published var groupImageURLs: [String: URL] = [:]
+    @Published var groupImages: [String: UIImage] = [:]
+    @Published var isLoadingImages: Bool = false
     @Published var isLoading: Bool = false
     @Published var isSubmitting: Bool = false
     @Published var serverError: String?
 
-    /// Wide card images are requested at the widest card (400pt Pro Max at 3×)
-    /// by its fixed 90pt height; imgproxy crops, and the card fills.
-    private let imageWidth = 1200
-    private let imageHeight = 270
+    /// Pixel size the wide images are requested at: the card's on-screen size
+    /// times the display scale, reported by the view once it has laid out.
+    private var imagePixelSize: (width: Int, height: Int)?
 
     private let appState: AppState
     private let api: CoveAPIClient
@@ -65,11 +65,31 @@ class InterestOnboardingViewModel: ObservableObject {
         do {
             let nodes = try await api.categories()
             groups = Self.buildGroups(from: nodes)
-            await prefetchImages(for: groups)
         } catch {
             print("❌ fetchCategories failed: \(error)")
         }
+        // Show the cards right away; each shimmers until its image arrives.
         isLoading = false
+        isLoadingImages = groups.contains { $0.wideImageKey != nil }
+        await prefetchImagesIfReady()
+    }
+
+    /// Called by the view with the card's laid-out size. Images are requested at
+    /// exactly that size in pixels (points × display scale), so each device
+    /// downloads only what it shows, at full sharpness.
+    func cardSizeDidChange(_ size: CGSize, displayScale: CGFloat) async {
+        guard size.width > 0, size.height > 0, imagePixelSize == nil else { return }
+        imagePixelSize = (
+            width: Int((size.width * displayScale).rounded(.up)),
+            height: Int((size.height * displayScale).rounded(.up))
+        )
+        await prefetchImagesIfReady()
+    }
+
+    /// Whether a group's card should shimmer. Every card with an image shimmers
+    /// until the whole set has downloaded, then they're revealed together.
+    func isLoadingImage(for group: InterestGroup) -> Bool {
+        isLoadingImages && group.wideImageKey != nil
     }
 
     /// Selects a group (expanding its pills), or deselects it, collapsing it and
@@ -121,22 +141,19 @@ class InterestOnboardingViewModel: ObservableObject {
         appState.setAuthState(.loggedIn)
     }
 
-    private func prefetchImages(for groups: [InterestGroup]) async {
-        await withTaskGroup(of: (String, URL?).self) { taskGroup in
-            for group in groups {
-                guard let key = group.wideImageKey else { continue }
-                taskGroup.addTask {
-                    let url = try? await self.imageRepository.imageURL(
-                        for: key, width: self.imageWidth, height: self.imageHeight
-                    )
-                    return (group.id, url)
-                }
-            }
-            for await (id, url) in taskGroup {
-                if let url {
-                    groupImageURLs[id] = url
-                }
-            }
+    /// Downloads every wide image once both the categories and the card size are
+    /// known, then reveals them all at once.
+    private func prefetchImagesIfReady() async {
+        guard let size = imagePixelSize, !groups.isEmpty, groupImages.isEmpty else { return }
+        let keys = groups.reduce(into: [String: String]()) { keys, group in
+            keys[group.id] = group.wideImageKey
+        }
+        isLoadingImages = true
+        let images = await ImagePreloader(imageRepository: imageRepository)
+            .load(keys, width: size.width, height: size.height)
+        withAnimation(.easeOut(duration: 0.25)) {
+            groupImages = images
+            isLoadingImages = false
         }
     }
 
