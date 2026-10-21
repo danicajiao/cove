@@ -45,7 +45,7 @@ struct InterestCategoryCard: View {
                 .clipShape(RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
                 .contentShape(RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(NoPressFeedbackButtonStyle())
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
@@ -71,6 +71,14 @@ struct InterestCategoryCard: View {
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(Color.Colors.Fills.inverse)
             }
+    }
+}
+
+/// Draws the label as-is in every state. `PlainButtonStyle` dims its label while
+/// pressed; the selection badge is the only feedback these cards need.
+private struct NoPressFeedbackButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
     }
 }
 
