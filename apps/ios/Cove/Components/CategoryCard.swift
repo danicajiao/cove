@@ -9,16 +9,25 @@ import SwiftUI
 
 /// A homepage category card driven by `GET /recommendations/categories`.
 ///
-/// Renders a card with a background image and the category name. The signed
-/// imgproxy URL is pre-fetched by `HomeViewModel` when categories load so the
-/// image is ready before the card scrolls into view.
+/// Renders a card with a background image and the category name. The image is
+/// downloaded up front by `HomeViewModel`, so it's ready before the card scrolls
+/// into view. The card shimmers while `isLoadingImage` is true and falls back to
+/// a plain fill if there's no image.
 struct CategoryCard: View {
     let category: Components.Schemas.RecommendedCategory
-    let imageURL: URL?
+    let image: UIImage?
+    var isLoadingImage: Bool = false
     let onTap: () -> Void
 
-    private let width: CGFloat = 130
-    private let height: CGFloat = 60
+    /// Fixed card size in points; images are requested at this times the display scale.
+    static let size = CGSize(width: 130, height: 60)
+    private var width: CGFloat {
+        Self.size.width
+    }
+
+    private var height: CGFloat {
+        Self.size.height
+    }
 
     var body: some View {
         NavigationLink(value: Path.categoryResults(path: category.path, name: category.name)) {
@@ -46,30 +55,17 @@ struct CategoryCard: View {
 
     @ViewBuilder
     private var backgroundLayer: some View {
-        if let imageURL {
-            AsyncImage(url: imageURL) { phase in
-                switch phase {
-                case let .success(image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: width, height: height)
-                        .clipped()
-                case .failure:
-                    Color.Colors.Fills.quinary
-                        .frame(width: width, height: height)
-                case .empty:
-                    Color.Colors.Fills.quinary
-                        .frame(width: width, height: height)
-                        .overlay {
-                            ProgressView()
-                                .tint(Color.Colors.Text.tertiary)
-                        }
-                @unknown default:
-                    Color.Colors.Fills.quinary
-                        .frame(width: width, height: height)
-                }
-            }
+        if isLoadingImage {
+            Color.Colors.Fills.quinary
+                .frame(width: width, height: height)
+                .shimmer()
+        } else if let image {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(width: width, height: height)
+                .clipped()
+                .transition(.opacity)
         } else {
             Color.Colors.Fills.quinary
                 .frame(width: width, height: height)
@@ -98,8 +94,8 @@ struct CategoryCard: View {
 }
 
 /// Bundled 390×180 copies of real category images, from `Preview Content` (development-only, not shipped).
-private func previewImageURL(_ name: String) -> URL? {
-    Bundle.main.url(forResource: "category-preview-\(name)", withExtension: "jpg")
+private func previewImage(_ name: String) -> UIImage? {
+    Bundle.main.path(forResource: "category-preview-\(name)", ofType: "jpg").flatMap(UIImage.init(contentsOfFile:))
 }
 
 #Preview {
@@ -110,18 +106,25 @@ private func previewImageURL(_ name: String) -> URL? {
                 // Level 1 categories, as on the home shelf (no parent label)
                 CategoryCard(
                     category: .init(id: "1", name: "Food", path: "food"),
-                    imageURL: previewImageURL("food"),
+                    image: previewImage("food"),
                     onTap: {}
                 )
                 CategoryCard(
                     category: .init(id: "2", name: "Alcohol", path: "alcohol"),
-                    imageURL: previewImageURL("alcohol"),
+                    image: previewImage("alcohol"),
+                    onTap: {}
+                )
+                // Still loading
+                CategoryCard(
+                    category: .init(id: "4", name: "Apparel", path: "apparel"),
+                    image: nil,
+                    isLoadingImage: true,
                     onTap: {}
                 )
                 // Text-only fallback (no image_key)
                 CategoryCard(
                     category: .init(id: "3", name: "Music", path: "music"),
-                    imageURL: nil,
+                    image: nil,
                     onTap: {}
                 )
             }
