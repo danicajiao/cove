@@ -34,6 +34,7 @@ struct InterestOnboardingView: View {
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 Text("What are you into?")
                     .font(.custom("Gazpacho-Black", size: 28))
+                    .tracking(-1.4) // Figma letter spacing -5% × 28pt
                     .foregroundStyle(Color.Colors.Text.primary)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -68,7 +69,10 @@ struct InterestOnboardingView: View {
         } else {
             ScrollViewReader { proxy in
                 ScrollView(showsIndicators: false) {
-                    LazyVStack(spacing: Spacing.lg) {
+                    // Not lazy: 9 sections with preloaded images are cheap, and a lazy
+                    // stack would rebuild pill grids scrolled off-screen, replaying
+                    // their entrance animation when they scroll back in.
+                    VStack(spacing: Spacing.lg) {
                         ForEach(viewModel.groups) { group in
                             InterestGroupSection(
                                 group: group,
