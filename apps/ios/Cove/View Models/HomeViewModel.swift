@@ -5,20 +5,16 @@
 //  Created by Daniel Cajiao on 12/6/22.
 //
 
-import Foundation
+import SwiftUI
 
 @MainActor
 class HomeViewModel: ObservableObject {
     var items = [any Item]()
     @Published var brands = [Brand]()
     @Published var categories = [Components.Schemas.RecommendedCategory]()
-    @Published var categoryImageURLs: [String: URL] = [:]
+    @Published var categoryImages: [String: UIImage] = [:]
     @Published var isLoadingCategories = false
-
-    /// Number of category cards requested for the home shelf. Kept small so the
-    /// horizontal scroller stays light even for users with no interests (whose
-    /// recommendations fall back to the full leaf-category set server-side).
-    private let categoryLimit = 5
+    @Published var isLoadingCategoryImages = false
 
     private var lastFetchTime: Date?
     private let cacheTimeout: TimeInterval = 300
@@ -36,35 +32,46 @@ class HomeViewModel: ObservableObject {
         self.imageRepository = imageRepository
     }
 
-    /// Fetches personalized category cards from `GET /recommendations/categories`,
-    /// then eagerly pre-fetches signed image URLs for all returned categories so
-    /// cards display immediately when they come into view.
-    func fetchCategories() async {
+    /// Fetches the home shelf from `GET /recommendations/categories`: every level 1
+    /// category, with the user's picks first, in server order. The cards show right
+    /// away and shimmer while every card image downloads, then are revealed
+    /// together, including cards off-screen in the lazy stack.
+    ///
+    /// - Parameter displayScale: Screen scale; images are requested at the card's
+    ///   point size times this, so each device downloads only what it shows.
+    func fetchCategories(displayScale: CGFloat) async {
         guard categories.isEmpty else { return }
         isLoadingCategories = true
         do {
-            categories = try await api.recommendedCategories(limit: categoryLimit)
-            await prefetchCategoryImages(for: categories)
+            categories = try await api.recommendedCategories()
         } catch {
             print("❌ fetchCategories failed: \(error)")
         }
         isLoadingCategories = false
+        await prefetchCategoryImages(for: categories, displayScale: displayScale)
     }
 
-    private func prefetchCategoryImages(for categories: [Components.Schemas.RecommendedCategory]) async {
-        await withTaskGroup(of: (String, URL?).self) { group in
-            for category in categories {
-                guard let key = category.image_key else { continue }
-                group.addTask {
-                    let url = try? await self.imageRepository.imageURL(for: key, width: 390, height: 180)
-                    return (category.path, url)
-                }
-            }
-            for await (path, url) in group {
-                if let url {
-                    categoryImageURLs[path] = url
-                }
-            }
+    /// Whether a category's card should shimmer. Every card with an image shimmers
+    /// until the whole set has downloaded.
+    func isLoadingImage(for category: Components.Schemas.RecommendedCategory) -> Bool {
+        isLoadingCategoryImages && category.image_key != nil
+    }
+
+    private func prefetchCategoryImages(
+        for categories: [Components.Schemas.RecommendedCategory],
+        displayScale: CGFloat
+    ) async {
+        let width = Int((CategoryCard.size.width * displayScale).rounded(.up))
+        let height = Int((CategoryCard.size.height * displayScale).rounded(.up))
+        let keys = categories.reduce(into: [String: String]()) { keys, category in
+            keys[category.path] = category.image_key
+        }
+        isLoadingCategoryImages = true
+        let images = await ImagePreloader(imageRepository: imageRepository)
+            .load(keys, width: width, height: height)
+        withAnimation(.easeOut(duration: 0.25)) {
+            categoryImages = images
+            isLoadingCategoryImages = false
         }
     }
 

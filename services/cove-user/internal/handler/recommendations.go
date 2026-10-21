@@ -28,18 +28,20 @@ type recommendedCategoriesResponse struct {
 
 // RecommendedCategoriesHandler handles GET /recommendations/categories.
 //
-// Algorithm:
-//  1. Resolve auth_uid → internal user_id. If the user has no profile yet,
-//     skip straight to the global fallback (new users still get recommendations).
-//  2. If the user has interests, return those categories ordered by engagement
-//     count in profile.events (last 30 days) descending.
-//  3. If the user has no interests (or no profile), fall back to all leaf
-//     categories ordered by total event count across all users (last 30 days).
-//  4. If no events exist at all, the COALESCE(engagement, 0) clause naturally
-//     falls back to alphabetical by name.
+// The home shelf shows level 1 categories only. One query ranks them:
+//  1. Level 1 categories the user selected as interests come first, ordered by
+//     the user's own engagement, then global engagement, then name.
+//  2. The remaining level 1 categories follow, ordered by global engagement,
+//     then name.
+//
+// Engagement is the count of profile.events in the last 30 days, rolled up to
+// the level 1 ancestor: an event on food.coffee.whole_bean, or on an item in
+// it, counts toward food. Users without a profile (or without interests) get
+// every level 1 category ordered by global engagement. Level 2 interests are
+// stored but don't affect the shelf.
 //
 // The result count is capped by the optional ?limit= query parameter
-// (default 25, max 100).
+// (default 25, max 100), which covers every level 1 category by default.
 func (d *Deps) RecommendedCategoriesHandler(w http.ResponseWriter, r *http.Request) {
 	authUID := r.Header.Get("X-Cove-Uid")
 
@@ -50,7 +52,7 @@ func (d *Deps) RecommendedCategoriesHandler(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	// ── Resolve user_id (best-effort — new users without a profile skip to fallback) ──
+	// ── Resolve user_id (best-effort — new users without a profile get the global order) ──
 	var userIDUUID pgtype.UUID
 	userLookupErr := d.DB.QueryRow(r.Context(),
 		`SELECT id FROM profile.users WHERE auth_uid = $1`, authUID).Scan(&userIDUUID)
@@ -61,104 +63,57 @@ func (d *Deps) RecommendedCategoriesHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	categories := []recommendedCategory{}
-
-	// ── Query 1: interest-based personalization (only when user has a profile) ──
+	// NULL user_id matches no interests or events, leaving only the global order.
+	var userID *string
 	if userLookupErr == nil {
-		userID := formatUUID(userIDUUID)
-
-		const interestSQL = `
-SELECT c.id, c.name, c.path::text, c.image_key
-FROM profile.interests i
-JOIN catalog.categories c ON c.id = i.category_id
-LEFT JOIN (
-    SELECT category_id, COUNT(*) AS engagement
-    FROM profile.events
-    WHERE user_id = $1
-      AND category_id IS NOT NULL
-      AND created_at > now() - interval '30 days'
-    GROUP BY category_id
-) e ON e.category_id = i.category_id
-WHERE i.user_id = $1
-ORDER BY COALESCE(e.engagement, 0) DESC, c.name ASC
-LIMIT $2`
-
-		rows, err := d.DB.Query(r.Context(), interestSQL, userID, limit)
-		if err != nil {
-			log.Printf("ERROR RecommendedCategoriesHandler interest query user_id=%s: %v", userID, err)
-			writeError(w, http.StatusInternalServerError, "recommendations query failed")
-			return
-		}
-		defer rows.Close()
-
-		for rows.Next() {
-			var id pgtype.UUID
-			var name, path string
-			var imageKey *string
-			if err := rows.Scan(&id, &name, &path, &imageKey); err != nil {
-				log.Printf("ERROR RecommendedCategoriesHandler interest scan user_id=%s: %v", userID, err)
-				writeError(w, http.StatusInternalServerError, "recommendations scan failed")
-				return
-			}
-			categories = append(categories, recommendedCategory{
-				ID:       formatUUID(id),
-				Name:     name,
-				Path:     path,
-				ImageKey: imageKey,
-			})
-		}
-		if err := rows.Err(); err != nil {
-			writeError(w, http.StatusInternalServerError, "recommendations iteration failed")
-			return
-		}
+		id := formatUUID(userIDUUID)
+		userID = &id
 	}
 
-	// If interests filled the limit exactly, return now — no top-up needed.
-	if len(categories) >= limit {
-		writeJSON(w, http.StatusOK, recommendedCategoriesResponse{Categories: categories})
-		return
-	}
-
-	// ── Query 2: top-up / global fallback ────────────────────────────────────
-	// When the user has fewer interests than the requested limit, fill the
-	// remainder from globally popular leaf categories. Exclude any category
-	// already returned from interests so there are no duplicates.
-	remaining := limit - len(categories)
-
-	excludeIDs := make([]string, len(categories))
-	for i, cat := range categories {
-		excludeIDs[i] = cat.ID
-	}
-
-	const fallbackSQL = `
+	const shelfSQL = `
+WITH recent AS (
+    SELECT e.user_id, subpath(c.path, 0, 1) AS root_path
+    FROM profile.events e
+    LEFT JOIN catalog.items it ON it.id = e.item_id
+    JOIN catalog.categories c ON c.id = COALESCE(e.category_id, it.category_id)
+    WHERE e.created_at > now() - interval '30 days'
+),
+global_engagement AS (
+    SELECT root_path, COUNT(*) AS n FROM recent GROUP BY root_path
+),
+user_engagement AS (
+    SELECT root_path, COUNT(*) AS n FROM recent WHERE user_id = $1::uuid GROUP BY root_path
+),
+selected AS (
+    SELECT category_id FROM profile.interests WHERE user_id = $1::uuid
+)
 SELECT c.id, c.name, c.path::text, c.image_key
 FROM catalog.categories c
-LEFT JOIN (
-    SELECT category_id, COUNT(*) AS engagement
-    FROM profile.events
-    WHERE category_id IS NOT NULL
-      AND created_at > now() - interval '30 days'
-    GROUP BY category_id
-) e ON e.category_id = c.id
-WHERE c.is_leaf = true
-  AND NOT (c.id::text = ANY($2))
-ORDER BY COALESCE(e.engagement, 0) DESC, c.name ASC
-LIMIT $1`
+LEFT JOIN selected s          ON s.category_id = c.id
+LEFT JOIN user_engagement u   ON u.root_path = c.path
+LEFT JOIN global_engagement g ON g.root_path = c.path
+WHERE nlevel(c.path) = 1
+ORDER BY (s.category_id IS NOT NULL) DESC,
+         CASE WHEN s.category_id IS NOT NULL THEN COALESCE(u.n, 0) ELSE 0 END DESC,
+         COALESCE(g.n, 0) DESC,
+         c.name ASC
+LIMIT $2`
 
-	fallbackRows, err := d.DB.Query(r.Context(), fallbackSQL, remaining, excludeIDs)
+	rows, err := d.DB.Query(r.Context(), shelfSQL, userID, limit)
 	if err != nil {
-		log.Printf("ERROR RecommendedCategoriesHandler fallback query auth_uid=%s: %v", authUID, err)
+		log.Printf("ERROR RecommendedCategoriesHandler query auth_uid=%s: %v", authUID, err)
 		writeError(w, http.StatusInternalServerError, "recommendations query failed")
 		return
 	}
-	defer fallbackRows.Close()
+	defer rows.Close()
 
-	for fallbackRows.Next() {
+	categories := []recommendedCategory{}
+	for rows.Next() {
 		var id pgtype.UUID
 		var name, path string
 		var imageKey *string
-		if err := fallbackRows.Scan(&id, &name, &path, &imageKey); err != nil {
-			log.Printf("ERROR RecommendedCategoriesHandler fallback scan auth_uid=%s: %v", authUID, err)
+		if err := rows.Scan(&id, &name, &path, &imageKey); err != nil {
+			log.Printf("ERROR RecommendedCategoriesHandler scan auth_uid=%s: %v", authUID, err)
 			writeError(w, http.StatusInternalServerError, "recommendations scan failed")
 			return
 		}
@@ -169,7 +124,7 @@ LIMIT $1`
 			ImageKey: imageKey,
 		})
 	}
-	if err := fallbackRows.Err(); err != nil {
+	if err := rows.Err(); err != nil {
 		writeError(w, http.StatusInternalServerError, "recommendations iteration failed")
 		return
 	}

@@ -3,348 +3,247 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
-func TestRecommendedCategoriesHandler_WithInterests(t *testing.T) {
-	// QueryRow: user lookup returns a UUID.
-	// Query (1st call): interest-based returns two categories that exactly fill
-	// limit=2 → no fallback top-up needed.
-	catID1 := newCategoryUUID("11111111111111111111111111111111")
-	catID2 := newCategoryUUID("22222222222222222222222222222222")
+// The ranking itself (selected first, rollup to level 1, 30-day window) lives
+// in shelfSQL and needs a real Postgres to exercise. These tests cover the
+// handler around it: bind arguments, pass-through order and error handling.
 
-	queryCalls := 0
-	deps := &Deps{
-		DB: &mockStore{
-			queryRowFn: func(ctx context.Context, sql string, args ...any) Row {
-				return userUUIDRow() // lookupUserID succeeds
-			},
-			queryFn: func(ctx context.Context, sql string, args ...any) (Rows, error) {
-				queryCalls++
-				if queryCalls == 1 {
-					return &categoryRows{rows: []categoryRow{
-						{id: catID1, name: "Coffee", path: "food.coffee"},
-						{id: catID2, name: "Tea", path: "food.tea"},
-					}}, nil
-				}
-				// Second query should not be called when interests fill the limit.
-				return &emptyRows{}, nil
-			},
-		},
-		CommitSHA: "test",
-	}
-
-	// limit=2 so the two interest categories exactly fill the limit → no top-up.
-	req := httptest.NewRequest(http.MethodGet, "/recommendations/categories?limit=2", nil)
-	req.Header.Set("X-Cove-Uid", "uid-123")
-	rr := httptest.NewRecorder()
-
-	deps.RecommendedCategoriesHandler(rr, req)
-
-	if rr.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d", rr.Code)
-	}
-
-	var body recommendedCategoriesResponse
-	if err := json.NewDecoder(rr.Body).Decode(&body); err != nil {
-		t.Fatalf("decode body: %v", err)
-	}
-	if len(body.Categories) != 2 {
-		t.Errorf("expected 2 categories, got %d", len(body.Categories))
-	}
-	if body.Categories[0].Name != "Coffee" {
-		t.Errorf("first category name: got %q, want %q", body.Categories[0].Name, "Coffee")
-	}
-	if body.Categories[0].Path != "food.coffee" {
-		t.Errorf("first category path: got %q, want %q", body.Categories[0].Path, "food.coffee")
-	}
-	if queryCalls != 1 {
-		t.Errorf("expected only the interest query to run, got %d query calls", queryCalls)
-	}
+// shelfRows returns three level 1 categories in a fixed order.
+func shelfRows() *categoryRows {
+	return &categoryRows{rows: []categoryRow{
+		{id: newCategoryUUID("11111111111111111111111111111111"), name: "Music", path: "music"},
+		{id: newCategoryUUID("22222222222222222222222222222222"), name: "Food", path: "food"},
+		{id: newCategoryUUID("33333333333333333333333333333333"), name: "Art", path: "art"},
+	}}
 }
 
-func TestRecommendedCategoriesHandler_FallbackNoInterests(t *testing.T) {
-	// QueryRow: user exists. Query (1st): no interests. Query (2nd): fallback categories.
-	catID := newCategoryUUID("33333333333333333333333333333333")
+func serveRecommendations(t *testing.T, deps *Deps, query string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, "/recommendations/categories"+query, nil)
+	req.Header.Set("X-Cove-Uid", "uid-123")
+	rr := httptest.NewRecorder()
+	deps.RecommendedCategoriesHandler(rr, req)
+	return rr
+}
 
+func TestRecommendedCategoriesHandler_WithProfile(t *testing.T) {
+	// The user's ID is bound so their interests and engagement rank first, and
+	// rows come back in the order the query returns them.
+	var gotUserID any
 	queryCalls := 0
 	deps := &Deps{
 		DB: &mockStore{
 			queryRowFn: func(ctx context.Context, sql string, args ...any) Row {
-				return userUUIDRow() // user has a profile but no interests
+				return userUUIDRow()
 			},
 			queryFn: func(ctx context.Context, sql string, args ...any) (Rows, error) {
 				queryCalls++
-				if queryCalls == 1 {
-					// No interests.
-					return &emptyRows{}, nil
-				}
-				// Fallback global categories.
-				return &categoryRows{rows: []categoryRow{
-					{id: catID, name: "Pottery", path: "crafts.pottery"},
-				}}, nil
+				gotUserID = args[0]
+				return shelfRows(), nil
 			},
 		},
 		CommitSHA: "test",
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/recommendations/categories", nil)
-	req.Header.Set("X-Cove-Uid", "uid-no-interests")
-	rr := httptest.NewRecorder()
-
-	deps.RecommendedCategoriesHandler(rr, req)
-
+	rr := serveRecommendations(t, deps, "")
 	if rr.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d", rr.Code)
+		t.Fatalf("expected 200, got %d", rr.Code)
+	}
+
+	p, ok := gotUserID.(*string)
+	if !ok || p == nil || *p != formatUUID(testUserUUID) {
+		t.Errorf("expected user ID %q bound, got %#v", formatUUID(testUserUUID), gotUserID)
+	}
+	if queryCalls != 1 {
+		t.Errorf("expected 1 query call, got %d", queryCalls)
 	}
 
 	var body recommendedCategoriesResponse
 	if err := json.NewDecoder(rr.Body).Decode(&body); err != nil {
 		t.Fatalf("decode body: %v", err)
 	}
-	if len(body.Categories) != 1 {
-		t.Errorf("expected 1 fallback category, got %d", len(body.Categories))
+	var paths []string
+	for _, c := range body.Categories {
+		paths = append(paths, c.Path)
 	}
-	if body.Categories[0].Name != "Pottery" {
-		t.Errorf("category name: got %q, want %q", body.Categories[0].Name, "Pottery")
-	}
-	if queryCalls != 2 {
-		t.Errorf("expected 2 query calls (interest + fallback), got %d", queryCalls)
+	if got := strings.Join(paths, ","); got != "music,food,art" {
+		t.Errorf("expected query order music,food,art, got %s", got)
 	}
 }
 
 func TestRecommendedCategoriesHandler_NoProfile(t *testing.T) {
-	// QueryRow: user has no profile (ErrNoRows) → skip interest query, go to fallback.
-	catID := newCategoryUUID("44444444444444444444444444444444")
-
-	queryCalls := 0
+	// No profile (ErrNoRows) → NULL user ID, so the query falls back to the
+	// global order. Still one query, still 200.
+	var gotUserID any = "unset"
 	deps := &Deps{
 		DB: &mockStore{
 			// No queryRowFn — default returns errRow{pgx.ErrNoRows} → no profile.
 			queryFn: func(ctx context.Context, sql string, args ...any) (Rows, error) {
-				queryCalls++
-				return &categoryRows{rows: []categoryRow{
-					{id: catID, name: "Accessories", path: "accessories"},
-				}}, nil
+				gotUserID = args[0]
+				return shelfRows(), nil
 			},
 		},
 		CommitSHA: "test",
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/recommendations/categories", nil)
-	req.Header.Set("X-Cove-Uid", "uid-new-user")
-	rr := httptest.NewRecorder()
-
-	deps.RecommendedCategoriesHandler(rr, req)
-
+	rr := serveRecommendations(t, deps, "")
 	if rr.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d", rr.Code)
+		t.Fatalf("expected 200, got %d", rr.Code)
+	}
+	if p, ok := gotUserID.(*string); !ok || p != nil {
+		t.Errorf("expected nil user ID for a user without a profile, got %#v", gotUserID)
 	}
 
 	var body recommendedCategoriesResponse
 	if err := json.NewDecoder(rr.Body).Decode(&body); err != nil {
 		t.Fatalf("decode body: %v", err)
 	}
-	if len(body.Categories) != 1 {
-		t.Errorf("expected 1 fallback category, got %d", len(body.Categories))
-	}
-	// Only the fallback query should run — interest query is skipped.
-	if queryCalls != 1 {
-		t.Errorf("expected 1 query call (fallback only), got %d", queryCalls)
+	if len(body.Categories) != 3 {
+		t.Errorf("expected 3 categories, got %d", len(body.Categories))
 	}
 }
 
-func TestRecommendedCategoriesHandler_BothQueriesEmpty(t *testing.T) {
-	// Both queries return empty — response should be 200 with empty categories list.
+func TestRecommendedCategoriesHandler_LookupError(t *testing.T) {
+	// A user lookup failure other than "not found" is a 500, not a silent fallback.
+	deps := &Deps{
+		DB: &mockStore{
+			queryRowFn: func(ctx context.Context, sql string, args ...any) Row {
+				return &errRow{err: errors.New("connection reset")}
+			},
+		},
+		CommitSHA: "test",
+	}
+
+	if rr := serveRecommendations(t, deps, ""); rr.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", rr.Code)
+	}
+}
+
+func TestRecommendedCategoriesHandler_QueryError(t *testing.T) {
 	deps := &Deps{
 		DB: &mockStore{
 			queryRowFn: func(ctx context.Context, sql string, args ...any) Row {
 				return userUUIDRow()
 			},
 			queryFn: func(ctx context.Context, sql string, args ...any) (Rows, error) {
+				return nil, errors.New("boom")
+			},
+		},
+		CommitSHA: "test",
+	}
+
+	if rr := serveRecommendations(t, deps, ""); rr.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", rr.Code)
+	}
+}
+
+func TestRecommendedCategoriesHandler_Empty(t *testing.T) {
+	// No categories → 200 with an empty list, not null.
+	deps := &Deps{
+		DB: &mockStore{
+			queryRowFn: func(ctx context.Context, sql string, args ...any) Row {
+				return userUUIDRow()
+			},
+		},
+		CommitSHA: "test",
+	}
+
+	rr := serveRecommendations(t, deps, "")
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rr.Code)
+	}
+	if got := strings.TrimSpace(rr.Body.String()); got != `{"categories":[]}` {
+		t.Errorf("expected empty list, got %s", got)
+	}
+}
+
+func TestRecommendedCategoriesHandler_LevelOneOnly(t *testing.T) {
+	// Guard the query's contract: level 1 only, with engagement rolled up to the
+	// level 1 ancestor and item events counted through the item's category.
+	var gotSQL string
+	deps := &Deps{
+		DB: &mockStore{
+			queryFn: func(ctx context.Context, sql string, args ...any) (Rows, error) {
+				gotSQL = sql
 				return &emptyRows{}, nil
 			},
 		},
 		CommitSHA: "test",
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/recommendations/categories", nil)
-	req.Header.Set("X-Cove-Uid", "uid-empty")
-	rr := httptest.NewRecorder()
-
-	deps.RecommendedCategoriesHandler(rr, req)
-
-	if rr.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d", rr.Code)
-	}
-
-	var body recommendedCategoriesResponse
-	if err := json.NewDecoder(rr.Body).Decode(&body); err != nil {
-		t.Fatalf("decode body: %v", err)
-	}
-	if len(body.Categories) != 0 {
-		t.Errorf("expected 0 categories, got %d", len(body.Categories))
-	}
-}
-
-func TestRecommendedCategoriesHandler_TopUpWithFallback(t *testing.T) {
-	// User has 1 interest but requests limit=5 → interest query returns 1 category,
-	// fallback top-up is called for the remaining 4, total response is 5.
-	interestCatID := newCategoryUUID("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-	fallbackCatID1 := newCategoryUUID("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
-	fallbackCatID2 := newCategoryUUID("cccccccccccccccccccccccccccccccc")
-	fallbackCatID3 := newCategoryUUID("dddddddddddddddddddddddddddddddd")
-	fallbackCatID4 := newCategoryUUID("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
-
-	queryCalls := 0
-	deps := &Deps{
-		DB: &mockStore{
-			queryRowFn: func(ctx context.Context, sql string, args ...any) Row {
-				return userUUIDRow()
-			},
-			queryFn: func(ctx context.Context, sql string, args ...any) (Rows, error) {
-				queryCalls++
-				if queryCalls == 1 {
-					// Interest query: returns 1 category (less than limit=5).
-					return &categoryRows{rows: []categoryRow{
-						{id: interestCatID, name: "Coffee", path: "food.coffee"},
-					}}, nil
-				}
-				// Fallback top-up: should be called with remaining=4, excludeIDs=[coffee-id].
-				return &categoryRows{rows: []categoryRow{
-					{id: fallbackCatID1, name: "Vinyl", path: "music.vinyl"},
-					{id: fallbackCatID2, name: "Pottery", path: "crafts.pottery"},
-					{id: fallbackCatID3, name: "Plants", path: "plants"},
-					{id: fallbackCatID4, name: "Art", path: "art"},
-				}}, nil
-			},
-		},
-		CommitSHA: "test",
-	}
-
-	req := httptest.NewRequest(http.MethodGet, "/recommendations/categories?limit=5", nil)
-	req.Header.Set("X-Cove-Uid", "uid-topup")
-	rr := httptest.NewRecorder()
-
-	deps.RecommendedCategoriesHandler(rr, req)
-
-	if rr.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d", rr.Code)
-	}
-
-	var body recommendedCategoriesResponse
-	if err := json.NewDecoder(rr.Body).Decode(&body); err != nil {
-		t.Fatalf("decode body: %v", err)
-	}
-	if len(body.Categories) != 5 {
-		t.Errorf("expected 5 categories (1 interest + 4 fallback), got %d", len(body.Categories))
-	}
-	if body.Categories[0].Name != "Coffee" {
-		t.Errorf("first category should be the interest category, got %q", body.Categories[0].Name)
-	}
-	if body.Categories[1].Name != "Vinyl" {
-		t.Errorf("second category should be first fallback, got %q", body.Categories[1].Name)
-	}
-	if queryCalls != 2 {
-		t.Errorf("expected 2 query calls (interest + fallback top-up), got %d", queryCalls)
+	serveRecommendations(t, deps, "")
+	for _, want := range []string{
+		"nlevel(c.path) = 1",
+		"subpath(c.path, 0, 1)",
+		"COALESCE(e.category_id, it.category_id)",
+		"interval '30 days'",
+	} {
+		if !strings.Contains(gotSQL, want) {
+			t.Errorf("query missing %q", want)
+		}
 	}
 }
 
 func TestRecommendedCategoriesHandler_LimitForwarded(t *testing.T) {
-	// ?limit=5 should be parsed and passed as the LIMIT bind argument to the interest query.
-	var interestLimit any
-	queryCalls := 0
+	// ?limit=5 is parsed and bound as the LIMIT argument.
+	var gotLimit any
 	deps := &Deps{
 		DB: &mockStore{
-			queryRowFn: func(ctx context.Context, sql string, args ...any) Row {
-				return userUUIDRow()
-			},
 			queryFn: func(ctx context.Context, sql string, args ...any) (Rows, error) {
-				queryCalls++
-				if queryCalls == 1 {
-					// Interest query: args = [userID, limit].
-					interestLimit = args[1]
-				}
+				gotLimit = args[1]
 				return &emptyRows{}, nil
 			},
 		},
 		CommitSHA: "test",
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/recommendations/categories?limit=5", nil)
-	req.Header.Set("X-Cove-Uid", "uid-limit")
-	rr := httptest.NewRecorder()
-
-	deps.RecommendedCategoriesHandler(rr, req)
-
-	if rr.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d", rr.Code)
-	}
-	if interestLimit != 5 {
-		t.Errorf("expected limit 5 forwarded to query, got %v", interestLimit)
+	serveRecommendations(t, deps, "?limit=5")
+	if gotLimit != 5 {
+		t.Errorf("expected limit 5 forwarded to query, got %v", gotLimit)
 	}
 }
 
 func TestRecommendedCategoriesHandler_InvalidLimitFallsBackToDefault(t *testing.T) {
 	// A non-numeric / out-of-range limit is ignored in favor of the default.
-	var interestLimit any
-	queryCalls := 0
+	var gotLimit any
 	deps := &Deps{
 		DB: &mockStore{
-			queryRowFn: func(ctx context.Context, sql string, args ...any) Row {
-				return userUUIDRow()
-			},
 			queryFn: func(ctx context.Context, sql string, args ...any) (Rows, error) {
-				queryCalls++
-				if queryCalls == 1 {
-					interestLimit = args[1]
-				}
+				gotLimit = args[1]
 				return &emptyRows{}, nil
 			},
 		},
 		CommitSHA: "test",
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/recommendations/categories?limit=banana", nil)
-	req.Header.Set("X-Cove-Uid", "uid-bad-limit")
-	rr := httptest.NewRecorder()
-
-	deps.RecommendedCategoriesHandler(rr, req)
-
-	if interestLimit != defaultCategoryLimit {
-		t.Errorf("expected default limit %d, got %v", defaultCategoryLimit, interestLimit)
+	serveRecommendations(t, deps, "?limit=banana")
+	if gotLimit != defaultCategoryLimit {
+		t.Errorf("expected default limit %d, got %v", defaultCategoryLimit, gotLimit)
 	}
 }
 
 func TestRecommendedCategoriesHandler_ImageKey(t *testing.T) {
 	// image_key is passed through when set and omitted from the JSON when NULL.
-	catID1 := newCategoryUUID("11111111111111111111111111111111")
-	catID2 := newCategoryUUID("22222222222222222222222222222222")
-	key := "images/categories/food-baked_goods.jpg"
-
+	key := "images/categories/card/food.jpg"
 	deps := &Deps{
 		DB: &mockStore{
-			queryRowFn: func(ctx context.Context, sql string, args ...any) Row {
-				return userUUIDRow()
-			},
 			queryFn: func(ctx context.Context, sql string, args ...any) (Rows, error) {
 				return &categoryRows{rows: []categoryRow{
-					{id: catID1, name: "Baked Goods", path: "food.baked_goods", imageKey: &key},
-					{id: catID2, name: "Tea", path: "food.tea"},
+					{id: newCategoryUUID("11111111111111111111111111111111"), name: "Food", path: "food", imageKey: &key},
+					{id: newCategoryUUID("22222222222222222222222222222222"), name: "Art", path: "art"},
 				}}, nil
 			},
 		},
 		CommitSHA: "test",
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/recommendations/categories?limit=2", nil)
-	req.Header.Set("X-Cove-Uid", "uid-123")
-	rr := httptest.NewRecorder()
-
-	deps.RecommendedCategoriesHandler(rr, req)
-
+	rr := serveRecommendations(t, deps, "")
 	var body struct {
 		Categories []map[string]any `json:"categories"`
 	}

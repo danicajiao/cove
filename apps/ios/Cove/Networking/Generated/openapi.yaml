@@ -717,12 +717,17 @@ paths:
         Proxied to cove-user. Returns personalized category cards for the
         authenticated user.
 
-        Algorithm:
-        1. If the user has interests, return those categories ordered by
-           engagement count in profile.events (last 30 days) descending.
-        2. If the user has no interests, fall back to all leaf categories
-           ordered by total event count across all users (last 30 days).
-        3. If no events exist at all, order alphabetically by name.
+        Returns level 1 categories only (the home shelf), ranked as:
+        1. Level 1 categories the user selected as interests, ordered by the
+           user's own engagement, then global engagement, then name.
+        2. The remaining level 1 categories, ordered by global engagement,
+           then name.
+
+        Engagement is the profile.events count over the last 30 days, rolled
+        up to the level 1 ancestor (events on descendant categories, or on
+        items in them, count toward it). Users with no profile or no interests
+        get every level 1 category ordered by global engagement. Level 2
+        interests don't affect this list.
       parameters:
         - name: limit
           in: query
@@ -1001,10 +1006,17 @@ components:
         image_key:
           type: [string, "null"]
           description: |
-            Garage object key for the category card background image,
-            e.g. "images/categories/food-coffee.jpg". Present only on
-            top-level and mid-level categories; absent on leaf sub-categories.
-          example: images/categories/food-coffee.jpg
+            Garage object key for the category card image (~13:6 crop),
+            e.g. "images/categories/card/food-coffee.jpg". Set on every
+            category; omitted when absent.
+          example: images/categories/card/food-coffee.jpg
+        wide_image_key:
+          type: [string, "null"]
+          description: |
+            Garage object key for the wide category image (4:1 crop) used by
+            the onboarding interest cards, e.g. "images/categories/wide/food.jpg".
+            Set only on top-level categories; omitted elsewhere.
+          example: images/categories/wide/food.jpg
         children:
           type: array
           items:
@@ -1358,10 +1370,10 @@ components:
           type: [string, "null"]
           description: |
             Garage object key for the category card background image, e.g.
-            "images/categories/food-baked_goods.jpg". Pass to GET /images/{filename}/url
+            "images/categories/card/food-baked_goods.jpg". Pass to GET /images/{filename}/url
             (without the "images/" prefix) to get a signed imgproxy URL. Absent when
             the category has no image.
-          example: images/categories/food-baked_goods.jpg
+          example: images/categories/card/food-baked_goods.jpg
 
     RecommendedCategoriesResponse:
       type: object

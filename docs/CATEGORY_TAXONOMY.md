@@ -19,7 +19,18 @@ Cove's category taxonomy is a **3-level tree** stored in Postgres using the `ltr
 
 Items may only be assigned to **leaf nodes** — the deepest node in a given branch. Non-leaf categories are browse/navigation nodes only; they cannot be set as an item's `category_id`.
 
-The v1 taxonomy has **9 top-level categories** and 242 nodes total (9 top-level, 50 level-2, 183 level-3), seeded via migration `000004`. Every node has a category card image key (`images/categories/<path with dots as hyphens>.jpg`), seeded by `000012` and returned as `image_key` by both `GET /categories` and `GET /recommendations/categories`. Leaf enforcement is defined in `000003`.
+The v1 taxonomy has **9 top-level categories** and 242 nodes total (9 top-level, 50 level-2, 183 level-3), seeded via migration `000004`. Leaf enforcement is defined in `000003`. Display names were later corrected in `000014` (Plantcare, Bodycare, Haircare) and `000015` (Protein).
+
+### Category images
+
+Category images live in Garage (`cove-media`) in two aspect-ratio variants. Keys mirror the path, with dots as hyphens and underscores kept, and are seeded by `000013`:
+
+| Variant | Key | Crop | Set on | API field |
+|---|---|---|---|---|
+| Card | `images/categories/card/<path>.jpg` | ~13:6 (1560×720 source) | Every node | `image_key`, from `GET /categories` and `GET /recommendations/categories` |
+| Wide | `images/categories/wide/<path>.jpg` | 4:1 (1560×388 source) | Level 1 only | `wide_image_key`, from `GET /categories` |
+
+Clients read keys from the API and never build them. A new category needs its image uploaded to Garage and its keys set in the same migration that adds it.
 
 ---
 
@@ -322,15 +333,16 @@ Create the next numbered migration file:
 
 ```bash
 # example: adding food.fresh.kimchi
-touch services/cove-item/migrations/000013_add_kimchi_category.up.sql
-touch services/cove-item/migrations/000013_add_kimchi_category.down.sql
+touch services/cove-item/migrations/000016_add_kimchi_category.up.sql
+touch services/cove-item/migrations/000016_add_kimchi_category.down.sql
 ```
 
 **up:**
 ```sql
-INSERT INTO catalog.categories (id, name, path)
-VALUES (gen_random_uuid(), 'Kimchi', 'food.fresh.kimchi')
-ON CONFLICT (path) DO UPDATE SET name = EXCLUDED.name;
+INSERT INTO catalog.categories (id, name, path, image_key)
+VALUES (gen_random_uuid(), 'Kimchi', 'food.fresh.kimchi',
+        'images/categories/card/food-fresh-kimchi.jpg')
+ON CONFLICT (path) DO UPDATE SET name = EXCLUDED.name, image_key = EXCLUDED.image_key;
 ```
 
 **down:**
