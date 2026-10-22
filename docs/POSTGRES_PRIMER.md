@@ -24,7 +24,7 @@ Assumed starting point: comfortable with Firestore, new to relational databases.
 
 Cove runs one CNPG `Cluster` (`cove-db`) hosting a single database (`cove`). Inside that database, each service owns its own schema (`directory`, `catalog`, `user`). This primer covers the Postgres *mechanics* those schemas rely on; the **canonical schema, entities, and service ownership live in [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md)** — refer there for the actual table definitions. The examples below are illustrative.
 
-Each service connects with a Postgres role whose `search_path` is set to its own schema, so application queries stay unqualified — `SELECT * FROM items` inside `cove-item` works without ever typing `catalog.items`. Cross-schema references (e.g., `user.favorites` → `catalog.items`, `catalog.items.maker_id` → `directory.makers`) use real foreign keys, since all schemas live in the same database.
+Each service connects with a Postgres role whose `search_path` is set to its own schema, so application queries stay unqualified — `SELECT * FROM items` inside `cove-item` works without ever typing `catalog.items`. Cross-schema references (e.g., `user.favorites` → `catalog.items`, `catalog.items.producer_id` → `directory.producers`) use real foreign keys, since all schemas live in the same database.
 
 ### Why one cluster, not one per service
 
@@ -467,7 +467,7 @@ A `parent_id` column requires a recursive CTE (`WITH RECURSIVE`) to traverse the
 
 ## Geospatial search with PostGIS
 
-Cove's core query is "what's near me." Discovery is gated by a radius: storefronts within N miles of the user. The right tool for this on Postgres is **PostGIS** — an extension that adds spatial types, functions, and index support.
+Cove's core query is "what's near me." Discovery is gated by a radius: places within N miles of the user. The right tool for this on Postgres is **PostGIS** — an extension that adds spatial types, functions, and index support.
 
 ### Why not a B-tree on lat/long, or geohashing?
 
@@ -482,11 +482,11 @@ A `geography` column stores a point as longitude/latitude on a spheroid (SRID 43
 CREATE EXTENSION IF NOT EXISTS postgis;
 
 -- geography(Point, 4326): lon/lat on the earth's spheroid
-ALTER TABLE storefronts ADD COLUMN location geography(Point, 4326);
-CREATE INDEX ON storefronts USING GIST (location);
+ALTER TABLE places ADD COLUMN location geography(Point, 4326);
+CREATE INDEX ON places USING GIST (location);
 
 -- Insert a point — note ST_MakePoint takes (longitude, latitude) order
-UPDATE storefronts SET location = ST_MakePoint(-104.99, 39.74)::geography
+UPDATE places SET location = ST_MakePoint(-104.99, 39.74)::geography
 WHERE id = $1;
 ```
 
@@ -506,11 +506,11 @@ PostGIS has two spatial types. The distinction matters:
 `ST_DWithin(a, b, meters)` returns true if two points are within the given distance. It uses the GiST index, so it's fast:
 
 ```sql
--- Storefronts within 20 miles of downtown Denver.
+-- Places within 20 miles of downtown Denver.
 -- ST_DWithin on geography takes METERS — 20 mi = 32186.9 m. This is the
 -- single most common gotcha: geography = meters, always.
 SELECT id, name, ST_Distance(location, ST_MakePoint(-104.99, 39.74)::geography) AS distance_m
-FROM storefronts
+FROM places
 WHERE ST_DWithin(location, ST_MakePoint(-104.99, 39.74)::geography, 32186.9)
 ORDER BY distance_m;
 ```
