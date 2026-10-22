@@ -19,7 +19,7 @@ Cove's category taxonomy is a **3-level tree** stored in Postgres using the `ltr
 
 Items may only be assigned to **leaf nodes** — the deepest node in a given branch. Non-leaf categories are browse/navigation nodes only; they cannot be set as an item's `category_id`.
 
-The v1 taxonomy has **9 top-level categories** and 242 nodes total (9 top-level, 50 level-2, 183 level-3), seeded via migration `000004`. Leaf enforcement is defined in `000003`. Display names were later corrected in `000014` (Plantcare, Bodycare, Haircare) and `000015` (Protein).
+The v1 taxonomy has **10 top-level categories** and 252 nodes total (10 top-level, 59 level-2, 183 level-3), seeded via migration `000004`. `eat_drink` is the newest top-level category; see [Why Eat & Drink is separate from Food](#why-eat--drink-is-separate-from-food). Leaf enforcement is defined in `000003`. Display names were later corrected in `000014` (Plantcare, Bodycare, Haircare) and `000015` (Protein).
 
 ### Category images
 
@@ -64,11 +64,50 @@ The v1 taxonomy is capped at **3 levels** (`root.mid.leaf` — e.g. `food.coffee
 
 Alcohol has distinct regulatory, cultural, and discovery contexts. Grouping `food.beer` alongside `food.baked_goods` would make browse-mode category cards confusing and would complicate any future age-gating. Keeping it as a top-level `alcohol` preserves that separation cleanly.
 
+### Why Eat & Drink is separate from Food
+
+> **An item's category is what it is, not where you eat it.**
+
+Eat & Drink covers **dishes and drinks made to order**: a cortado, boba, pad thai, a house cocktail. Food and Alcohol cover **goods**, including the sweets you eat on the spot: a bag of beans, a croissant, a chocolate bar, a pint of gelato, a bottle of gin. A croissant is `food.baked_goods.pastries` whether it comes in a box or on a plate, so no item ever has to choose between two branches.
+
+Eat & Drink is organized by **cuisine**, because cuisine is how people choose where to eat and what they tell us at onboarding. A dish nearly always has one cuisine; a restaurant that spans several appears under each of them through the category roll-up from its items. Cafés and bars are not cuisines, so `cafes`, `juices` and `bars` sit alongside the cuisines at level 2.
+
+There is no `eat_drink.desserts`: every dessert already has a home in Food (`baked_goods`, `confections`, `dairy.ice_cream`), and a plated dessert at a restaurant takes the restaurant's cuisine (tiramisu → `eat_drink.european`).
+
+Served drinks at a bar, cocktails included, live under `eat_drink.bars` rather than `alcohol`. Age-gating, when it ships, must cover both `alcohol` and `eat_drink.bars`.
+
+### Places reach Eat & Drink three ways
+
+A place appears in a level 1 category's Places section through the roll-up of the items it sells. Eat & Drink adds two place-level routes, because a bakery or patisserie sells Food items but is somewhere you go to eat:
+
+- **Item roll-up**: a boba shop appears under `cafes` because it sells boba, which is `eat_drink.cafes`.
+- **Place type**: café, restaurant, bar, bakery and dessert shop always appear in Eat & Drink → Places.
+- **Cuisine tags on the place**: a place can be tagged with cuisines directly, so a patisserie (type bakery) tagged European appears under Eat & Drink → European even though its items are all `food.baked_goods`.
+
+A candy shop is type `shop` and appears under Food only.
+
+### Flavors, meals and diets are filters
+
+Matcha, brunch, and dietary tags (vegan, gluten-free) overlap and cut across branches, so they are filter facets, not tree nodes. A matcha latte is `eat_drink.cafes`, matcha cake is `food.baked_goods.cakes`, and matcha soft serve is `food.dairy.ice_cream`; search and the matcha filter find all three.
+
 ---
 
 ## v1 taxonomy
 
+`eat_drink` is listed first to match its position in the app's fixed level 1 order.
+
 ```
+eat_drink
+├── cafes                — espresso drinks, pour-over, tea and matcha, boba  ← leaf at level 2
+├── juices               — fresh juice, smoothies, agua fresca  ← leaf at level 2
+├── bars                 — house cocktails, mocktails, zero-proof drinks  ← leaf at level 2
+├── american             — burgers, diners, BBQ, Southern, soul food  ← leaf at level 2
+├── latin                — Mexican, Salvadoran, Peruvian, Caribbean  ← leaf at level 2
+├── european             — Italian, French, Greek, Spanish  ← leaf at level 2
+├── mideast              — falafel, shawarma, mezze  ← leaf at level 2
+├── african              — Ethiopian, West African, North African  ← leaf at level 2
+└── asian                — Chinese, Japanese, Korean, Vietnamese, Thai, Indian  ← leaf at level 2
+
 food
 ├── coffee
 │   ├── whole_bean       — single-origin bags, local roaster blends

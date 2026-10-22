@@ -21,7 +21,7 @@ Surface items with an explanation of why they were recommended ("Based on your i
 When item reviews are added, summarize sentiment into a "what buyers say" blurb shown on the item detail screen.
 
 ### Brand Storytelling
-A "tell me about this brand" button that synthesizes a maker's catalog data into a short narrative paragraph shown on the brand page.
+A "tell me about this brand" button that synthesizes a producer's catalog data into a short narrative paragraph shown on the brand page.
 
 ### Onboarding Quiz
 Ask a few free-text questions about the user's values (sustainability priorities, budget, preferred categories). Use an LLM to interpret answers into structured user preferences stored as `profile.interests` (via `cove-user`) and used for personalization.

@@ -27,7 +27,7 @@ flowchart TD
     CF --> API["cove-api · K3s pod<br/>cove-staging / cove-prod<br/>validates ID token via Firebase Admin SDK,<br/>routes by path prefix"]
     API -->|"/images/*"| IMG["cove-image"]
     API -->|"/i/*"| IMGPROXY["imgproxy<br/>image transforms"]
-    API -->|"/discovery · /categories<br/>/items/* · /makers/* · /storefronts/*"| ITEM["cove-item"]
+    API -->|"/discovery · /categories<br/>/items/* · /producers/* · /places/*"| ITEM["cove-item"]
     API -->|"/users/* · /recommendations/*"| USER["cove-user"]
 ```
 
@@ -124,7 +124,7 @@ Services drop the `-svc` suffix. The pod, K8s Service, and image name are all th
 | `cove-api` | BFF gateway — validates Firebase token, routes to backend services | Phase 1 (deployed) |
 | `cove-image` | Image upload (`POST /images`), signed-URL serving (`GET /images/{filename}/url`), normalization to WebP, content-addressed storage in Garage | Phase 2 (deployed) |
 | `cove-item` | Item ingestion, category catalog, `GET /discovery` endpoint | Phase 3 (complete) |
-| `cove-user` | User profiles, interests, `GET /recommendations/categories`, `POST /users/me/events` | Phase 3 (complete) |
+| `cove-user` | User profiles, interests, `GET /recommendations/categories`, `POST /users/me/activity` | Phase 3 (complete) |
 
 In Kubernetes, each service runs as a `Deployment` in `cove-staging` or `cove-prod`, with a matching `Service` of the same name.
 
@@ -325,11 +325,11 @@ Each phase is independently shippable. The iOS app is updated incrementally — 
 
 ### Phase 3 — Data services ✅ complete
 
-See [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md) for the canonical schema (maker / storefront / item / signals) and full data model.
+See [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md) for the canonical schema (producer / place / item / signals) and full data model.
 
-- Provision a single CNPG `Cluster` (`cove-db`, with PostGIS + ltree) hosting the `cove` database with three schemas: `directory`, `catalog`, and `profile`. The `directory` schema (makers + storefronts) is pre-positioned for a future `cove-directory` service — no service owns it in Phase 3. PostGIS enables radius-based discovery queries.
+- Provision a single CNPG `Cluster` (`cove-db`, with PostGIS + ltree) hosting the `cove` database with three schemas: `directory`, `catalog`, and `profile`. The `directory` schema (producers + places) is pre-positioned for a future `cove-directory` service — no service owns it in Phase 3. PostGIS enables radius-based discovery queries.
 - `profile.user_flags` migration added to `cove-db`
-- Deploy `cove-item` (item ingestion, `GET /discovery` endpoint) and `cove-user` (user profiles, interests, `GET /recommendations/categories`, `POST /users/me/events`) to `cove-staging`; the prod overlay keeps both at `sha-placeholder` until the integration branch merges to `main`, at which point `ci-services.yml` promotes them to `cove-prod`
+- Deploy `cove-item` (item ingestion, `GET /discovery` endpoint) and `cove-user` (user profiles, interests, `GET /recommendations/categories`, `POST /users/me/activity`) to `cove-staging`; the prod overlay keeps both at `sha-placeholder` until the integration branch merges to `main`, at which point `ci-services.yml` promotes them to `cove-prod`
 - Postgres replaces Firestore for all structured data; cross-schema foreign keys preserve referential integrity for user-centric features (favorites, follows, interests)
 - iOS app calls `api.coveapp.dev/discovery`, `api.coveapp.dev/recommendations/*`, `api.coveapp.dev/users/*`, and `api.coveapp.dev/categories`
 - Firestore retired upon completion
@@ -339,8 +339,8 @@ See [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md) for the canonical sc
 Not yet planned in detail; tracked separately. Scope:
 
 - Build `cove-directory` at `services/cove-directory/`
-- Self-serve onboarding flow (maker + storefront, business/individual verification)
-- Maker and storefront profile management; trust-signal verification
+- Self-serve onboarding flow (producer + place, business/individual verification)
+- Producer and place profile management; trust-signal verification
 - Producer-facing dashboard API (separate iOS/web surface)
 - Take ownership of the `directory` schema via a permissions flip — no schema migration, no data move; `cove-item` keeps SELECT for discovery reads
 
