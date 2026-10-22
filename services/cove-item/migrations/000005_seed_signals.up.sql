@@ -74,7 +74,7 @@ INSERT INTO catalog.signals (id, code, name, description, verification_method, w
         gen_random_uuid(),
         'identity_verified',
         'Identity Verified',
-        'Maker identity confirmed via government-issued ID through automated KYC verification. Applies to individual makers operating without a registered business entity.',
+        'Producer identity confirmed via government-issued ID through automated KYC verification. Applies to individual producers operating without a registered business entity.',
         'kyc',
         1,
         false

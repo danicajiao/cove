@@ -1,12 +1,16 @@
--- catalog schema: categories, signals, items, availability, entity_signals, media
+-- catalog schema: categories, signals, items, availability, entity_signals, media,
+-- plus directory.place_categories (it references catalog.categories)
 --
 -- Consolidates 000003_catalog + 000005_category_leaf_constraint +
--- 000006_category_delete_integrity + 000007_schema_enhancements (catalog parts):
+-- 000006_category_delete_integrity + 000007_schema_enhancements (catalog parts),
+-- and the category image columns from the old 000011 and 000013:
 --
---   catalog.categories   — is_leaf baked in; mark_parent_non_leaf + delete-integrity
---                          triggers installed from the start
+--   catalog.categories   — is_leaf, image_key and wide_image_key baked in;
+--                          mark_parent_non_leaf + delete-integrity triggers
+--                          installed from the start
 --   catalog.signals      — has_expiry + is_active baked in from the start
---   catalog.items        — unchanged; is_active + search_vec GENERATED column present
+--   catalog.items        — producer_id nullable (brand-only and secondhand items);
+--                          brand, is_active + search_vec GENERATED column present
 --   catalog.availability — listing_source, listing_url, is_active baked in;
 --                          item_id FK is ON DELETE RESTRICT from the start
 --   catalog.entity_signals — cert_number, cert_expires_at, verified_by baked in
@@ -17,11 +21,15 @@
 --
 -- Run order: after 000002_directory.
 
+-- image_key is the card image (every category); wide_image_key is the 4:1
+-- onboarding image (level 1 only). Both are set in 000004.
 CREATE TABLE catalog.categories (
-    id      uuid  PRIMARY KEY DEFAULT gen_random_uuid(),
-    name    text  NOT NULL,
-    path    ltree NOT NULL UNIQUE,
-    is_leaf boolean NOT NULL DEFAULT true
+    id             uuid    PRIMARY KEY DEFAULT gen_random_uuid(),
+    name           text    NOT NULL,
+    path           ltree   NOT NULL UNIQUE,
+    is_leaf        boolean NOT NULL DEFAULT true,
+    image_key      text,
+    wide_image_key text
 );
 
 CREATE INDEX ON catalog.categories USING GIST  (path);
@@ -94,9 +102,12 @@ CREATE TABLE catalog.signals (
 
 CREATE TABLE catalog.items (
     id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-    maker_id    uuid        NOT NULL REFERENCES directory.makers(id),
+    producer_id uuid        REFERENCES directory.producers(id),
+        -- nullable: brand-only and secondhand items have no producer
     category_id uuid        NOT NULL REFERENCES catalog.categories(id),
     name        text        NOT NULL,
+    brand       text,
+        -- plain brand name for items whose brand isn't a producer
     description text,
     price_cents integer,
     attributes  jsonb       NOT NULL DEFAULT '{}',
@@ -111,7 +122,7 @@ CREATE TABLE catalog.items (
 CREATE INDEX ON catalog.items USING GIN (search_vec);
 CREATE INDEX ON catalog.items USING GIN (attributes);
 CREATE INDEX ON catalog.items (category_id) WHERE is_active = true;
-CREATE INDEX ON catalog.items (maker_id);
+CREATE INDEX ON catalog.items (producer_id);
 
 -- Trigger: enforce that items can only reference leaf categories.
 CREATE FUNCTION catalog.enforce_leaf_category() RETURNS trigger AS $$
@@ -128,31 +139,42 @@ CREATE TRIGGER items_enforce_leaf_category
     BEFORE INSERT OR UPDATE ON catalog.items
     FOR EACH ROW EXECUTE FUNCTION catalog.enforce_leaf_category();
 
--- Many-to-many: an item can be available at multiple storefronts.
+-- Many-to-many: an item can be sold at multiple places.
 -- listing_source, listing_url, is_active baked in (old 000007).
 -- item_id FK is ON DELETE RESTRICT (changed from CASCADE in old 000007).
 CREATE TABLE catalog.availability (
-    item_id        uuid        NOT NULL REFERENCES catalog.items(id)         ON DELETE RESTRICT,
-    storefront_id  uuid        NOT NULL REFERENCES directory.storefronts(id) ON DELETE CASCADE,
-    listing_source text        NOT NULL DEFAULT 'storefront_listed'
-        CHECK (listing_source IN ('maker_listed', 'storefront_listed')),
+    item_id        uuid        NOT NULL REFERENCES catalog.items(id)     ON DELETE RESTRICT,
+    place_id       uuid        NOT NULL REFERENCES directory.places(id) ON DELETE CASCADE,
+    listing_source text        NOT NULL DEFAULT 'place_listed'
+        CHECK (listing_source IN ('producer_listed', 'place_listed')),
     listing_url    text,
     is_active      boolean     NOT NULL DEFAULT true,
     created_at     timestamptz NOT NULL DEFAULT now(),
-    PRIMARY KEY (item_id, storefront_id)
+    PRIMARY KEY (item_id, place_id)
 );
 
-CREATE INDEX ON catalog.availability (storefront_id) WHERE is_active = true;
+CREATE INDEX ON catalog.availability (place_id) WHERE is_active = true;
+
+-- Categories a place is tagged with directly: cuisine tags, and places with no
+-- items (a venue tagged music). Item roll-up through availability covers the rest.
+CREATE TABLE directory.place_categories (
+    place_id    uuid        NOT NULL REFERENCES directory.places(id) ON DELETE CASCADE,
+    category_id uuid        NOT NULL REFERENCES catalog.categories(id),
+    created_at  timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (place_id, category_id)
+);
+
+CREATE INDEX ON directory.place_categories (category_id);
 
 -- Polymorphic trust signal attachment — links a signal to exactly one entity
--- via an exclusive arc (exactly one of maker_id, storefront_id, item_id is set).
+-- via an exclusive arc (exactly one of producer_id, place_id, item_id is set).
 -- cert_number, cert_expires_at, verified_by baked in (old 000007).
 CREATE TABLE catalog.entity_signals (
     id              uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
     signal_id       uuid        NOT NULL REFERENCES catalog.signals(id),
-    maker_id        uuid        REFERENCES directory.makers(id)      ON DELETE CASCADE,
-    storefront_id   uuid        REFERENCES directory.storefronts(id) ON DELETE CASCADE,
-    item_id         uuid        REFERENCES catalog.items(id)         ON DELETE CASCADE,
+    producer_id     uuid        REFERENCES directory.producers(id) ON DELETE CASCADE,
+    place_id        uuid        REFERENCES directory.places(id)    ON DELETE CASCADE,
+    item_id         uuid        REFERENCES catalog.items(id)       ON DELETE CASCADE,
     status          text        NOT NULL DEFAULT 'pending',
         -- 'verified' | 'pending' | 'community_vouched'
     verified_at     timestamptz,
@@ -161,33 +183,33 @@ CREATE TABLE catalog.entity_signals (
     cert_expires_at timestamptz,
     verified_by     text,
     created_at      timestamptz NOT NULL DEFAULT now(),
-    CHECK (num_nonnulls(maker_id, storefront_id, item_id) = 1)
+    CHECK (num_nonnulls(producer_id, place_id, item_id) = 1)
 );
 
-CREATE INDEX ON catalog.entity_signals (maker_id);
-CREATE INDEX ON catalog.entity_signals (storefront_id);
+CREATE INDEX ON catalog.entity_signals (producer_id);
+CREATE INDEX ON catalog.entity_signals (place_id);
 CREATE INDEX ON catalog.entity_signals (item_id);
 
 -- Polymorphic media — links an image to exactly one entity.
 CREATE TABLE catalog.media (
-    id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-    maker_id      uuid        REFERENCES directory.makers(id)      ON DELETE CASCADE,
-    storefront_id uuid        REFERENCES directory.storefronts(id) ON DELETE CASCADE,
-    item_id       uuid        REFERENCES catalog.items(id)         ON DELETE CASCADE,
-    media_key     text        NOT NULL,
-    role          text        NOT NULL DEFAULT 'gallery',
+    id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    producer_id uuid        REFERENCES directory.producers(id) ON DELETE CASCADE,
+    place_id    uuid        REFERENCES directory.places(id)    ON DELETE CASCADE,
+    item_id     uuid        REFERENCES catalog.items(id)       ON DELETE CASCADE,
+    media_key   text        NOT NULL,
+    role        text        NOT NULL DEFAULT 'gallery',
         -- 'primary' | 'gallery' | 'logo'
-    sort_order    integer     NOT NULL DEFAULT 0,
-    alt_text      text,
-    width         integer     NOT NULL,
-    height        integer     NOT NULL,
-    created_at    timestamptz NOT NULL DEFAULT now(),
-    CHECK (num_nonnulls(maker_id, storefront_id, item_id) = 1)
+    sort_order  integer     NOT NULL DEFAULT 0,
+    alt_text    text,
+    width       integer     NOT NULL,
+    height      integer     NOT NULL,
+    created_at  timestamptz NOT NULL DEFAULT now(),
+    CHECK (num_nonnulls(producer_id, place_id, item_id) = 1)
 );
 
 CREATE INDEX ON catalog.media (item_id, sort_order);
-CREATE INDEX ON catalog.media (storefront_id);
-CREATE INDEX ON catalog.media (maker_id);
+CREATE INDEX ON catalog.media (place_id);
+CREATE INDEX ON catalog.media (producer_id);
 
 -- cove_item owns the full catalog
 GRANT SELECT, INSERT, UPDATE, DELETE ON catalog.categories     TO cove_item;
@@ -196,7 +218,9 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON catalog.items          TO cove_item;
 GRANT SELECT, INSERT, UPDATE, DELETE ON catalog.availability   TO cove_item;
 GRANT SELECT, INSERT, UPDATE, DELETE ON catalog.entity_signals TO cove_item;
 GRANT SELECT, INSERT, UPDATE, DELETE ON catalog.media          TO cove_item;
+GRANT SELECT, INSERT, UPDATE, DELETE ON directory.place_categories TO cove_item;
 
 -- cove_user reads items and categories for favorites/interests cross-schema FKs
 GRANT SELECT, REFERENCES ON catalog.items      TO cove_user;
 GRANT SELECT, REFERENCES ON catalog.categories TO cove_user;
+GRANT SELECT             ON directory.place_categories TO cove_user;

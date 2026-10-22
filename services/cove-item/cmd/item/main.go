@@ -77,8 +77,8 @@ func main() {
 		r.Get("/discovery", deps.DiscoveryHandler)
 		r.Get("/categories", deps.CategoriesHandler)
 		r.Get("/items/{id}", deps.ItemHandler)
-		r.Get("/makers/{id}", deps.MakerHandler)
-		r.Get("/storefronts/{id}", deps.StorefrontHandler)
+		r.Get("/producers/{id}", deps.ProducerHandler)
+		r.Get("/places/{id}", deps.PlaceHandler)
 	})
 
 	port := envOr("PORT", "8080")

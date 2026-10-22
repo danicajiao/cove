@@ -5,7 +5,7 @@ info:
   version: "0.1.0"
   description: |
     Discovery surface for the Cove platform.
-    Handles category browsing, item/maker/storefront detail, and the core
+    Handles category browsing, item/producer/place detail, and the core
     trust+proximity+relevance discovery query.
 
     Authentication: this service does NOT validate Firebase tokens directly.
@@ -53,8 +53,9 @@ paths:
         Proximity scoring requires lat and lon together. radius defaults to
         50 000 m (50 km) when lat/lon are supplied without an explicit value.
 
-        Storefronts with a null location (e.g. online stores) are excluded
-        when a geo filter is active but are included in text-only queries.
+        Places with a null location (the placeholder online places) are
+        excluded when a geo filter is active but are included in text-only
+        queries.
       parameters:
         - name: X-Cove-Uid
           in: header
@@ -152,7 +153,7 @@ paths:
       summary: Get item detail
       description: |
         Returns full item detail including: all fields, trust signals
-        (item-level + maker-level + storefront-level), all storefronts that
+        (item-level + producer-level + place-level), all places that
         carry the item, and signed imgproxy URLs for all five image variants
         across all media rows.
       parameters:
@@ -188,13 +189,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /makers/{id}:
+  /producers/{id}:
     get:
-      operationId: getMaker
-      summary: Get maker detail
+      operationId: getProducer
+      summary: Get producer detail
       description: |
-        Returns maker detail including: profile fields, trust signals,
-        and the list of storefronts operated by this maker.
+        Returns producer detail including: profile fields, trust signals,
+        and the list of places run by this producer.
       parameters:
         - name: X-Cove-Uid
           in: header
@@ -204,17 +205,17 @@ paths:
         - name: id
           in: path
           required: true
-          description: Maker UUID.
+          description: Producer UUID.
           schema:
             type: string
             format: uuid
       responses:
         "200":
-          description: Maker detail
+          description: Producer detail
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MakerDetail"
+                $ref: "#/components/schemas/ProducerDetail"
         "401":
           description: Missing or empty X-Cove-Uid header
           content:
@@ -222,19 +223,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
-          description: Maker not found or inactive
+          description: Producer not found or inactive
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /storefronts/{id}:
+  /places/{id}:
     get:
-      operationId: getStorefront
-      summary: Get storefront detail
+      operationId: getPlace
+      summary: Get place detail
       description: |
-        Returns storefront detail including: location, trust signals,
-        and the list of items available at this storefront.
+        Returns place detail including: location, trust signals,
+        and the list of items sold at this place.
       parameters:
         - name: X-Cove-Uid
           in: header
@@ -244,17 +245,17 @@ paths:
         - name: id
           in: path
           required: true
-          description: Storefront UUID.
+          description: Place UUID.
           schema:
             type: string
             format: uuid
       responses:
         "200":
-          description: Storefront detail
+          description: Place detail
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/StorefrontDetail"
+                $ref: "#/components/schemas/PlaceDetail"
         "401":
           description: Missing or empty X-Cove-Uid header
           content:
@@ -262,7 +263,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
-          description: Storefront not found or inactive
+          description: Place not found or inactive
           content:
             application/json:
               schema:
@@ -362,7 +363,7 @@ components:
     # ── Shared sub-schemas ───────────────────────────────────────────────────
 
     Signal:
-      description: A trust signal attached to a maker, storefront, or item.
+      description: A trust signal attached to a producer, place, or item.
       required: [code, name, weight, status]
       properties:
         code:
@@ -387,7 +388,7 @@ components:
         cert_number:
           type: string
 
-    MakerSummary:
+    ProducerSummary:
       required: [id, name, trust_score]
       properties:
         id:
@@ -400,7 +401,7 @@ components:
           type: number
           example: 3
 
-    StorefrontSummary:
+    PlaceSummary:
       required: [id, name, type]
       properties:
         id:
@@ -410,8 +411,9 @@ components:
           type: string
         type:
           type: string
-          enum: [shop, gallery, studio, market, taproom, online]
-          example: online
+          enum: [cafe, restaurant, bar, bakery, dessert_shop, shop, gallery, studio, market, venue, taproom, online]
+          description: The online value is temporary, used only by the placeholder seed places.
+          example: cafe
         distance_m:
           type: number
           description: |
@@ -425,7 +427,7 @@ components:
     # ── Discovery ────────────────────────────────────────────────────────────
 
     DiscoveryResult:
-      required: [id, name, maker, nearest_storefront, storefronts, base_trust, score]
+      required: [id, name, nearest_place, places, base_trust, score]
       properties:
         id:
           type: string
@@ -438,20 +440,24 @@ components:
         price_cents:
           type: integer
           example: 2300
-        maker:
-          $ref: "#/components/schemas/MakerSummary"
-        nearest_storefront:
-          $ref: "#/components/schemas/StorefrontSummary"
-        storefronts:
+        brand:
+          type: string
+          description: Plain brand name, set when the item's brand isn't a producer.
+        producer:
+          description: Absent for brand-only and secondhand items, which have no producer.
+          $ref: "#/components/schemas/ProducerSummary"
+        nearest_place:
+          $ref: "#/components/schemas/PlaceSummary"
+        places:
           type: array
-          description: All storefronts that carry this item ("Where to find it").
+          description: All places that sell this item ("Sold at").
           items:
-            $ref: "#/components/schemas/StorefrontSummary"
+            $ref: "#/components/schemas/PlaceSummary"
         primary_image:
           $ref: "#/components/schemas/ImageVariants"
         base_trust:
           type: number
-          description: Maker trust score + nearest storefront trust score.
+          description: Producer trust score (0 when there is no producer) + nearest place trust score.
           example: 3
         score:
           type: number
@@ -510,7 +516,7 @@ components:
 
     # ── Item detail ──────────────────────────────────────────────────────────
 
-    StorefrontDetailSummary:
+    PlaceDetailSummary:
       required: [id, name, type]
       properties:
         id:
@@ -525,7 +531,7 @@ components:
           format: uri
 
     ItemDetail:
-      required: [id, name, category_id, maker, signals, storefronts, media]
+      required: [id, name, category_id, signals, places, media]
       properties:
         id:
           type: string
@@ -547,26 +553,30 @@ components:
         category_id:
           type: string
           format: uuid
-        maker:
-          $ref: "#/components/schemas/MakerSummary"
+        brand:
+          type: string
+          description: Plain brand name, set when the item's brand isn't a producer.
+        producer:
+          description: Absent for brand-only and secondhand items, which have no producer.
+          $ref: "#/components/schemas/ProducerSummary"
         signals:
           type: array
-          description: Trust signals from all three levels (item, maker, storefront).
+          description: Trust signals from all three levels (item, producer, place).
           items:
             $ref: "#/components/schemas/Signal"
-        storefronts:
+        places:
           type: array
           items:
-            $ref: "#/components/schemas/StorefrontDetailSummary"
+            $ref: "#/components/schemas/PlaceDetailSummary"
         media:
           type: array
           description: Full gallery with all five signed variant URLs per image.
           items:
             $ref: "#/components/schemas/ItemMedia"
 
-    # ── Maker detail ─────────────────────────────────────────────────────────
+    # ── Producer detail ─────────────────────────────────────────────────────────
 
-    MakerStorefront:
+    ProducerPlace:
       required: [id, name, type]
       properties:
         id:
@@ -579,8 +589,8 @@ components:
         slug:
           type: string
 
-    MakerDetail:
-      required: [id, name, tier, trust_score, signals, storefronts]
+    ProducerDetail:
+      required: [id, name, tier, trust_score, signals, places]
       properties:
         id:
           type: string
@@ -607,14 +617,14 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Signal"
-        storefronts:
+        places:
           type: array
           items:
-            $ref: "#/components/schemas/MakerStorefront"
+            $ref: "#/components/schemas/ProducerPlace"
 
-    # ── Storefront detail ────────────────────────────────────────────────────
+    # ── Place detail ────────────────────────────────────────────────────
 
-    StorefrontItem:
+    PlaceItem:
       required: [id, name]
       properties:
         id:
@@ -630,7 +640,7 @@ components:
         image:
           $ref: "#/components/schemas/ImageVariants"
 
-    StorefrontDetail:
+    PlaceDetail:
       required: [id, name, type, trust_score, signals, items]
       properties:
         id:
@@ -642,7 +652,7 @@ components:
           type: string
         type:
           type: string
-          enum: [shop, gallery, studio, market, taproom, online]
+          enum: [cafe, restaurant, bar, bakery, dessert_shop, shop, gallery, studio, market, venue, taproom, online]
         trust_score:
           type: number
         city:
@@ -654,10 +664,11 @@ components:
         website_url:
           type: string
           format: uri
-        maker_id:
+        producer_id:
           type: string
           format: uuid
-        maker_name:
+          description: The producer that runs this place, if any.
+        producer_name:
           type: string
         signals:
           type: array
@@ -666,4 +677,4 @@ components:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/StorefrontItem"
+            $ref: "#/components/schemas/PlaceItem"

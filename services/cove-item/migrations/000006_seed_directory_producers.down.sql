@@ -1,4 +1,4 @@
-DELETE FROM directory.makers
+DELETE FROM directory.producers
 WHERE slug IN (
     'ritual-coffee-roasters',
     'onyx-coffee-lab',

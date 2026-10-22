@@ -12,29 +12,30 @@ import (
 
 // itemDetail is the GET /items/:id response body.
 type itemDetail struct {
-	ID          string             `json:"id"`
-	Name        string             `json:"name"`
-	Description *string            `json:"description,omitempty"`
-	PriceCents  *int               `json:"price_cents,omitempty"`
-	Attributes  json.RawMessage    `json:"attributes,omitempty"`
-	Details     json.RawMessage    `json:"details,omitempty"`
-	CategoryID  string             `json:"category_id"`
-	Maker       makerSummary       `json:"maker"`
-	Signals     []Signal           `json:"signals"`
-	Storefronts []storefrontDetail `json:"storefronts"`
-	Media       []ItemMedia        `json:"media"`
+	ID          string           `json:"id"`
+	Name        string           `json:"name"`
+	Description *string          `json:"description,omitempty"`
+	PriceCents  *int             `json:"price_cents,omitempty"`
+	Attributes  json.RawMessage  `json:"attributes,omitempty"`
+	Details     json.RawMessage  `json:"details,omitempty"`
+	CategoryID  string           `json:"category_id"`
+	Brand       *string          `json:"brand,omitempty"`
+	Producer    *producerSummary `json:"producer,omitempty"` // nil for brand-only and secondhand items
+	Signals     []Signal         `json:"signals"`
+	Places      []placeDetail    `json:"places"`
+	Media       []ItemMedia      `json:"media"`
 }
 
-type storefrontDetail struct {
-	ID         string   `json:"id"`
-	Name       string   `json:"name"`
-	Type       string   `json:"type"`
-	ListingURL *string  `json:"listing_url,omitempty"`
+type placeDetail struct {
+	ID         string  `json:"id"`
+	Name       string  `json:"name"`
+	Type       string  `json:"type"`
+	ListingURL *string `json:"listing_url,omitempty"`
 }
 
 // ItemHandler handles GET /items/{id}.
-// Returns full item detail: signals (item + maker + storefront), all
-// storefronts, and signed imgproxy URLs for all five media variants.
+// Returns full item detail: signals (item + producer + place), all
+// places, and signed imgproxy URLs for all five media variants.
 func (d *Deps) ItemHandler(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if id == "" {
@@ -42,29 +43,30 @@ func (d *Deps) ItemHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// ── Core item + maker ────────────────────────────────────────────────────
+	// ── Core item + producer ───────────────────────────────────────────────
 	const itemSQL = `
 SELECT
     p.id, p.name, p.description, p.price_cents,
-    p.attributes, p.details, p.category_id::text,
-    m.id AS maker_id, m.name AS maker_name, m.trust_score
+    p.attributes, p.details, p.category_id::text, p.brand,
+    pr.id AS producer_id, pr.name AS producer_name, pr.trust_score
 FROM catalog.items p
-JOIN directory.makers m ON m.id = p.maker_id
+LEFT JOIN directory.producers pr ON pr.id = p.producer_id
 WHERE p.id = $1 AND p.is_active`
 
 	var (
-		itemID, makerID     pgtype.UUID
-		itemName, makerName string
+		itemID, producerID  pgtype.UUID
+		itemName            string
+		producerName, brand *string
 		description         *string
 		priceCents          *int32
 		attributes, details []byte
 		categoryID          string
-		makerTrust          float64
+		producerTrust       *float64
 	)
 	err := d.DB.QueryRow(r.Context(), itemSQL, id).Scan(
 		&itemID, &itemName, &description, &priceCents,
-		&attributes, &details, &categoryID,
-		&makerID, &makerName, &makerTrust,
+		&attributes, &details, &categoryID, &brand,
+		&producerID, &producerName, &producerTrust,
 	)
 	if err != nil {
 		if isNotFound(err) {
@@ -76,11 +78,11 @@ WHERE p.id = $1 AND p.is_active`
 		return
 	}
 
-	// ── Signals: item + maker + storefronts that carry this item ─────────────
+	// ── Signals: item + producer + places that carry this item ─────────────
 	const signalsSQL = `
 SELECT scope, code, name, description, weight, status, verified_at, cert_number
 FROM (
-    SELECT 'item'        AS scope, s.code, s.name, s.description, s.weight,
+    SELECT 'item'     AS scope, s.code, s.name, s.description, s.weight,
            es.status, es.verified_at, es.cert_number
     FROM catalog.entity_signals es
     JOIN catalog.signals s ON s.id = es.signal_id
@@ -88,20 +90,20 @@ FROM (
 
     UNION ALL
 
-    SELECT 'maker'       AS scope, s.code, s.name, s.description, s.weight,
+    SELECT 'producer' AS scope, s.code, s.name, s.description, s.weight,
            es.status, es.verified_at, es.cert_number
     FROM catalog.entity_signals es
     JOIN catalog.signals s ON s.id = es.signal_id
-    JOIN catalog.items   i ON i.maker_id = es.maker_id
+    JOIN catalog.items   i ON i.producer_id = es.producer_id
     WHERE i.id = $1 AND s.is_active
 
     UNION ALL
 
-    SELECT 'storefront'  AS scope, s.code, s.name, s.description, s.weight,
+    SELECT 'place'    AS scope, s.code, s.name, s.description, s.weight,
            es.status, es.verified_at, es.cert_number
     FROM catalog.entity_signals es
     JOIN catalog.signals        s ON s.id = es.signal_id
-    JOIN catalog.availability   a ON a.storefront_id = es.storefront_id
+    JOIN catalog.availability   a ON a.place_id = es.place_id
     WHERE a.item_id = $1 AND a.is_active AND s.is_active
 ) combined
 ORDER BY weight DESC, name`
@@ -142,45 +144,45 @@ ORDER BY weight DESC, name`
 		return
 	}
 
-	// ── Storefronts ──────────────────────────────────────────────────────────
-	const storefrontsSQL = `
-SELECT s.id, s.name, s.type, a.listing_url
-FROM catalog.availability   a
-JOIN directory.storefronts  s ON s.id = a.storefront_id
-WHERE a.item_id = $1 AND a.is_active AND s.is_active
-ORDER BY s.name`
+	// ── Places ─────────────────────────────────────────────────────────────
+	const placesSQL = `
+SELECT pl.id, pl.name, pl.type, a.listing_url
+FROM catalog.availability a
+JOIN directory.places     pl ON pl.id = a.place_id
+WHERE a.item_id = $1 AND a.is_active AND pl.is_active
+ORDER BY pl.name`
 
-	sfRows, err := d.DB.Query(r.Context(), storefrontsSQL, id)
+	plRows, err := d.DB.Query(r.Context(), placesSQL, id)
 	if err != nil {
-		log.Printf("ERROR storefronts query item=%s: %v", id, err)
-		writeError(w, http.StatusInternalServerError, "storefronts query failed")
+		log.Printf("ERROR places query item=%s: %v", id, err)
+		writeError(w, http.StatusInternalServerError, "places query failed")
 		return
 	}
-	defer sfRows.Close()
+	defer plRows.Close()
 
-	var storefronts []storefrontDetail
-	for sfRows.Next() {
-		var sfID pgtype.UUID
-		var sfName, sfType string
+	var places []placeDetail
+	for plRows.Next() {
+		var plID pgtype.UUID
+		var plName, plType string
 		var listingURL *string
-		if err := sfRows.Scan(&sfID, &sfName, &sfType, &listingURL); err != nil {
-			log.Printf("ERROR storefronts scan item=%s: %v", id, err)
-			writeError(w, http.StatusInternalServerError, "storefronts scan failed")
+		if err := plRows.Scan(&plID, &plName, &plType, &listingURL); err != nil {
+			log.Printf("ERROR places scan item=%s: %v", id, err)
+			writeError(w, http.StatusInternalServerError, "places scan failed")
 			return
 		}
-		storefronts = append(storefronts, storefrontDetail{
-			ID:         formatUUID(sfID),
-			Name:       sfName,
-			Type:       sfType,
+		places = append(places, placeDetail{
+			ID:         formatUUID(plID),
+			Name:       plName,
+			Type:       plType,
 			ListingURL: listingURL,
 		})
 	}
-	if err := sfRows.Err(); err != nil {
-		writeError(w, http.StatusInternalServerError, "storefronts iteration failed")
+	if err := plRows.Err(); err != nil {
+		writeError(w, http.StatusInternalServerError, "places iteration failed")
 		return
 	}
 
-	// ── Media ────────────────────────────────────────────────────────────────
+	// ── Media ──────────────────────────────────────────────────────────────
 	const mediaSQL = `
 SELECT media_key, role, coalesce(alt_text, ''), width, height
 FROM   catalog.media
@@ -211,11 +213,20 @@ ORDER  BY sort_order`
 		return
 	}
 
-	// ── Assemble response ────────────────────────────────────────────────────
+	// ── Assemble response ──────────────────────────────────────────────────
 	var pc *int
 	if priceCents != nil {
 		v := int(*priceCents)
 		pc = &v
+	}
+
+	var producer *producerSummary
+	if producerID.Valid {
+		producer = &producerSummary{
+			ID:         formatUUID(producerID),
+			Name:       *producerName,
+			TrustScore: *producerTrust,
+		}
 	}
 
 	detail := itemDetail{
@@ -226,13 +237,10 @@ ORDER  BY sort_order`
 		Attributes:  attributes,
 		Details:     details,
 		CategoryID:  categoryID,
-		Maker: makerSummary{
-			ID:         formatUUID(makerID),
-			Name:       makerName,
-			TrustScore: makerTrust,
-		},
+		Brand:       brand,
+		Producer:    producer,
 		Signals:     signals,
-		Storefronts: storefronts,
+		Places:      places,
 		Media:       media,
 	}
 
