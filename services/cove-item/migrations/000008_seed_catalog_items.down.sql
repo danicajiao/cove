@@ -1,8 +1,0 @@
--- availability rows must be deleted first (000010.down runs before this).
-DELETE FROM catalog.items
-WHERE id IN (
-    'f3000001-1234-0000-0000-000000000001',
-    'f3000001-1234-0000-0000-000000000002',
-    'f3000001-1234-0000-0000-000000000003',
-    'f3000001-1234-0000-0000-000000000004'
-);

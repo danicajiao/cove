@@ -252,7 +252,7 @@ Every issue needs a **type label**. Most sub-issues need an **area label**. Epic
 **Examples**:
 - Epic: Auth System → `epic, feature, security`
 - Implement Firebase Auth (iOS) → `feature, ios, security`
-- Implement cove-item discovery endpoint → `feature, backend`
+- Implement cove-catalog discovery endpoint → `feature, backend`
 - Build checkout UI → `feature, ios, ui/ux`
 - Fix cart total bug (iOS) → `bugfix, ios`
 - Add ViewModel unit tests → `chore, ios, testing`

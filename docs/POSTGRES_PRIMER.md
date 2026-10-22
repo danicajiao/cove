@@ -24,7 +24,7 @@ Assumed starting point: comfortable with Firestore, new to relational databases.
 
 Cove runs one CNPG `Cluster` (`cove-db`) hosting a single database (`cove`). Inside that database, each service owns its own schema (`directory`, `catalog`, `user`). This primer covers the Postgres *mechanics* those schemas rely on; the **canonical schema, entities, and service ownership live in [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md)** — refer there for the actual table definitions. The examples below are illustrative.
 
-Each service connects with a Postgres role whose `search_path` is set to its own schema, so application queries stay unqualified — `SELECT * FROM items` inside `cove-item` works without ever typing `catalog.items`. Cross-schema references (e.g., `user.favorites` → `catalog.items`, `catalog.items.producer_id` → `directory.producers`) use real foreign keys, since all schemas live in the same database.
+Each service connects with a Postgres role whose `search_path` is set to its own schema, so application queries stay unqualified — `SELECT * FROM items` inside `cove-catalog` works without ever typing `catalog.items`. Cross-schema references (e.g., `user.favorites` → `catalog.items`, `catalog.items.producer_id` → `directory.producers`) use real foreign keys, since all schemas live in the same database.
 
 ### Why one cluster, not one per service
 
@@ -59,11 +59,11 @@ SHOW search_path;
 -- "$user", public
 ```
 
-**How Cove uses this:** CNPG provisions the `cove` database, then bootstrap migrations create the per-service schemas plus a role per service, each with its `search_path` scoped to its own schema (so application queries stay unqualified — `SELECT * FROM items` resolves inside `cove-item`). Extensions like `ltree` and `postgis` live in `public` so they're reachable from any schema. The full bootstrap (schemas, roles, cross-schema grants) is in [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md); the mechanic to understand here is `search_path`:
+**How Cove uses this:** CNPG provisions the `cove` database, then bootstrap migrations create the per-service schemas plus a role per service, each with its `search_path` scoped to its own schema (so application queries stay unqualified — `SELECT * FROM items` resolves inside `cove-catalog`). Extensions like `ltree` and `postgis` live in `public` so they're reachable from any schema. The full bootstrap (schemas, roles, cross-schema grants) is in [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md); the mechanic to understand here is `search_path`:
 
 ```sql
 -- A role whose unqualified queries resolve against its own schema first
-ALTER ROLE cove_item SET search_path = catalog, public;
+ALTER ROLE cove_catalog SET search_path = catalog, public;
 ```
 
 Cross-schema foreign keys are the unlock that makes the single-cluster model practical:
@@ -587,11 +587,11 @@ Quick lookups for terms used throughout. For full context, see the corresponding
 
 **Repeatable read** — An isolation level where the entire transaction sees the snapshot taken at its start. Use when you need consistency across multiple reads in one transaction.
 
-**Role** — A Postgres "user" with login and permission grants. Services connect as their own role (`cove_item`, `cove_user`) so schema ownership is enforced at the database level.
+**Role** — A Postgres "user" with login and permission grants. Services connect as their own role (`cove_catalog`, `cove_user`) so schema ownership is enforced at the database level.
 
 **Schema** — A namespace inside a Postgres database that groups tables, functions, and types. Cove uses one schema per service (`directory`, `catalog`, `user`) within a single `cove` database.
 
-**search_path** — Ordered list of schemas Postgres checks for unqualified names. Each service's role has its own schema first, so application queries stay unqualified (`SELECT * FROM items` works inside `cove-item` because `search_path = catalog, public`).
+**search_path** — Ordered list of schemas Postgres checks for unqualified names. Each service's role has its own schema first, so application queries stay unqualified (`SELECT * FROM items` works inside `cove-catalog` because `search_path = catalog, public`).
 
 **Serializable** — The strictest isolation level — transactions behave as if they ran one at a time. Rarely needed; comes with occasional retry on conflict.
 
