@@ -1,7 +1,7 @@
--- Seed directory.makers with the four v1 placeholder brands.
+-- Seed directory.producers with the four v1 placeholder brands.
 -- Fixed UUIDs make this idempotent via ON CONFLICT DO NOTHING.
 
-INSERT INTO directory.makers (id, name, slug, description, tier, city, state, location, website_url)
+INSERT INTO directory.producers (id, name, slug, description, tier, city, state, location, website_url)
 VALUES (
     'f1000001-c0ff-0000-0000-000000000001',
     'Ritual Coffee Roasters',
@@ -15,7 +15,7 @@ VALUES (
 )
 ON CONFLICT (slug) DO NOTHING;
 
-INSERT INTO directory.makers (id, name, slug, description, tier, city, state, location, website_url)
+INSERT INTO directory.producers (id, name, slug, description, tier, city, state, location, website_url)
 VALUES (
     'f1000001-c0ff-0000-0000-000000000002',
     'Onyx Coffee Lab',
@@ -29,7 +29,7 @@ VALUES (
 )
 ON CONFLICT (slug) DO NOTHING;
 
-INSERT INTO directory.makers (id, name, slug, description, tier, website_url)
+INSERT INTO directory.producers (id, name, slug, description, tier, website_url)
 VALUES (
     'f1000001-c0ff-0000-0000-000000000003',
     'iets franz…',
@@ -40,7 +40,7 @@ VALUES (
 )
 ON CONFLICT (slug) DO NOTHING;
 
-INSERT INTO directory.makers (id, name, slug, description, tier, website_url)
+INSERT INTO directory.producers (id, name, slug, description, tier, website_url)
 VALUES (
     'f1000001-c0ff-0000-0000-000000000004',
     'HOMESHAKE',

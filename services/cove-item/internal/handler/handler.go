@@ -24,15 +24,15 @@ type Deps struct {
 	CommitSHA string
 }
 
-// Signal is a trust signal attached to a maker, storefront, or item.
+// Signal is a trust signal attached to a producer, place, or item.
 type Signal struct {
-	Code        string  `json:"code"`
-	Name        string  `json:"name"`
-	Description *string `json:"description,omitempty"`
-	Weight      float64 `json:"weight"`
-	Status      string  `json:"status"`
+	Code        string     `json:"code"`
+	Name        string     `json:"name"`
+	Description *string    `json:"description,omitempty"`
+	Weight      float64    `json:"weight"`
+	Status      string     `json:"status"`
 	VerifiedAt  *time.Time `json:"verified_at,omitempty"`
-	CertNumber  *string `json:"cert_number,omitempty"`
+	CertNumber  *string    `json:"cert_number,omitempty"`
 }
 
 // ImageVariants holds signed imgproxy URLs for list-view sizes (thumb, sm, md).

@@ -1,7 +1,7 @@
--- Seed directory.storefronts — one online storefront per maker.
--- Maker UUIDs are hardcoded (guaranteed to exist after 000006_seed_directory_makers).
+-- Seed directory.places — one online place per producer.
+-- Producer UUIDs are hardcoded (guaranteed to exist after 000006_seed_directory_producers).
 
-INSERT INTO directory.storefronts (id, operated_by_maker_id, name, slug, type, website_url)
+INSERT INTO directory.places (id, run_by_producer_id, name, slug, type, website_url)
 VALUES (
     'f2000001-cafe-0000-0000-000000000001',
     'f1000001-c0ff-0000-0000-000000000001',
@@ -12,7 +12,7 @@ VALUES (
 )
 ON CONFLICT (slug) DO NOTHING;
 
-INSERT INTO directory.storefronts (id, operated_by_maker_id, name, slug, type, website_url)
+INSERT INTO directory.places (id, run_by_producer_id, name, slug, type, website_url)
 VALUES (
     'f2000001-cafe-0000-0000-000000000002',
     'f1000001-c0ff-0000-0000-000000000002',
@@ -23,7 +23,7 @@ VALUES (
 )
 ON CONFLICT (slug) DO NOTHING;
 
-INSERT INTO directory.storefronts (id, operated_by_maker_id, name, slug, type, website_url)
+INSERT INTO directory.places (id, run_by_producer_id, name, slug, type, website_url)
 VALUES (
     'f2000001-cafe-0000-0000-000000000003',
     'f1000001-c0ff-0000-0000-000000000003',
@@ -34,7 +34,7 @@ VALUES (
 )
 ON CONFLICT (slug) DO NOTHING;
 
-INSERT INTO directory.storefronts (id, operated_by_maker_id, name, slug, type, website_url)
+INSERT INTO directory.places (id, run_by_producer_id, name, slug, type, website_url)
 VALUES (
     'f2000001-cafe-0000-0000-000000000004',
     'f1000001-c0ff-0000-0000-000000000004',

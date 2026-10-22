@@ -19,11 +19,11 @@ Cove's category taxonomy is a **3-level tree** stored in Postgres using the `ltr
 
 Items may only be assigned to **leaf nodes** — the deepest node in a given branch. Non-leaf categories are browse/navigation nodes only; they cannot be set as an item's `category_id`.
 
-The v1 taxonomy has **10 top-level categories** and 252 nodes total (10 top-level, 59 level-2, 183 level-3), seeded via migration `000004`. `eat_drink` is the newest top-level category; see [Why Eat & Drink is separate from Food](#why-eat--drink-is-separate-from-food). Leaf enforcement is defined in `000003`. Display names were later corrected in `000014` (Plantcare, Bodycare, Haircare) and `000015` (Protein).
+The v1 taxonomy has **10 top-level categories** and 252 nodes total (10 top-level, 59 level-2, 183 level-3), seeded via migration `000004`. `eat_drink` is the newest top-level category; see [Why Eat & Drink is separate from Food](#why-eat--drink-is-separate-from-food). Leaf enforcement is defined in `000003`.
 
 ### Category images
 
-Category images live in Garage (`cove-media`) in two aspect-ratio variants. Keys mirror the path, with dots as hyphens and underscores kept, and are seeded by `000013`:
+Category images live in Garage (`cove-media`) in two aspect-ratio variants. Keys mirror the path, with dots as hyphens and underscores kept, and are set at the end of `000004`:
 
 | Variant | Key | Crop | Set on | API field |
 |---|---|---|---|---|
@@ -372,8 +372,8 @@ Create the next numbered migration file:
 
 ```bash
 # example: adding food.fresh.kimchi
-touch services/cove-item/migrations/000016_add_kimchi_category.up.sql
-touch services/cove-item/migrations/000016_add_kimchi_category.down.sql
+touch services/cove-item/migrations/000011_add_kimchi_category.up.sql
+touch services/cove-item/migrations/000011_add_kimchi_category.down.sql
 ```
 
 **up:**
@@ -460,7 +460,7 @@ Four triggers on `catalog.categories` and `catalog.items` enforce taxonomy integ
 The `RESTRICT` foreign key on `catalog.items.category_id` provides a fifth layer: Postgres itself will block deletion of any category that has items referencing it, before any trigger fires.
 
 Defined in:
-- `services/cove-item/migrations/000003_catalog.up.sql` — `is_leaf` column, insert trigger, delete guard and parent recheck triggers, item enforcement trigger
+- `services/cove-item/migrations/000003_catalog.up.sql` — `is_leaf`, `image_key` and `wide_image_key` columns, insert trigger, delete guard and parent recheck triggers, item enforcement trigger
 
 ---
 

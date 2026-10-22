@@ -1,3 +1,3 @@
--- Remove in dependency order: storefronts reference makers.
-DROP TABLE IF EXISTS directory.storefronts;
-DROP TABLE IF EXISTS directory.makers;
+-- Remove in dependency order: places reference producers.
+DROP TABLE IF EXISTS directory.places;
+DROP TABLE IF EXISTS directory.producers;

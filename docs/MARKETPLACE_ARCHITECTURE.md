@@ -386,7 +386,7 @@ Steps 2–4 are additive — no existing tables change.
 
 ## Geospatial: the local availability gate
 
-Location is the proximity dimension of discovery and the integrity gate: every place has a verifiable local address within the Denver metro area and appears in radius search. There is no online-only place type. A producer that sells only online reaches Cove through the local places that carry its items. This prevents national chains from self-listing as local and diluting the trust layer.
+Location is the proximity dimension of discovery and the integrity gate: every place has a verifiable local address within the Denver metro area and appears in radius search. There is no online-only place type. A producer that sells only online reaches Cove through the local places that carry its items. (The four placeholder seed places still use a temporary `online` type with no location; the Denver seed data in #406 replaces them and drops the value.) This prevents national chains from self-listing as local and diluting the trust layer.
 
 Both `directory.producers` and `directory.places` carry a `geography(Point,4326)` column with a GiST index (from `migrations/000002_directory.up.sql`). It is nullable on producers, which can be national. The PostGIS extension is enabled in `migrations/000001_setup.up.sql`.
 

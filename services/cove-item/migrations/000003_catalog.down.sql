@@ -1,6 +1,7 @@
 -- Drop catalog tables and trigger functions in reverse dependency order.
 
 -- Triggers are dropped automatically with their tables, but functions need explicit drops.
+DROP TABLE IF EXISTS directory.place_categories;
 DROP TABLE IF EXISTS catalog.media;
 DROP TABLE IF EXISTS catalog.entity_signals;
 DROP TABLE IF EXISTS catalog.availability;

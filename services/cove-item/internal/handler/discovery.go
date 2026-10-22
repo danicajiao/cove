@@ -13,25 +13,26 @@ import (
 
 // discoveryResult is one item in the GET /discovery response.
 type discoveryResult struct {
-	ID                string             `json:"id"`
-	Name              string             `json:"name"`
-	Description       *string            `json:"description,omitempty"`
-	PriceCents        *int               `json:"price_cents,omitempty"`
-	Maker             makerSummary       `json:"maker"`
-	NearestStorefront storefrontSummary  `json:"nearest_storefront"`
-	Storefronts       []storefrontSummary `json:"storefronts"`
-	PrimaryImage      *ImageVariants     `json:"primary_image,omitempty"`
-	BaseTrust         float64            `json:"base_trust"`
-	Score             float64            `json:"score"`
+	ID           string           `json:"id"`
+	Name         string           `json:"name"`
+	Description  *string          `json:"description,omitempty"`
+	PriceCents   *int             `json:"price_cents,omitempty"`
+	Brand        *string          `json:"brand,omitempty"`
+	Producer     *producerSummary `json:"producer,omitempty"` // nil for brand-only and secondhand items
+	NearestPlace placeSummary     `json:"nearest_place"`
+	Places       []placeSummary   `json:"places"`
+	PrimaryImage *ImageVariants   `json:"primary_image,omitempty"`
+	BaseTrust    float64          `json:"base_trust"`
+	Score        float64          `json:"score"`
 }
 
-type makerSummary struct {
+type producerSummary struct {
 	ID         string  `json:"id"`
 	Name       string  `json:"name"`
 	TrustScore float64 `json:"trust_score"`
 }
 
-type storefrontSummary struct {
+type placeSummary struct {
 	ID         string   `json:"id"`
 	Name       string   `json:"name"`
 	Type       string   `json:"type"`
@@ -91,23 +92,24 @@ func (d *Deps) DiscoveryHandler(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	type rawRow struct {
-		itemID          pgtype.UUID
-		itemName        string
-		description     *string
-		priceCents      *int32
-		makerID         pgtype.UUID
-		makerName       string
-		makerTrustScore float64
-		sfID            pgtype.UUID
-		sfName          string
-		sfType          string
-		sfListingURL    *string
-		distanceM       *float64
-		baseTrust       float64
-		score           float64
-		mediaKey        *string
-		imgWidth        *int32
-		imgHeight       *int32
+		itemID             pgtype.UUID
+		itemName           string
+		description        *string
+		priceCents         *int32
+		brand              *string
+		producerID         pgtype.UUID
+		producerName       *string
+		producerTrustScore *float64
+		plID               pgtype.UUID
+		plName             string
+		plType             string
+		plListingURL       *string
+		distanceM          *float64
+		baseTrust          float64
+		score              float64
+		mediaKey           *string
+		imgWidth           *int32
+		imgHeight          *int32
 	}
 
 	var raws []rawRow
@@ -116,9 +118,9 @@ func (d *Deps) DiscoveryHandler(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var rw rawRow
 		if err := rows.Scan(
-			&rw.itemID, &rw.itemName, &rw.description, &rw.priceCents,
-			&rw.makerID, &rw.makerName, &rw.makerTrustScore,
-			&rw.sfID, &rw.sfName, &rw.sfType, &rw.sfListingURL,
+			&rw.itemID, &rw.itemName, &rw.description, &rw.priceCents, &rw.brand,
+			&rw.producerID, &rw.producerName, &rw.producerTrustScore,
+			&rw.plID, &rw.plName, &rw.plType, &rw.plListingURL,
 			&rw.distanceM, &rw.baseTrust, &rw.score,
 			&rw.mediaKey, &rw.imgWidth, &rw.imgHeight,
 		); err != nil {
@@ -140,10 +142,10 @@ func (d *Deps) DiscoveryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sfMap, err := fetchStorefrontsForItems(r.Context(), d, itemIDs, lat, lon)
+	plMap, err := fetchPlacesForItems(r.Context(), d, itemIDs, lat, lon)
 	if err != nil {
-		log.Printf("ERROR fetching storefronts: %v", err)
-		writeError(w, http.StatusInternalServerError, "storefront query failed")
+		log.Printf("ERROR fetching places: %v", err)
+		writeError(w, http.StatusInternalServerError, "place query failed")
 		return
 	}
 
@@ -169,24 +171,30 @@ func (d *Deps) DiscoveryHandler(w http.ResponseWriter, r *http.Request) {
 			primaryImage = d.signListVariants(*rw.mediaKey, w2, h2)
 		}
 
+		var producer *producerSummary
+		if rw.producerID.Valid {
+			producer = &producerSummary{
+				ID:         formatUUID(rw.producerID),
+				Name:       *rw.producerName,
+				TrustScore: *rw.producerTrustScore,
+			}
+		}
+
 		results = append(results, discoveryResult{
 			ID:          itemIDStr,
 			Name:        rw.itemName,
 			Description: rw.description,
 			PriceCents:  priceCents,
-			Maker: makerSummary{
-				ID:         formatUUID(rw.makerID),
-				Name:       rw.makerName,
-				TrustScore: rw.makerTrustScore,
-			},
-			NearestStorefront: storefrontSummary{
-				ID:         formatUUID(rw.sfID),
-				Name:       rw.sfName,
-				Type:       rw.sfType,
+			Brand:       rw.brand,
+			Producer:    producer,
+			NearestPlace: placeSummary{
+				ID:         formatUUID(rw.plID),
+				Name:       rw.plName,
+				Type:       rw.plType,
 				DistanceM:  rw.distanceM,
-				ListingURL: rw.sfListingURL,
+				ListingURL: rw.plListingURL,
 			},
-			Storefronts:  sfMap[itemIDStr],
+			Places:       plMap[itemIDStr],
 			PrimaryImage: primaryImage,
 			BaseTrust:    rw.baseTrust,
 			Score:        rw.score,
@@ -236,33 +244,34 @@ func buildDiscoverySQL(q string, lat, lon, radiusM *float64, category string) (s
 
 	// Blended score: trust 40 %, relevance 30 %, proximity 30 %.
 	var scoreParts []string
-	scoreParts = append(scoreParts, "0.40 * (m.trust_score + s.trust_score)")
+	scoreParts = append(scoreParts, "0.40 * (coalesce(pr.trust_score, 0) + pl.trust_score)")
 	if hasQ {
 		scoreParts = append(scoreParts,
 			fmt.Sprintf("0.30 * ts_rank(p.search_vec, websearch_to_tsquery('english', %s))", qRef))
 	}
 	if hasGeo {
 		scoreParts = append(scoreParts,
-			fmt.Sprintf("0.30 * (1.0 / (1 + ST_Distance(s.location, %s)))", geoPoint))
+			fmt.Sprintf("0.30 * (1.0 / (1 + ST_Distance(pl.location, %s)))", geoPoint))
 	}
 	scoreExpr := strings.Join(scoreParts, "\n            + ")
 
 	// Distance column expression — NULL for non-geo queries.
 	distanceExpr := "NULL::double precision"
 	if hasGeo {
-		distanceExpr = fmt.Sprintf("ST_Distance(s.location, %s)", geoPoint)
+		distanceExpr = fmt.Sprintf("ST_Distance(pl.location, %s)", geoPoint)
 	}
 
 	// WHERE predicates.
 	var where []string
-	where = append(where, "p.is_active", "m.is_active", "a.is_active", "s.is_active")
+	// An item may have no producer; when it has one, the producer must be active.
+	where = append(where, "p.is_active", "(pr.id IS NULL OR pr.is_active)", "a.is_active", "pl.is_active")
 	if hasQ {
 		where = append(where, fmt.Sprintf(
 			"p.search_vec @@ websearch_to_tsquery('english', %s)", qRef))
 	}
 	if hasGeo {
 		where = append(where, fmt.Sprintf(
-			"ST_DWithin(s.location, %s, %s)", geoPoint, radiusRef))
+			"ST_DWithin(pl.location, %s, %s)", geoPoint, radiusRef))
 	}
 	if hasCat {
 		where = append(where, fmt.Sprintf(
@@ -277,23 +286,24 @@ WITH ranked AS (
         p.name,
         p.description,
         p.price_cents,
-        m.id                                AS maker_id,
-        m.name                              AS maker_name,
-        m.trust_score                       AS maker_trust_score,
-        s.id                                AS sf_id,
-        s.name                              AS sf_name,
-        s.type                              AS sf_type,
-        a.listing_url                       AS sf_listing_url,
+        p.brand,
+        pr.id                               AS producer_id,
+        pr.name                             AS producer_name,
+        pr.trust_score                      AS producer_trust_score,
+        pl.id                               AS pl_id,
+        pl.name                             AS pl_name,
+        pl.type                             AS pl_type,
+        a.listing_url                       AS pl_listing_url,
         %s                                  AS distance_m,
-        (m.trust_score + s.trust_score)     AS base_trust,
+        (coalesce(pr.trust_score, 0) + pl.trust_score) AS base_trust,
         (%s)                                AS score,
         img.media_key,
         img.width                           AS img_width,
         img.height                          AS img_height
-    FROM catalog.items        p
-    JOIN directory.makers     m   ON m.id = p.maker_id
-    JOIN catalog.availability a   ON a.item_id = p.id
-    JOIN directory.storefronts s  ON s.id = a.storefront_id
+    FROM catalog.items             p
+    LEFT JOIN directory.producers  pr ON pr.id = p.producer_id
+    JOIN catalog.availability      a  ON a.item_id = p.id
+    JOIN directory.places          pl ON pl.id = a.place_id
     LEFT JOIN LATERAL (
         SELECT media_key, width, height
         FROM   catalog.media
@@ -304,9 +314,9 @@ WITH ranked AS (
     ORDER BY p.id, (%s) DESC
 )
 SELECT
-    id, name, description, price_cents,
-    maker_id, maker_name, maker_trust_score,
-    sf_id, sf_name, sf_type, sf_listing_url,
+    id, name, description, price_cents, brand,
+    producer_id, producer_name, producer_trust_score,
+    pl_id, pl_name, pl_type, pl_listing_url,
     distance_m, base_trust, score,
     media_key, img_width, img_height
 FROM ranked
@@ -321,9 +331,9 @@ LIMIT 25`,
 	return sql, args
 }
 
-// fetchStorefrontsForItems returns a map of itemID string → []storefrontSummary
-// for all active storefronts stocking any of the given items.
-func fetchStorefrontsForItems(ctx context.Context, d *Deps, itemIDs []pgtype.UUID, lat, lon *float64) (map[string][]storefrontSummary, error) {
+// fetchPlacesForItems returns a map of itemID string → []placeSummary
+// for all active places stocking any of the given items.
+func fetchPlacesForItems(ctx context.Context, d *Deps, itemIDs []pgtype.UUID, lat, lon *float64) (map[string][]placeSummary, error) {
 	if len(itemIDs) == 0 {
 		return nil, nil
 	}
@@ -333,7 +343,7 @@ func fetchStorefrontsForItems(ctx context.Context, d *Deps, itemIDs []pgtype.UUI
 
 	var distanceExpr string
 	if lat != nil && lon != nil {
-		distanceExpr = "ST_Distance(s.location, ST_Point($2, $3)::geography)"
+		distanceExpr = "ST_Distance(pl.location, ST_Point($2, $3)::geography)"
 		args = append(args, *lon, *lat)
 	} else {
 		distanceExpr = "NULL::double precision"
@@ -342,16 +352,16 @@ func fetchStorefrontsForItems(ctx context.Context, d *Deps, itemIDs []pgtype.UUI
 	sql := fmt.Sprintf(`
 SELECT
     a.item_id,
-    s.id,
-    s.name,
-    s.type,
+    pl.id,
+    pl.name,
+    pl.type,
     a.listing_url,
     %s AS distance_m
-FROM catalog.availability   a
-JOIN directory.storefronts  s ON s.id = a.storefront_id
+FROM catalog.availability a
+JOIN directory.places     pl ON pl.id = a.place_id
 WHERE a.item_id = ANY($1)
   AND a.is_active
-  AND s.is_active
+  AND pl.is_active
 ORDER BY a.item_id, distance_m NULLS LAST`, distanceExpr)
 
 	rows, err := d.DB.Query(ctx, sql, args...)
@@ -360,21 +370,21 @@ ORDER BY a.item_id, distance_m NULLS LAST`, distanceExpr)
 	}
 	defer rows.Close()
 
-	result := make(map[string][]storefrontSummary)
+	result := make(map[string][]placeSummary)
 	for rows.Next() {
-		var itemID, sfID pgtype.UUID
-		var sfName, sfType string
+		var itemID, plID pgtype.UUID
+		var plName, plType string
 		var listingURL *string
 		var distM *float64
 
-		if err := rows.Scan(&itemID, &sfID, &sfName, &sfType, &listingURL, &distM); err != nil {
+		if err := rows.Scan(&itemID, &plID, &plName, &plType, &listingURL, &distM); err != nil {
 			return nil, err
 		}
 		key := formatUUID(itemID)
-		result[key] = append(result[key], storefrontSummary{
-			ID:         formatUUID(sfID),
-			Name:       sfName,
-			Type:       sfType,
+		result[key] = append(result[key], placeSummary{
+			ID:         formatUUID(plID),
+			Name:       plName,
+			Type:       plType,
 			DistanceM:  distM,
 			ListingURL: listingURL,
 		})

@@ -1,8 +1,8 @@
 -- Seed catalog.items — four v1 placeholder products.
--- Maker UUIDs are hardcoded. Category UUIDs are looked up by path.
+-- Producer UUIDs are hardcoded. Category UUIDs are looked up by path.
 -- Dollar-quote tags: $d$ = description text, $j$ = jsonb literals.
 
-INSERT INTO catalog.items (id, maker_id, category_id, name, description, price_cents, attributes, details)
+INSERT INTO catalog.items (id, producer_id, category_id, name, description, price_cents, attributes, details)
 SELECT
     'f3000001-1234-0000-0000-000000000001',
     'f1000001-c0ff-0000-0000-000000000001',
@@ -15,7 +15,7 @@ SELECT
 FROM catalog.categories WHERE path = 'food.coffee.whole_bean'
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO catalog.items (id, maker_id, category_id, name, description, price_cents, attributes, details)
+INSERT INTO catalog.items (id, producer_id, category_id, name, description, price_cents, attributes, details)
 SELECT
     'f3000001-1234-0000-0000-000000000002',
     'f1000001-c0ff-0000-0000-000000000002',
@@ -28,7 +28,7 @@ SELECT
 FROM catalog.categories WHERE path = 'food.coffee.whole_bean'
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO catalog.items (id, maker_id, category_id, name, description, price_cents, attributes, details)
+INSERT INTO catalog.items (id, producer_id, category_id, name, description, price_cents, attributes, details)
 SELECT
     'f3000001-1234-0000-0000-000000000003',
     'f1000001-c0ff-0000-0000-000000000003',
@@ -41,7 +41,7 @@ SELECT
 FROM catalog.categories WHERE path = 'apparel.unisex.bottoms'
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO catalog.items (id, maker_id, category_id, name, description, price_cents, attributes, details)
+INSERT INTO catalog.items (id, producer_id, category_id, name, description, price_cents, attributes, details)
 SELECT
     'f3000001-1234-0000-0000-000000000004',
     'f1000001-c0ff-0000-0000-000000000004',
