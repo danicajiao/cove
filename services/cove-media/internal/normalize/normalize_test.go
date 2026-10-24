@@ -11,7 +11,7 @@ import (
 
 	"github.com/davidbyttow/govips/v2/vips"
 
-	"github.com/danicajiao/cove/services/cove-image/internal/normalize"
+	"github.com/danicajiao/cove/services/cove-media/internal/normalize"
 )
 
 // TestMain initialises and shuts down the libvips runtime for the whole test

@@ -13,19 +13,19 @@ RUN apt-get update \
 
 WORKDIR /build
 
-# Shared module first. The replace directive in services/cove-image/go.mod
+# Shared module first. The replace directive in services/cove-media/go.mod
 # points at ../../packages/imgproxy, so it must exist on disk before `go build`
 # resolves it. The container layout mirrors the repo so the relative path lines up.
 COPY packages/imgproxy/ ./packages/imgproxy/
 
 # Service module files next, so the dependency-download layer caches
 # independently of service source changes.
-COPY services/cove-image/go.mod services/cove-image/go.sum ./services/cove-image/
-WORKDIR /build/services/cove-image
+COPY services/cove-media/go.mod services/cove-media/go.sum ./services/cove-media/
+WORKDIR /build/services/cove-media
 RUN go mod download
 
 # Service source.
-COPY services/cove-image/ ./
+COPY services/cove-media/ ./
 
 # COMMIT_SHA is injected by CI via --build-arg so /health reports the running commit.
 ARG COMMIT_SHA=dev
@@ -33,8 +33,8 @@ ARG COMMIT_SHA=dev
 # CGO_ENABLED=1 is required — govips links against the libvips C library.
 RUN CGO_ENABLED=1 GOOS=linux go build \
     -ldflags "-X main.commitSHA=${COMMIT_SHA}" \
-    -o /build/cove-image \
-    ./cmd/image/
+    -o /build/cove-media \
+    ./cmd/media/
 
 # Stage 2 — Run
 # debian:bookworm-slim + libvips42 (runtime only, no dev headers or compiler).
@@ -46,8 +46,8 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends libvips42 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /build/cove-image /cove-image
+COPY --from=builder /build/cove-media /cove-media
 
 EXPOSE 8080
 
-ENTRYPOINT ["/cove-image"]
+ENTRYPOINT ["/cove-media"]

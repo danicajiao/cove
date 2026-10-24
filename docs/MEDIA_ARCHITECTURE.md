@@ -1,6 +1,6 @@
 # Media Architecture
 
-> **Status:** Phase 2 complete. `cove-image` is deployed and handling image uploads and signed-URL delivery. The full variant-serving pipeline (imgproxy + Cloudflare CDN) and the Postgres `catalog.media` table are Phase 3 work — those sections document the target design. v1 covers item images only; videos and documents are deferred.
+> **Status:** Phase 2 complete. `cove-media` is deployed and handling image uploads and signed-URL delivery. The full variant-serving pipeline (imgproxy + Cloudflare CDN) and the Postgres `catalog.media` table are Phase 3 work — those sections document the target design. v1 covers item images only; videos and documents are deferred.
 
 ## Contents
 
@@ -36,7 +36,7 @@ This doc describes the system that delivers all of that. For the broader data mo
 
 ## Phase 2 signed-URL endpoint — lifecycle
 
-`cove-image` exposes `GET /images/{filename}/url`, which returns a short-lived HMAC-SHA256 signed imgproxy URL (1 hr TTL). This is the endpoint the iOS app calls today via `CoveAPIClient.imageURL(filename:width:height:)`.
+`cove-media` exposes `GET /images/{filename}/url`, which returns a short-lived HMAC-SHA256 signed imgproxy URL (1 hr TTL). This is the endpoint the iOS app calls today via `CoveAPIClient.imageURL(filename:width:height:)`.
 
 **Phase 2 role:** interim mechanism — lets the iOS app fetch images before `cove-catalog` exists to embed signed URLs in its responses.
 
@@ -60,7 +60,7 @@ The principle that ties them together: **one source of truth, infinite derived v
 
 ```mermaid
 flowchart LR
-    Producer["Producer app"] -->|"POST /images (bytes)"| CImg["cove-image<br/>rotate · strip EXIF<br/>WebP q90 · SHA-256"]
+    Producer["Producer app"] -->|"POST /images (bytes)"| CImg["cove-media<br/>rotate · strip EXIF<br/>WebP q90 · SHA-256"]
     CImg -->|"images/{sha256}.webp"| Garage[("Garage · cove-media<br/>canonical original")]
     Client["iOS app"] -->|"signed variant URL"| CF{"Cloudflare edge<br/>cache hit?"}
     CF -->|hit| Client
@@ -79,7 +79,7 @@ The fields this pipeline relies on: `media_key` (the content-addressed Garage ob
 
 Notes:
 
-- **`media_key` is content-addressed.** `cove-image` writes objects under `<sha256-of-bytes>.webp`, so the same upload twice never wastes storage and never overwrites a different image.
+- **`media_key` is content-addressed.** `cove-media` writes objects under `<sha256-of-bytes>.webp`, so the same upload twice never wastes storage and never overwrites a different image.
 - **`width` / `height` are source dimensions.** Clients use these to reserve layout space *before* the image loads, eliminating layout shift in list views.
 - **No `image_key` column on `catalog.items`.** The primary image is `WHERE role = 'primary'` on this table; list queries pull it via a `LATERAL JOIN`.
 - **`ON DELETE CASCADE`.** Deleting an item removes its media rows automatically. (The Garage objects themselves are pruned by a separate cleanup job — see "Garbage collection" below.)
@@ -124,7 +124,7 @@ All variants resize with `fill` mode (crop overflow to exact square dimensions).
 
 When the future web client needs `2k` (2048 × 2048) for retina laptops:
 
-1. Add the row to the catalog (single config value in `cove-catalog` / `cove-image`)
+1. Add the row to the catalog (single config value in `cove-catalog` / `cove-media`)
 2. Server starts including `2k` in response shapes that already return the full set (or add it to specific endpoints)
 3. Clients that know about it use it; clients that don't ignore it
 
@@ -279,7 +279,7 @@ For a future web client, the same response shape maps directly to `<picture>` wi
 
 Producers upload once; the server handles everything that needs to be identical across items.
 
-### Minimum requirements (enforced server-side in `cove-image`)
+### Minimum requirements (enforced server-side in `cove-media`)
 
 | Requirement | Value | Why |
 |---|---|---|
@@ -293,7 +293,7 @@ These are returned in a structured error response when violated so the client ca
 
 ### Normalization pipeline
 
-After accepting the upload, `cove-image` runs the bytes through libvips before writing to Garage:
+After accepting the upload, `cove-media` runs the bytes through libvips before writing to Garage:
 
 ```
 1. Decode source format            (handles JPEG, PNG, WebP — govips/libvips)
@@ -468,7 +468,7 @@ The first two are normal cache-warm scenarios. The third is operationally signif
 
 ## Pre-warming
 
-Optionally, `cove-image` can pre-warm Cloudflare's cache right after a successful upload:
+Optionally, `cove-media` can pre-warm Cloudflare's cache right after a successful upload:
 
 ```go
 go func(key string) {
