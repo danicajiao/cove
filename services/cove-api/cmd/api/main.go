@@ -56,10 +56,11 @@ func main() {
 
 		// Internal service URLs — default to the in-cluster Service names,
 		// which resolve within the same Kubernetes namespace without a full
-		// DNS path (e.g. http://cove-item:8080 resolves to
-		// cove-item.cove-staging.svc.cluster.local in staging).
-		coveImageURL := envOr("COVE_IMAGE_URL", "http://cove-image:8080")
-		coveItemURL := envOr("COVE_ITEM_URL", "http://cove-item:8080")
+		// DNS path (e.g. http://cove-catalog:8080 resolves to
+		// cove-catalog.cove-staging.svc.cluster.local in staging).
+		coveMediaURL := envOr("COVE_MEDIA_URL", "http://cove-media:8080")
+		coveCatalogURL := envOr("COVE_CATALOG_URL", "http://cove-catalog:8080")
+		coveDirectoryURL := envOr("COVE_DIRECTORY_URL", "http://cove-directory:8080")
 		coveUserURL := envOr("COVE_USER_URL", "http://cove-user:8080")
 
 		// All routes except /health and /i/* are protected by Firebase
@@ -69,21 +70,24 @@ func main() {
 		r.Group(func(r chi.Router) {
 			r.Use(covauth.Middleware(authClient))
 
-			// cove-image: signed imgproxy URL generation.
-			imgHandler := uidProxy("cove-image", coveImageURL)
-			r.Handle("/images", imgHandler)
-			r.Handle("/images/*", imgHandler)
+			// cove-media: image uploads and signed imgproxy URL generation.
+			mediaHandler := uidProxy("cove-media", coveMediaURL)
+			r.Handle("/images", mediaHandler)
+			r.Handle("/images/*", mediaHandler)
 
-			// cove-item: discovery, category tree, item/maker/storefront detail.
-			itemHandler := uidProxy("cove-item", coveItemURL)
-			r.Handle("/discovery", itemHandler)
-			r.Handle("/categories", itemHandler)
-			r.Handle("/items/*", itemHandler)
-			r.Handle("/makers/*", itemHandler)
-			r.Handle("/storefronts/*", itemHandler)
+			// cove-catalog: discovery, category tree, item detail.
+			catalogHandler := uidProxy("cove-catalog", coveCatalogURL)
+			r.Handle("/discovery", catalogHandler)
+			r.Handle("/categories", catalogHandler)
+			r.Handle("/items/*", catalogHandler)
 
-			// cove-user: profile, favorites, follows, interests, attention
-			// events, and personalized category recommendations.
+			// cove-directory: producer and place detail.
+			directoryHandler := uidProxy("cove-directory", coveDirectoryURL)
+			r.Handle("/producers/*", directoryHandler)
+			r.Handle("/places/*", directoryHandler)
+
+			// cove-user: profile, favorites, follows, interests, activity,
+			// and personalized category recommendations.
 			userHandler := uidProxy("cove-user", coveUserURL)
 			r.Handle("/users/*", userHandler)
 			r.Handle("/recommendations/*", userHandler)
