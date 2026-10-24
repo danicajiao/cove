@@ -118,7 +118,7 @@ See [Category Taxonomy](CATEGORY_TAXONOMY.md#places-reach-eat--drink-three-ways)
 | `cove-catalog` | `services/cove-catalog/` | Categories, items, availability, trust signals, media metadata, and the discovery endpoint (`GET /discovery`). Owns the `catalog` schema; reads `directory` for discovery. |
 | `cove-directory` | `services/cove-directory/` | Producers, places and place categories: `GET /producers/{id}`, `GET /places/{id}`, and next places by category and places for you. Owns the `directory` schema; reads `catalog` for signals, items sold at a place, and category matching. Self-serve onboarding and listing management land here later. |
 | `cove-user` | `services/cove-user/` | User profiles, interest management, `GET /recommendations/categories` (level 1 home shelf ranking), `POST /users/me/activity` (attention activity). |
-| `cove-image` | `services/cove-image/` | Authenticated image uploads to Garage and signed-URL fetch via imgproxy. Stateless. |
+| `cove-media` | `services/cove-media/` | Authenticated image uploads to Garage and signed-URL fetch via imgproxy. Stateless. |
 **Ownership rule:** each service writes only its own schema. Reads across schemas are allowed and granted explicitly: `cove-catalog` reads `directory` for discovery, `cove-directory` reads `catalog` for place and producer pages, and `cove-user` reads both. Directory data is seeded by migrations until self-serve onboarding ships.
 
 The iOS app uses `swift-openapi-generator` to produce a typed Swift client per service. ViewModels never construct URLs or call `URLSession` directly — they consume repository protocols backed by the generated clients (see [iOS App Architecture](IOS_APP_ARCHITECTURE.md)).

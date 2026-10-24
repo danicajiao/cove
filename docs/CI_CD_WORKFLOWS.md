@@ -149,22 +149,22 @@ To release to App Store, manually trigger the workflow from GitHub Actions UI.
 ### 5. CI - Services (`ci-services.yml`)
 
 **Triggers:**
-- Pull requests touching `services/cove-api/**`, `services/cove-image/**`, `services/cove-catalog/**`, `services/cove-directory/**`, `services/cove-user/**`, or `packages/imgproxy/**`
+- Pull requests touching `services/cove-api/**`, `services/cove-media/**`, `services/cove-catalog/**`, `services/cove-directory/**`, `services/cove-user/**`, or `packages/imgproxy/**`
 - Pushes to `main` touching those paths
 - Manual `workflow_dispatch` (useful for bootstrapping GAR before an integration branch merges)
 
 **Concurrency:** Cancels in-progress runs for the same workflow + ref on new pushes.
 
-**Jobs:** Six jobs run in parallel — one per service (`cove-api`, `cove-image`, `cove-catalog`, `cove-directory`, `cove-user`) plus one for the shared `packages/imgproxy` module.
+**Jobs:** Six jobs run in parallel — one per service (`cove-api`, `cove-media`, `cove-catalog`, `cove-directory`, `cove-user`) plus one for the shared `packages/imgproxy` module.
 
-**What each service job does (`cove-api`, `cove-image`, `cove-catalog`, `cove-directory`, `cove-user`):**
+**What each service job does (`cove-api`, `cove-media`, `cove-catalog`, `cove-directory`, `cove-user`):**
 
 1. Set up Go (version from `go.mod`)
 2. Run `go test ./...` and `go vet ./...`
 3. **On main / `workflow_dispatch` only:** Authenticate to GCP via Workload Identity Federation, configure Docker, build and push image to Google Artifact Registry (GAR) as `sha-<full-commit-sha>`
 4. **On PRs:** Build only (no push) — verifies the Dockerfile and that the service compiles
 
-**`packages/imgproxy` job:** Runs `go test ./...` and `go vet ./...` on the shared imgproxy signing library. No Docker build or GAR push — `packages/imgproxy` is a Go module included in the build context of `cove-image`, `cove-catalog` and `cove-directory`, not a deployed service.
+**`packages/imgproxy` job:** Runs `go test ./...` and `go vet ./...` on the shared imgproxy signing library. No Docker build or GAR push — `packages/imgproxy` is a Go module included in the build context of `cove-media`, `cove-catalog` and `cove-directory`, not a deployed service.
 
 After all five jobs succeed on main or `workflow_dispatch`, a sixth job (`bump-overlay-tags`) opens a PR against `danicajiao/homelab` that bumps the Kustomize overlay image tags to the new SHA. On main it updates both staging and prod overlays; on other branches (e.g. integration branch `workflow_dispatch`) it updates staging only.
 
@@ -176,19 +176,19 @@ After all five jobs succeed on main or `workflow_dispatch`, a sixth job (`bump-o
 
 ### 6. CI - OpenAPI Lint (`ci-openapi.yml`)
 
-**Trigger:** Pull requests touching `services/cove-api/api/**`, `services/cove-image/api/**`, `services/cove-catalog/api/**`, `services/cove-directory/api/**`, or `services/cove-user/api/**`
+**Trigger:** Pull requests touching `services/cove-api/api/**`, `services/cove-media/api/**`, `services/cove-catalog/api/**`, `services/cove-directory/api/**`, or `services/cove-user/api/**`
 
 **Purpose:** Lint all OpenAPI specs for validity and style using [Redocly CLI](https://redocly.com/docs/cli/).
 
 **Steps:**
 1. Install `@redocly/cli` (latest)
 2. Lint `services/cove-api/api/openapi.yaml` using `services/cove-api/redocly.yaml`
-3. Lint `services/cove-image/api/openapi.yaml` using `services/cove-image/redocly.yaml`
+3. Lint `services/cove-media/api/openapi.yaml` using `services/cove-media/redocly.yaml`
 4. Lint `services/cove-catalog/api/openapi.yaml` using `services/cove-catalog/redocly.yaml`
 5. Lint `services/cove-directory/api/openapi.yaml` using `services/cove-directory/redocly.yaml`
 6. Lint `services/cove-user/api/openapi.yaml` using `services/cove-user/redocly.yaml`
 
-This workflow runs on PRs only — there is no main-push gate for spec linting. All five service specs (`cove-api`, `cove-image`, `cove-catalog`, `cove-directory`, `cove-user`) are in the path filter and linted.
+This workflow runs on PRs only — there is no main-push gate for spec linting. All five service specs (`cove-api`, `cove-media`, `cove-catalog`, `cove-directory`, `cove-user`) are in the path filter and linted.
 
 ---
 

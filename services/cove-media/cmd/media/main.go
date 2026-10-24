@@ -16,13 +16,13 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/danicajiao/cove/packages/imgproxy"
-	"github.com/danicajiao/cove/services/cove-image/internal/normalize"
-	"github.com/danicajiao/cove/services/cove-image/internal/storage"
+	"github.com/danicajiao/cove/services/cove-media/internal/normalize"
+	"github.com/danicajiao/cove/services/cove-media/internal/storage"
 )
 
 // commitSHA is set at build time via ldflags:
 //
-//	go build -ldflags "-X main.commitSHA=$(git rev-parse --short HEAD)" ./cmd/image/
+//	go build -ldflags "-X main.commitSHA=$(git rev-parse --short HEAD)" ./cmd/media/
 //
 // It defaults to "dev" for local builds where the flag is not supplied.
 var commitSHA = "dev"
@@ -115,14 +115,14 @@ func main() {
 		port = "8080"
 	}
 
-	log.Printf("cove-image listening on :%s", port)
+	log.Printf("cove-media listening on :%s", port)
 	if err := http.ListenAndServe(":"+port, r); err != nil {
 		log.Fatalf("server error: %v", err)
 	}
 }
 
 // uidMiddleware rejects requests that do not carry a non-empty X-Cove-Uid
-// header with 401 Unauthorized.  cove-image does NOT validate Firebase tokens
+// header with 401 Unauthorized.  cove-media does NOT validate Firebase tokens
 // itself — it trusts the UID injected by the upstream cove-api gateway.
 func uidMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -237,7 +237,7 @@ type imageURLResponse struct {
 }
 
 // imageURLHandler returns a signed imgproxy URL for the requested image and
-// resize parameters. The client follows the URL directly — cove-image is not
+// resize parameters. The client follows the URL directly — cove-media is not
 // in the image bytes' hot path.
 //
 // Route: GET /images/{filename}/url
@@ -297,7 +297,7 @@ func imageURLHandler(signer *imgproxy.Signer) http.HandlerFunc {
 // healthHandler returns 200 with a JSON body identifying the service and Git commit SHA.
 func healthHandler(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{
-		"service": "cove-image",
+		"service": "cove-media",
 		"status":  "ok",
 		"commit":  commitSHA,
 	})

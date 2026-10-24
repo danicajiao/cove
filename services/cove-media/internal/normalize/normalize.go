@@ -1,4 +1,4 @@
-// Package normalize implements the image normalization pipeline for cove-image.
+// Package normalize implements the image normalization pipeline for cove-media.
 // It accepts raw upload bytes (JPEG, PNG, or WebP) and produces a WebP-encoded
 // output with EXIF metadata stripped and the EXIF orientation corrected.
 //

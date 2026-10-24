@@ -1,5 +1,5 @@
 rules:
-  # Not applicable — cove-image is a private internal service, not a public API.
+  # Not applicable — cove-media is a private internal service, not a public API.
   info-license: off
 
   # localhost:8080 is a legitimate local development server, not an example placeholder.
