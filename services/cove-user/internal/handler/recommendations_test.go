@@ -165,7 +165,7 @@ func TestRecommendedCategoriesHandler_Empty(t *testing.T) {
 
 func TestRecommendedCategoriesHandler_LevelOneOnly(t *testing.T) {
 	// Guard the query's contract: level 1 only, with engagement rolled up to the
-	// level 1 ancestor and item events counted through the item's category.
+	// level 1 ancestor and item activity counted through the item's category.
 	var gotSQL string
 	deps := &Deps{
 		DB: &mockStore{
