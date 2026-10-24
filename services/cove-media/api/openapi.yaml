@@ -1,7 +1,7 @@
 openapi: "3.1.0"
 
 info:
-  title: cove-image
+  title: cove-media
   version: "0.1.0"
   description: |
     Image upload and processing service for Cove.
@@ -15,7 +15,7 @@ info:
     Full spec (including imgproxy delivery endpoints) is tracked in issue #242.
 
 servers:
-  - url: http://cove-image.cove-image.svc.cluster.local:8080
+  - url: http://cove-media.cove-media.svc.cluster.local:8080
     description: In-cluster (default)
   - url: http://localhost:8080
     description: Local development
@@ -45,7 +45,7 @@ paths:
         Returns a short-lived signed URL that the client can follow to fetch a
         resized/re-encoded variant of the image directly from imgproxy.
 
-        cove-image is not in the image bytes' hot path — it only generates the
+        cove-media is not in the image bytes' hot path — it only generates the
         HMAC-SHA256 signature and returns the URL. The client fetches the image
         by following the URL, which is routed through the cove-api /i/* proxy
         to the in-cluster imgproxy service.
@@ -55,7 +55,7 @@ paths:
         (configurable via the IMGPROXY_URL_TTL environment variable).
 
         Choice rationale (signed-URL vs proxied-serve): the signed-URL approach
-        keeps cove-image out of the image bytes' hot path and lets imgproxy serve
+        keeps cove-media out of the image bytes' hot path and lets imgproxy serve
         directly, improving latency. Cloudflare caches the resized WebP responses
         at the edge, so subsequent requests for the same transform are free.
       parameters:
@@ -208,7 +208,7 @@ components:
       properties:
         service:
           type: string
-          example: cove-image
+          example: cove-media
         status:
           type: string
           example: ok

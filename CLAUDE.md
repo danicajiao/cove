@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Cove is a monorepo containing the Cove iOS app and (eventually) a web client, backend services, and shared packages. The iOS app uses SwiftUI with MVVM, Firebase (Auth, Firestore), Swift Package Manager, and targets iOS 26+. Firebase Storage was retired in Phase 2; images are served through the `cove-image` service.
+Cove is a monorepo containing the Cove iOS app and (eventually) a web client, backend services, and shared packages. The iOS app uses SwiftUI with MVVM, Firebase (Auth, Firestore), Swift Package Manager, and targets iOS 26+. Firebase Storage was retired in Phase 2; images are served through the `cove-media` service.
 
 **Repo layout:**
 
@@ -12,7 +12,7 @@ cove/
 │   └── ios/                # Swift / SwiftUI iOS app — see apps/ios/Cove/
 ├── services/               # Backend services
 │   ├── cove-api/           # Go gateway service (Phase 1) — see services/cove-api/
-│   └── cove-image/         # Go image service (Phase 2) — see services/cove-image/
+│   └── cove-media/         # Go image service (Phase 2) — see services/cove-media/
 ├── packages/               # Shared code (api-schema, design-tokens — planned)
 └── docs/                   # Cross-cutting product/architecture docs
 ```
@@ -104,7 +104,7 @@ The app talks to two completely independent backends. Never mix them up:
 | Firebase | Firebase iOS SDK (`FirebaseAuth`, `FirebaseFirestore`) | Auth, Firestore data |
 | cove-api gateway | `CoveAPIClient` | All gateway endpoints, including image loading via `CoveAPIImageRepository` |
 
-Note: `FirebaseStorage` was retired in Phase 2 and is no longer linked in the iOS Xcode target. All image loading now goes through `CoveAPIClient` → `cove-api` → `cove-image`.
+Note: `FirebaseStorage` was retired in Phase 2 and is no longer linked in the iOS Xcode target. All image loading now goes through `CoveAPIClient` → `cove-api` → `cove-media`.
 
 ### CoveAPIClient — the only path to cove-api
 

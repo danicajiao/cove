@@ -56,7 +56,7 @@ final class CoveAPIClient: @unchecked Sendable {
 
     /// Returns a signed imgproxy URL for the image stored at `filename` in Garage.
     ///
-    /// The URL is valid for 1 hour (configurable via `IMGPROXY_URL_TTL` on cove-image)
+    /// The URL is valid for 1 hour (configurable via `IMGPROXY_URL_TTL` on cove-media)
     /// and can be passed directly to `AsyncImage(url:)`. imgproxy resizes the image to
     /// the requested dimensions on first fetch; Cloudflare caches the transform at the edge.
     ///

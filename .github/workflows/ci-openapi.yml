@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - 'services/cove-api/api/**'
-      - 'services/cove-image/api/**'
+      - 'services/cove-media/api/**'
       - 'services/cove-catalog/api/**'
       - 'services/cove-directory/api/**'
       - 'services/cove-user/api/**'
@@ -25,8 +25,8 @@ jobs:
       - name: Lint cove-api openapi.yaml
         run: redocly lint --config services/cove-api/redocly.yaml services/cove-api/api/openapi.yaml
 
-      - name: Lint cove-image openapi.yaml
-        run: redocly lint --config services/cove-image/redocly.yaml services/cove-image/api/openapi.yaml
+      - name: Lint cove-media openapi.yaml
+        run: redocly lint --config services/cove-media/redocly.yaml services/cove-media/api/openapi.yaml
 
       - name: Lint cove-catalog openapi.yaml
         run: redocly lint --config services/cove-catalog/redocly.yaml services/cove-catalog/api/openapi.yaml

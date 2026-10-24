@@ -1,4 +1,4 @@
-module github.com/danicajiao/cove/services/cove-image
+module github.com/danicajiao/cove/services/cove-media
 
 go 1.25.0
 
