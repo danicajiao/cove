@@ -1,6 +1,6 @@
 # Marketplace Architecture
 
-> **Status:** Canonical data-model + services document (October 2026). This revision describes the producer/place model from epic #393; the code rename lands in #395, #397 and #398. Phase 3 is complete — `cove-item` and `cove-user` are deployed to `cove-staging` (prod promotion follows the integration-branch merge to `main`) and the iOS app calls them via the cove-api gateway. Firebase Firestore and Storage have been retired. For cluster and phase plan see [Backend Infrastructure](BACKEND_INFRASTRUCTURE.md); for Postgres mechanics see [Postgres Primer](POSTGRES_PRIMER.md); for the image pipeline see [Media Architecture](MEDIA_ARCHITECTURE.md).
+> **Status:** Canonical data-model + services document (October 2026). This revision describes the producer/place model from epic #393, including the split of `cove-item` into `cove-catalog` and `cove-directory` (#413); the gateway, CI and homelab changes land in #398, #415 and #416. Phase 3 is complete — `cove-catalog` and `cove-user` are deployed to `cove-staging` (prod promotion follows the integration-branch merge to `main`) and the iOS app calls them via the cove-api gateway. Firebase Firestore and Storage have been retired. For cluster and phase plan see [Backend Infrastructure](BACKEND_INFRASTRUCTURE.md); for Postgres mechanics see [Postgres Primer](POSTGRES_PRIMER.md); for the image pipeline see [Media Architecture](MEDIA_ARCHITECTURE.md).
 
 ## Contents
 
@@ -115,12 +115,11 @@ See [Category Taxonomy](CATEGORY_TAXONOMY.md#places-reach-eat--drink-three-ways)
 | Service | Path | Responsibility |
 |---|---|---|
 | `cove-api` | `services/cove-api/` | Single ingress (BFF gateway). Validates Firebase ID tokens, routes to backend services, forwards UID via `X-Cove-Uid`. |
-| `cove-item` | `services/cove-item/` | Item ingestion, category catalog, and the discovery endpoint (`GET /discovery`). Reads the `catalog` and `directory` schemas. |
+| `cove-catalog` | `services/cove-catalog/` | Categories, items, availability, trust signals, media metadata, and the discovery endpoint (`GET /discovery`). Owns the `catalog` schema; reads `directory` for discovery. |
+| `cove-directory` | `services/cove-directory/` | Producers, places and place categories: `GET /producers/{id}`, `GET /places/{id}`, and next places by category and places for you. Owns the `directory` schema; reads `catalog` for signals, items sold at a place, and category matching. Self-serve onboarding and listing management land here later. |
 | `cove-user` | `services/cove-user/` | User profiles, interest management, `GET /recommendations/categories` (level 1 home shelf ranking), `POST /users/me/activity` (attention activity). |
 | `cove-image` | `services/cove-image/` | Authenticated image uploads to Garage and signed-URL fetch via imgproxy. Stateless. |
-| `cove-directory` | `services/cove-directory/` (future) | Self-serve onboarding, producer/place profile management, signal verification. Takes over writes to the `directory` schema when it ships. |
-
-**v1 service ownership note:** `cove-item` owns the discovery surface for v1, including reading the `directory` schema (producers + places) which is seeded once during migration. When `cove-directory` ships (onboarding), it takes over writes to `directory` via a permissions flip — `cove-item` keeps SELECT for discovery. This mirrors the read-only pre-positioning pattern.
+**Ownership rule:** each service writes only its own schema. Reads across schemas are allowed and granted explicitly: `cove-catalog` reads `directory` for discovery, `cove-directory` reads `catalog` for place and producer pages, and `cove-user` reads both. Directory data is seeded by migrations until self-serve onboarding ships.
 
 The iOS app uses `swift-openapi-generator` to produce a typed Swift client per service. ViewModels never construct URLs or call `URLSession` directly — they consume repository protocols backed by the generated clients (see [iOS App Architecture](IOS_APP_ARCHITECTURE.md)).
 
@@ -132,8 +131,8 @@ All v1 services share one CNPG `Cluster` (`cove-db`) and one database (`cove`), 
 
 | Schema | Owning service | Tables |
 |---|---|---|
-| `directory` | `cove-directory` (future); read-only from `cove-item` in v1 | `producers`, `places`, `place_categories` |
-| `catalog` | `cove-item` | `categories`, `items`, `availability`, `media`, `signals`, `entity_signals` |
+| `directory` | `cove-directory` | `producers`, `places`, `place_categories` |
+| `catalog` | `cove-catalog` | `categories`, `items`, `availability`, `media`, `signals`, `entity_signals` |
 | `profile` | `cove-user` | `users`, `user_flags`, `favorites`, `follows`, `interests`, `activity` |
 
 ### Why one cluster, not one per service
@@ -171,7 +170,7 @@ flowchart LR
     availability -->|item_id| items
     availability -->|place_id| places
     place_categories -->|place_id| places
-    place_categories -->|category_id| categories
+    place_categories -.->|"category_id (plain ID, no FK)"| categories
     entity_signals -->|signal_id| signals
     entity_signals -.->|"polymorphic: exactly one of<br/>producer_id / place_id / item_id"| producers
     entity_signals -.-> places
@@ -493,18 +492,27 @@ CREATE SCHEMA directory;
 CREATE SCHEMA catalog;
 CREATE SCHEMA profile;
 
--- v1 service roles. cove_directory is NOT created yet — the directory schema
--- exists but cove-item reads it until cove-directory ships.
-CREATE ROLE cove_item LOGIN PASSWORD :'item_password';
-CREATE ROLE cove_user LOGIN PASSWORD :'user_password';
+-- One role per service. Roles are created by the CNPG bootstrap; schemas,
+-- tables and grants by each service's migrations (cove-directory, then
+-- cove-catalog, then cove-user).
+CREATE ROLE cove_directory LOGIN PASSWORD :'directory_password';
+CREATE ROLE cove_catalog   LOGIN PASSWORD :'catalog_password';
+CREATE ROLE cove_user      LOGIN PASSWORD :'user_password';
 
-GRANT USAGE ON SCHEMA catalog  TO cove_item;
-GRANT USAGE ON SCHEMA profile  TO cove_user;
+GRANT USAGE ON SCHEMA directory TO cove_directory;
+GRANT USAGE ON SCHEMA catalog   TO cove_catalog;
+GRANT USAGE ON SCHEMA profile   TO cove_user;
 
--- cove_item reads + references the directory graph for discovery
-GRANT USAGE      ON SCHEMA directory                          TO cove_item;
-GRANT SELECT     ON directory.producers, directory.places   TO cove_item;
-GRANT REFERENCES ON directory.producers, directory.places   TO cove_item;
+-- cove_catalog reads + references the directory graph for discovery
+GRANT USAGE      ON SCHEMA directory                          TO cove_catalog;
+GRANT SELECT     ON directory.producers, directory.places,
+                    directory.place_categories                TO cove_catalog;
+GRANT REFERENCES ON directory.producers, directory.places   TO cove_catalog;
+
+-- cove_directory reads catalog for place and producer pages and category matching
+GRANT USAGE      ON SCHEMA catalog                            TO cove_directory;
+GRANT SELECT     ON catalog.categories, catalog.signals, catalog.entity_signals,
+                    catalog.items, catalog.availability, catalog.media TO cove_directory;
 
 -- cove_user references items + the directory graph for favorites/follows
 GRANT USAGE      ON SCHEMA catalog, directory                 TO cove_user;
@@ -513,8 +521,9 @@ GRANT SELECT     ON directory.producers, directory.places   TO cove_user;
 GRANT REFERENCES ON catalog.items                             TO cove_user;
 GRANT REFERENCES ON directory.producers, directory.places   TO cove_user;
 
-ALTER ROLE cove_item SET search_path = catalog, directory, public;
-ALTER ROLE cove_user SET search_path = profile, public;
+ALTER ROLE cove_directory SET search_path = directory, catalog, public;
+ALTER ROLE cove_catalog   SET search_path = catalog, directory, public;
+ALTER ROLE cove_user      SET search_path = profile, public;
 ```
 
 ### `directory` schema
@@ -552,9 +561,11 @@ CREATE INDEX ON directory.places    (trust_score DESC);
 
 -- Categories a place is tagged with directly: cuisine tags, and places with no items.
 -- Item roll-up through availability covers everything else. See "Place categories".
+-- category_id is a plain ID, not a foreign key, so directory never depends on catalog
+-- at migration time; a trigger rejects IDs missing from catalog.categories on write.
 CREATE TABLE directory.place_categories (
     place_id    uuid        NOT NULL REFERENCES directory.places(id) ON DELETE CASCADE,
-    category_id uuid        NOT NULL REFERENCES catalog.categories(id),
+    category_id uuid        NOT NULL,
     created_at  timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (place_id, category_id)
 );
@@ -723,7 +734,7 @@ sequenceDiagram
     participant iOS as iOS app
     participant CF as Cloudflare Tunnel<br/>api.coveapp.dev
     participant API as cove-api
-    participant Item as cove-item
+    participant Item as cove-catalog
     iOS->>CF: GET /discovery?q=ceramics&lat=..&lon=..&radius=20mi<br/>Authorization: Bearer {Firebase ID Token}
     CF->>API: forward request
     API->>API: validate Firebase ID token
@@ -777,11 +788,11 @@ See [Backend Infrastructure](BACKEND_INFRASTRUCTURE.md) for cluster topology and
 - **Multi-currency, historical pricing** — `price_cents` is informational USD
 - **Producer/place admin roles** — v1 data is seeded manually; self-serve ownership and role management ships with `cove-directory`. See below.
 
-### Producer/place ownership and admin roles (future: `cove-directory`)
+### Producer/place ownership and admin roles (future, in `cove-directory`)
 
 In mature marketplaces (DoorDash for Merchants, Etsy seller portal, Airbnb host dashboard), the supply side is managed by the producers and place operators themselves — not by the platform team. A restaurant owner logs into a merchant portal and manages their own menu, photos, and hours. Cove follows the same model: `cove-directory` is the producer/place management portal.
 
-In v1, `directory` data is seeded once via migrations and managed by Cove internally. When `cove-directory` ships, the following additive migration lands:
+In v1, `directory` data is seeded once via migrations and managed by Cove internally. When self-serve onboarding ships in `cove-directory`, the following additive migration lands:
 
 ```sql
 -- Links a platform user to a producer or place with a named role.
@@ -800,7 +811,7 @@ CREATE INDEX ON profile.memberships (producer_id);
 CREATE INDEX ON profile.memberships (place_id);
 ```
 
-This is additive — no existing tables change. `cove-directory` gets `SELECT, INSERT, UPDATE, DELETE` on `profile.memberships` and write access to `directory` (the permissions flip described in the services table above).
+This is additive — no existing tables change. `cove-directory` gets `SELECT, INSERT, UPDATE, DELETE` on `profile.memberships`; it already owns `directory`.
 
 Platform-level admin (Cove internal staff who can manage any listing) is handled separately via a `is_platform_admin` flag on `profile.users` or a dedicated internal tooling layer — not via `profile.memberships`.
 
@@ -810,9 +821,9 @@ Platform-level admin (Cove internal staff who can manage any listing) is handled
 
 Items resolved in Phase 3:
 
-1. ~~**Service ownership**~~ — resolved: `cove-item` owns the discovery surface; `cove-directory` will take over `directory` writes when it ships.
+1. ~~**Service ownership**~~ — resolved: `cove-catalog` owns `catalog` and discovery, and `cove-directory` owns `directory` (#413).
 2. ~~**PostGIS in CNPG**~~ — resolved: PostGIS extension provisioned on `cove-db` in Phase 3.
-3. ~~**Discovery and category API shape**~~ — resolved in OpenAPI specs: `GET /discovery` (cove-item), `GET /categories` (cove-item), `GET /recommendations/categories` (cove-user), `POST /users/me/events` (cove-user, renamed `/users/me/activity` in #397).
+3. ~~**Discovery and category API shape**~~ — resolved in OpenAPI specs: `GET /discovery` (cove-catalog), `GET /categories` (cove-catalog), `GET /recommendations/categories` (cove-user), `POST /users/me/events` (cove-user, renamed `/users/me/activity` in #397).
 
 Items still open:
 
@@ -847,3 +858,4 @@ Items still open:
 - **Version 4.2** (May 2026) — **Category depth + personalization.** Capped v1 taxonomy at 3 levels (`root.mid.leaf`). Added homepage category cards with a two-phase personalization model (onboarding explicit interests → behavioral attention metrics). Added `interests` and `events` tables to the `profile` schema. Documented `ProductTypes.swift` replacement by API-driven categories. Expanded Open item 4 to cover `/categories`, `/recommendations/categories`, and `/users/me/events` endpoints.
 - **Version 5.0** (June 2026) — **Phase 3 alignment.** Renamed `cove-product` → `cove-item` to reflect what shipped (item ingestion + discovery endpoint). Renamed schemas: `product` → `catalog`, `user` → `profile`; `products` table → `items`; `product_id` FKs → `item_id`; `uid` PK → surrogate `id uuid` + `auth_uid`. Updated `cove-user` responsibilities to include `GET /recommendations/categories` and `POST /users/me/events`. Noted `profile.user_flags` migration. Closed Open items 1–3 (service ownership, PostGIS, API shape). Updated iOS networking layer: Firebase implementations removed, CoveAPI implementations active. Documented Phase 3 iOS scope (InterestOnboardingView, CategoryCard, CategoryResultsView).
 - **Version 6.0** (October 2026) — **Producers and places (epic #393).** Renamed `maker` → `producer` and `storefront` → `place` everywhere, with `operated_by_maker_id` → `run_by_producer_id`; "producer" and "place" are now consumer-facing words too ("Made by", "Sold at", "Made here", "From local producers"). `items.producer_id` became nullable and `items.brand` was added (brand-only and secondhand items). Place types grew to café, restaurant, bar, bakery, dessert shop, shop, gallery, studio, market, venue and taproom, enforced by a `CHECK`; dropped the online-only place. Added `directory.place_categories` and the three ways a place reaches a category. Renamed `profile.events` → `profile.activity` and `/users/me/events` → `/users/me/activity`. Reframed Cove as local community discovery (Product Brief v1.1), and moved events, community contributions and values signals from out of scope to planned v3 work.
+- **Version 6.1** (October 2026) — **Services named after their schemas (#413).** Split `cove-item` into `cove-catalog` (catalog schema, discovery) and `cove-directory` (directory schema, producer and place endpoints), each with its own migrations, role and migration history. Migrations run directory → catalog → user. `place_categories.category_id` became a plain ID checked by a trigger, so `directory` has no foreign keys into other schemas.

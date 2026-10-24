@@ -38,9 +38,9 @@ This doc describes the system that delivers all of that. For the broader data mo
 
 `cove-image` exposes `GET /images/{filename}/url`, which returns a short-lived HMAC-SHA256 signed imgproxy URL (1 hr TTL). This is the endpoint the iOS app calls today via `CoveAPIClient.imageURL(filename:width:height:)`.
 
-**Phase 2 role:** interim mechanism — lets the iOS app fetch images before `cove-item` exists to embed signed URLs in its responses.
+**Phase 2 role:** interim mechanism — lets the iOS app fetch images before `cove-catalog` exists to embed signed URLs in its responses.
 
-**Phase 3 onwards:** `cove-item` will generate and embed pre-signed variant URLs directly in item list and detail responses. iOS will stop calling `GET /images/{filename}/url` for day-to-day image loading; the signed URL will be available in the response payload alongside the item data.
+**Phase 3 onwards:** `cove-catalog` will generate and embed pre-signed variant URLs directly in item list and detail responses. iOS will stop calling `GET /images/{filename}/url` for day-to-day image loading; the signed URL will be available in the response payload alongside the item data.
 
 **Ongoing role:** the endpoint stays deployed and useful for producer-facing preview flows — e.g., preview a just-uploaded image before it is associated with an item.
 
@@ -124,7 +124,7 @@ All variants resize with `fill` mode (crop overflow to exact square dimensions).
 
 When the future web client needs `2k` (2048 × 2048) for retina laptops:
 
-1. Add the row to the catalog (single config value in `cove-item` / `cove-image`)
+1. Add the row to the catalog (single config value in `cove-catalog` / `cove-image`)
 2. Server starts including `2k` in response shapes that already return the full set (or add it to specific endpoints)
 3. Clients that know about it use it; clients that don't ignore it
 
@@ -320,7 +320,7 @@ Upload is decoupled from item association:
 
 1. Producer app calls `POST /images` with the image bytes → response: `{ media_key, width, height }`
 2. Producer app calls `POST /items` (or `PATCH`) with the desired role: `{ media_key, role: 'primary' }`
-3. `cove-item` inserts into `media`
+3. `cove-catalog` inserts into `media`
 
 This split means a producer can upload several images and then arrange them — no need for the upload endpoint to know about items.
 
@@ -404,7 +404,7 @@ This is the most nuanced part of the architecture. Image URLs need to coexist wi
 | Producer drafts (`is_active = false`, not yet published) | Option C — short-lived signed | 1 hour, refreshed via authenticated endpoint |
 | Truly private (future: producer verification documents, receipts) | Option D — token-protected | Per-request auth, no CDN |
 
-The implementation is straightforward: `cove-item` checks the item state when constructing the URL and decides which signing mode to use. imgproxy's `IMGPROXY_TOKEN_EXP` config supports verifying the expiry portion of the signature.
+The implementation is straightforward: `cove-catalog` checks the item state when constructing the URL and decides which signing mode to use. imgproxy's `IMGPROXY_TOKEN_EXP` config supports verifying the expiry portion of the signature.
 
 ### "But the catalog is auth-only — why is the image URL public?"
 
