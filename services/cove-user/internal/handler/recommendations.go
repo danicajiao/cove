@@ -34,8 +34,8 @@ type recommendedCategoriesResponse struct {
 //  2. The remaining level 1 categories follow, ordered by global engagement,
 //     then name.
 //
-// Engagement is the count of profile.events in the last 30 days, rolled up to
-// the level 1 ancestor: an event on food.coffee.whole_bean, or on an item in
+// Engagement is the count of profile.activity in the last 30 days, rolled up to
+// the level 1 ancestor: activity on food.coffee.whole_bean, or on an item in
 // it, counts toward food. Users without a profile (or without interests) get
 // every level 1 category ordered by global engagement. Level 2 interests are
 // stored but don't affect the shelf.
@@ -63,7 +63,7 @@ func (d *Deps) RecommendedCategoriesHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// NULL user_id matches no interests or events, leaving only the global order.
+	// NULL user_id matches no interests or activity, leaving only the global order.
 	var userID *string
 	if userLookupErr == nil {
 		id := formatUUID(userIDUUID)
@@ -73,7 +73,7 @@ func (d *Deps) RecommendedCategoriesHandler(w http.ResponseWriter, r *http.Reque
 	const shelfSQL = `
 WITH recent AS (
     SELECT e.user_id, subpath(c.path, 0, 1) AS root_path
-    FROM profile.events e
+    FROM profile.activity e
     LEFT JOIN catalog.items it ON it.id = e.item_id
     JOIN catalog.categories c ON c.id = COALESCE(e.category_id, it.category_id)
     WHERE e.created_at > now() - interval '30 days'

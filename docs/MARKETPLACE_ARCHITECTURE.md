@@ -646,6 +646,15 @@ CREATE TABLE profile.users (
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- Per-user flags. A row's presence is the flag; new flags need no schema change.
+-- Current flags: interests_onboarded (set by PUT /users/me/interests).
+CREATE TABLE profile.user_flags (
+    user_id    uuid        NOT NULL REFERENCES profile.users(id) ON DELETE CASCADE,
+    flag       text        NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (user_id, flag)
+);
+
 CREATE TABLE profile.favorites (
     user_id    uuid        NOT NULL REFERENCES profile.users(id)  ON DELETE CASCADE,
     item_id    uuid        NOT NULL REFERENCES catalog.items(id)  ON DELETE CASCADE,
@@ -677,19 +686,20 @@ CREATE TABLE profile.interests (
 CREATE INDEX ON profile.interests (user_id);
 
 -- Activity — implicit behavioral signals for recommendation ranking.
--- event_type: 'category_tap' | 'item_view' | 'result_dwell' | 'search'
+-- activity_type: 'category_tap' | 'item_view' | 'result_dwell' | 'search'
 CREATE TABLE profile.activity (
-    id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id     uuid        NOT NULL REFERENCES profile.users(id) ON DELETE CASCADE,
-    event_type  text        NOT NULL,
-    category_id uuid REFERENCES catalog.categories(id),
-    item_id     uuid REFERENCES catalog.items(id),
-    metadata    jsonb       NOT NULL DEFAULT '{}', -- dwell_ms, search_query, scroll_depth, etc.
-    created_at  timestamptz NOT NULL DEFAULT now()
+    id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id       uuid        NOT NULL REFERENCES profile.users(id) ON DELETE CASCADE,
+    activity_type text        NOT NULL,
+    category_id   uuid REFERENCES catalog.categories(id),
+    item_id       uuid REFERENCES catalog.items(id),
+    metadata      jsonb       NOT NULL DEFAULT '{}', -- dwell_ms, search_query, scroll_depth, etc.
+    created_at    timestamptz NOT NULL DEFAULT now()
 );
 
 CREATE INDEX ON profile.activity (user_id, created_at DESC);
 CREATE INDEX ON profile.activity (user_id, category_id) WHERE category_id IS NOT NULL;
+CREATE INDEX ON profile.activity (user_id, item_id)     WHERE item_id     IS NOT NULL;
 ```
 
 ---
@@ -830,7 +840,7 @@ Items still open:
 4. **Trust score recomputation** — for v1 it is seeded once at seed time; define the trigger/job model for when signals change post-onboarding.
 5. **Independent-place tier** — `tier` lives on `producer`. A registered independent place (a boutique that resells, with no producer of its own) earns trust via its signals, not a tier; revisit if places need their own tier.
 6. **`details` on products vs a separate table** — folded into a `details` JSONB column here; split back out only if payloads get large enough to hurt list queries.
-7. **`user_flags` column** — `profile.user_flags` migration was added in Phase 3; document its purpose and usage once defined.
+7. **`user_flags`** — the table and its one flag (`interests_onboarded`) are documented in the `profile` schema above; #368 tracks defining further flags and their owner.
 
 ---
 
@@ -859,3 +869,4 @@ Items still open:
 - **Version 5.0** (June 2026) — **Phase 3 alignment.** Renamed `cove-product` → `cove-item` to reflect what shipped (item ingestion + discovery endpoint). Renamed schemas: `product` → `catalog`, `user` → `profile`; `products` table → `items`; `product_id` FKs → `item_id`; `uid` PK → surrogate `id uuid` + `auth_uid`. Updated `cove-user` responsibilities to include `GET /recommendations/categories` and `POST /users/me/events`. Noted `profile.user_flags` migration. Closed Open items 1–3 (service ownership, PostGIS, API shape). Updated iOS networking layer: Firebase implementations removed, CoveAPI implementations active. Documented Phase 3 iOS scope (InterestOnboardingView, CategoryCard, CategoryResultsView).
 - **Version 6.0** (October 2026) — **Producers and places (epic #393).** Renamed `maker` → `producer` and `storefront` → `place` everywhere, with `operated_by_maker_id` → `run_by_producer_id`; "producer" and "place" are now consumer-facing words too ("Made by", "Sold at", "Made here", "From local producers"). `items.producer_id` became nullable and `items.brand` was added (brand-only and secondhand items). Place types grew to café, restaurant, bar, bakery, dessert shop, shop, gallery, studio, market, venue and taproom, enforced by a `CHECK`; dropped the online-only place. Added `directory.place_categories` and the three ways a place reaches a category. Renamed `profile.events` → `profile.activity` and `/users/me/events` → `/users/me/activity`. Reframed Cove as local community discovery (Product Brief v1.1), and moved events, community contributions and values signals from out of scope to planned v3 work.
 - **Version 6.1** (October 2026) — **Services named after their schemas (#413).** Split `cove-item` into `cove-catalog` (catalog schema, discovery) and `cove-directory` (directory schema, producer and place endpoints), each with its own migrations, role and migration history. Migrations run directory → catalog → user. `place_categories.category_id` became a plain ID checked by a trigger, so `directory` has no foreign keys into other schemas.
+- **Version 6.2** (October 2026) — **cove-user rename (#397).** `profile.activity.event_type` → `activity_type`; follows target `producer_id` / `place_id`; `profile.user_flags` folded into cove-user's first migration and documented in the `profile` schema.

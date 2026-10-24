@@ -20,7 +20,7 @@ const (
 )
 
 type userProfile struct {
-	UID                string    `json:"uid"`                 // auth_uid — Firebase UID exposed as "uid" for API compatibility
+	UID                string    `json:"uid"` // auth_uid — Firebase UID exposed as "uid" for API compatibility
 	Username           string    `json:"username"`
 	CreatedAt          time.Time `json:"created_at"`
 	InterestsOnboarded bool      `json:"interests_onboarded"` // true once PUT /users/me/interests has been called
@@ -263,17 +263,17 @@ func (d *Deps) GetFollowsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	const q = `
-SELECT 'maker' AS entity_type, m.id, m.name, f.created_at
+SELECT 'producer' AS entity_type, pr.id, pr.name, f.created_at
 FROM profile.follows f
-JOIN directory.makers m ON m.id = f.maker_id
-WHERE f.user_id = $1 AND f.maker_id IS NOT NULL
+JOIN directory.producers pr ON pr.id = f.producer_id
+WHERE f.user_id = $1 AND f.producer_id IS NOT NULL
 
 UNION ALL
 
-SELECT 'storefront' AS entity_type, s.id, s.name, f.created_at
+SELECT 'place' AS entity_type, pl.id, pl.name, f.created_at
 FROM profile.follows f
-JOIN directory.storefronts s ON s.id = f.storefront_id
-WHERE f.user_id = $1 AND f.storefront_id IS NOT NULL
+JOIN directory.places pl ON pl.id = f.place_id
+WHERE f.user_id = $1 AND f.place_id IS NOT NULL
 
 ORDER BY 4 DESC`
 
@@ -311,8 +311,8 @@ ORDER BY 4 DESC`
 }
 
 type addFollowRequest struct {
-	MakerID      *string `json:"maker_id"`
-	StorefrontID *string `json:"storefront_id"`
+	ProducerID *string `json:"producer_id"`
+	PlaceID    *string `json:"place_id"`
 }
 
 // AddFollowHandler handles POST /users/me/follows.
@@ -331,22 +331,22 @@ func (d *Deps) AddFollowHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.MakerID == nil && req.StorefrontID == nil {
-		writeError(w, http.StatusBadRequest, "exactly one of maker_id or storefront_id must be provided")
+	if req.ProducerID == nil && req.PlaceID == nil {
+		writeError(w, http.StatusBadRequest, "exactly one of producer_id or place_id must be provided")
 		return
 	}
-	if req.MakerID != nil && req.StorefrontID != nil {
-		writeError(w, http.StatusBadRequest, "exactly one of maker_id or storefront_id must be provided")
+	if req.ProducerID != nil && req.PlaceID != nil {
+		writeError(w, http.StatusBadRequest, "exactly one of producer_id or place_id must be provided")
 		return
 	}
 
-	if req.MakerID != nil {
+	if req.ProducerID != nil {
 		var existing int
 		err := d.DB.QueryRow(r.Context(),
-			`SELECT COUNT(*) FROM profile.follows WHERE user_id = $1 AND maker_id = $2`,
-			userID, *req.MakerID).Scan(&existing)
+			`SELECT COUNT(*) FROM profile.follows WHERE user_id = $1 AND producer_id = $2`,
+			userID, *req.ProducerID).Scan(&existing)
 		if err != nil {
-			log.Printf("ERROR AddFollowHandler check maker user_id=%s maker=%s: %v", userID, *req.MakerID, err)
+			log.Printf("ERROR AddFollowHandler check producer user_id=%s producer=%s: %v", userID, *req.ProducerID, err)
 			writeError(w, http.StatusInternalServerError, "follow check failed")
 			return
 		}
@@ -356,20 +356,20 @@ func (d *Deps) AddFollowHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		_, err = d.DB.Exec(r.Context(),
-			`INSERT INTO profile.follows (user_id, maker_id) VALUES ($1, $2)`,
-			userID, *req.MakerID)
+			`INSERT INTO profile.follows (user_id, producer_id) VALUES ($1, $2)`,
+			userID, *req.ProducerID)
 		if err != nil {
-			log.Printf("ERROR AddFollowHandler insert maker user_id=%s maker=%s: %v", userID, *req.MakerID, err)
+			log.Printf("ERROR AddFollowHandler insert producer user_id=%s producer=%s: %v", userID, *req.ProducerID, err)
 			writeError(w, http.StatusInternalServerError, "add follow failed")
 			return
 		}
 	} else {
 		var existing int
 		err := d.DB.QueryRow(r.Context(),
-			`SELECT COUNT(*) FROM profile.follows WHERE user_id = $1 AND storefront_id = $2`,
-			userID, *req.StorefrontID).Scan(&existing)
+			`SELECT COUNT(*) FROM profile.follows WHERE user_id = $1 AND place_id = $2`,
+			userID, *req.PlaceID).Scan(&existing)
 		if err != nil {
-			log.Printf("ERROR AddFollowHandler check storefront user_id=%s sf=%s: %v", userID, *req.StorefrontID, err)
+			log.Printf("ERROR AddFollowHandler check place user_id=%s place=%s: %v", userID, *req.PlaceID, err)
 			writeError(w, http.StatusInternalServerError, "follow check failed")
 			return
 		}
@@ -379,10 +379,10 @@ func (d *Deps) AddFollowHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		_, err = d.DB.Exec(r.Context(),
-			`INSERT INTO profile.follows (user_id, storefront_id) VALUES ($1, $2)`,
-			userID, *req.StorefrontID)
+			`INSERT INTO profile.follows (user_id, place_id) VALUES ($1, $2)`,
+			userID, *req.PlaceID)
 		if err != nil {
-			log.Printf("ERROR AddFollowHandler insert storefront user_id=%s sf=%s: %v", userID, *req.StorefrontID, err)
+			log.Printf("ERROR AddFollowHandler insert place user_id=%s place=%s: %v", userID, *req.PlaceID, err)
 			writeError(w, http.StatusInternalServerError, "add follow failed")
 			return
 		}
@@ -392,7 +392,7 @@ func (d *Deps) AddFollowHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // RemoveFollowHandler handles DELETE /users/me/follows/{entityId}.
-// Tries both maker_id and storefront_id columns.
+// Tries both producer_id and place_id columns.
 func (d *Deps) RemoveFollowHandler(w http.ResponseWriter, r *http.Request) {
 	authUID := r.Header.Get("X-Cove-Uid")
 	entityID := chi.URLParam(r, "entityId")
@@ -403,9 +403,9 @@ func (d *Deps) RemoveFollowHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ct, err := d.DB.Exec(r.Context(),
-		`DELETE FROM profile.follows WHERE user_id = $1 AND maker_id = $2`, userID, entityID)
+		`DELETE FROM profile.follows WHERE user_id = $1 AND producer_id = $2`, userID, entityID)
 	if err != nil {
-		log.Printf("ERROR RemoveFollowHandler maker user_id=%s entity=%s: %v", userID, entityID, err)
+		log.Printf("ERROR RemoveFollowHandler producer user_id=%s entity=%s: %v", userID, entityID, err)
 		writeError(w, http.StatusInternalServerError, "remove follow failed")
 		return
 	}
@@ -415,9 +415,9 @@ func (d *Deps) RemoveFollowHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ct, err = d.DB.Exec(r.Context(),
-		`DELETE FROM profile.follows WHERE user_id = $1 AND storefront_id = $2`, userID, entityID)
+		`DELETE FROM profile.follows WHERE user_id = $1 AND place_id = $2`, userID, entityID)
 	if err != nil {
-		log.Printf("ERROR RemoveFollowHandler storefront user_id=%s entity=%s: %v", userID, entityID, err)
+		log.Printf("ERROR RemoveFollowHandler place user_id=%s entity=%s: %v", userID, entityID, err)
 		writeError(w, http.StatusInternalServerError, "remove follow failed")
 		return
 	}
@@ -558,24 +558,24 @@ func (d *Deps) ReplaceInterestsHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// ── Events ────────────────────────────────────────────────────────────────────
+// ── Activity ────────────────────────────────────────────────────────────────────
 
-type ingestEventRequest struct {
-	EventType  string          `json:"event_type"`
-	CategoryID *string         `json:"category_id,omitempty"`
-	ItemID     *string         `json:"item_id,omitempty"`
-	Metadata   json.RawMessage `json:"metadata,omitempty"`
+type ingestActivityRequest struct {
+	ActivityType string          `json:"activity_type"`
+	CategoryID   *string         `json:"category_id,omitempty"`
+	ItemID       *string         `json:"item_id,omitempty"`
+	Metadata     json.RawMessage `json:"metadata,omitempty"`
 }
 
-var validEventTypes = map[string]bool{
-	"category_tap":  true,
-	"item_view":     true,
-	"result_dwell":  true,
-	"search":        true,
+var validActivityTypes = map[string]bool{
+	"category_tap": true,
+	"item_view":    true,
+	"result_dwell": true,
+	"search":       true,
 }
 
-// IngestEventHandler handles POST /users/me/events.
-func (d *Deps) IngestEventHandler(w http.ResponseWriter, r *http.Request) {
+// IngestActivityHandler handles POST /users/me/activity.
+func (d *Deps) IngestActivityHandler(w http.ResponseWriter, r *http.Request) {
 	authUID := r.Header.Get("X-Cove-Uid")
 
 	userID, ok := d.lookupUserID(r, w, authUID)
@@ -583,14 +583,14 @@ func (d *Deps) IngestEventHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req ingestEventRequest
+	var req ingestActivityRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	if !validEventTypes[req.EventType] {
-		writeError(w, http.StatusBadRequest, "event_type must be one of: category_tap, item_view, result_dwell, search")
+	if !validActivityTypes[req.ActivityType] {
+		writeError(w, http.StatusBadRequest, "activity_type must be one of: category_tap, item_view, result_dwell, search")
 		return
 	}
 
@@ -600,13 +600,13 @@ func (d *Deps) IngestEventHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	const q = `
-INSERT INTO profile.events (user_id, event_type, category_id, item_id, metadata)
+INSERT INTO profile.activity (user_id, activity_type, category_id, item_id, metadata)
 VALUES ($1, $2, $3, $4, $5)`
 
-	_, err := d.DB.Exec(r.Context(), q, userID, req.EventType, req.CategoryID, req.ItemID, metadata)
+	_, err := d.DB.Exec(r.Context(), q, userID, req.ActivityType, req.CategoryID, req.ItemID, metadata)
 	if err != nil {
-		log.Printf("ERROR IngestEventHandler user_id=%s type=%s: %v", userID, req.EventType, err)
-		writeError(w, http.StatusInternalServerError, "event ingest failed")
+		log.Printf("ERROR IngestActivityHandler user_id=%s type=%s: %v", userID, req.ActivityType, err)
+		writeError(w, http.StatusInternalServerError, "activity ingest failed")
 		return
 	}
 
