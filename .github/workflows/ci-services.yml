@@ -400,6 +400,9 @@ jobs:
         run: |
           SHORT_SHA="${COMMIT_SHA:0:8}"
           NEW_TAG="sha-${COMMIT_SHA}"
+          # Every deployed service built above. Each needs an `images:` entry
+          # in every overlay, or its Deployment keeps the base tag.
+          SERVICES="cove-api cove-media cove-catalog cove-directory cove-user"
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -428,6 +431,21 @@ jobs:
             git checkout -b "${BRANCH}"
           fi
 
+          # Fail before touching anything if an overlay doesn't pin one of the
+          # services — the sed below only rewrites tags that already exist, so
+          # a missing entry would silently deploy the base tag instead.
+          MISSING=""
+          for f in $OVERLAYS; do
+            for svc in $SERVICES; do
+              grep -q "name: us-central1-docker.pkg.dev/cove-6a685/services/${svc}$" "$f" \
+                || MISSING="${MISSING} ${f}:${svc}"
+            done
+          done
+          if [ -n "$MISSING" ]; then
+            echo "::error::Overlay images entries missing for:${MISSING}"
+            exit 1
+          fi
+
           # Rewrite the tag on every `newTag: sha-...` line. Match any run of
           # non-whitespace after `sha-` (not just hex) so first-deploy
           # placeholders like `sha-placeholder` are replaced cleanly — a hex-only
@@ -450,11 +468,9 @@ jobs:
             echo "|---|---|---|"
             for f in $OVERLAYS; do
               ENV=$(echo "$f" | grep -o 'staging\|prod')
-              echo "| \`${ENV}\` | \`cove-api\` | \`${NEW_TAG}\` |"
-              echo "| \`${ENV}\` | \`cove-media\` | \`${NEW_TAG}\` |"
-              echo "| \`${ENV}\` | \`cove-catalog\` | \`${NEW_TAG}\` |"
-              echo "| \`${ENV}\` | \`cove-directory\` | \`${NEW_TAG}\` |"
-              echo "| \`${ENV}\` | \`cove-user\` | \`${NEW_TAG}\` |"
+              for svc in $SERVICES; do
+                echo "| \`${ENV}\` | \`${svc}\` | \`${NEW_TAG}\` |"
+              done
             done
             echo ""
             echo "**Source:** [danicajiao/cove@${SHORT_SHA}](https://github.com/danicajiao/cove/commit/${COMMIT_SHA})"
