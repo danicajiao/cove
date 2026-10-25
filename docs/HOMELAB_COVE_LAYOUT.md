@@ -20,7 +20,7 @@ homelab/
 │   ├── gaming/
 │   │   └── minecraft/                    # separate tenant, not Cove
 │   └── cove/
-│       ├── base/                         # cove-api (P1), cove-image + imgproxy (P2), cove-item + cove-user (P3), cove-db (CNPG cluster); each in its own subdir
+│       ├── base/                         # cove-api (P1), cove-media + imgproxy (P2), cove-catalog + cove-directory + cove-user (P3), cove-db (CNPG cluster); each in its own subdir
 │       └── overlays/
 │           ├── staging/                  # → cove-staging namespace
 │           └── prod/                     # → cove-prod namespace
@@ -60,12 +60,15 @@ Backend services live in the `danicajiao/cove` monorepo under `services/cove-<na
 | Service | Path in `danicajiao/cove` | Phase | Deployment | Implementation issue |
 |---|---|---|---|---|
 | `cove-api` | `services/cove-api/` | 1 | staging + prod | [danicajiao/cove#229](https://github.com/danicajiao/cove/issues/229) |
-| `cove-image` | `services/cove-image/` | 2 | staging + prod | [danicajiao/cove#238](https://github.com/danicajiao/cove/issues/238) |
+| `cove-media` | `services/cove-media/` | 2 | staging + prod | [danicajiao/cove#238](https://github.com/danicajiao/cove/issues/238), renamed in [danicajiao/cove#414](https://github.com/danicajiao/cove/issues/414) |
 | `imgproxy` | upstream image; HMAC signing helper in `packages/imgproxy/` | 2 | staging + prod | — |
-| `cove-item` | `services/cove-item/` | 3 | staging (prod on merge to `main`) | [danicajiao/cove#321](https://github.com/danicajiao/cove/issues/321) |
-| `cove-user` | `services/cove-user/` | 3 | staging (prod on merge to `main`) | [danicajiao/cove#322](https://github.com/danicajiao/cove/issues/322) |
+| `cove-catalog` | `services/cove-catalog/` | 3 | staging + prod | [danicajiao/cove#321](https://github.com/danicajiao/cove/issues/321), split in [danicajiao/cove#413](https://github.com/danicajiao/cove/issues/413) |
+| `cove-directory` | `services/cove-directory/` | 3 | staging + prod | [danicajiao/cove#413](https://github.com/danicajiao/cove/issues/413) |
+| `cove-user` | `services/cove-user/` | 3 | staging + prod | [danicajiao/cove#322](https://github.com/danicajiao/cove/issues/322) |
 
-`cove-api` shipped in Phase 1; `cove-image` and `imgproxy` in Phase 2; `cove-item` and `cove-user` in Phase 3 (live in `cove-staging`, promoted to `cove-prod` when the Phase 3 integration branch merges to `main`). The `cove-api` and `cove-image` issue links predate the monorepo decision and reference the original separate-repo planning tickets.
+`cove-api` shipped in Phase 1; `cove-media` (then `cove-image`) and `imgproxy` in Phase 2; `cove-user` and `cove-item` in Phase 3. Epic [danicajiao/cove#393](https://github.com/danicajiao/cove/issues/393) split `cove-item` into `cove-catalog` and `cove-directory`, renamed `cove-image` to `cove-media`, and cut both environments over in one homelab PR ([danicajiao/homelab#73](https://github.com/danicajiao/homelab/pull/73)). The `cove-api` and `cove-media` issue links predate the monorepo decision and reference the original separate-repo planning tickets.
+
+Each service has a matching CNPG role bootstrapped in `apps/cove/base/cove-db/cluster.yaml` (`cove_catalog`, `cove_directory`, `cove_user`). Services still connect as the `app` user. Both overlays must pin an `images:` tag for every service, or cove CI's bump job fails.
 
 ## Runbooks
 
