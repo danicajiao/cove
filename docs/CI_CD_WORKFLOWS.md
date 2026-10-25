@@ -166,7 +166,9 @@ To release to App Store, manually trigger the workflow from GitHub Actions UI.
 
 **`packages/imgproxy` job:** Runs `go test ./...` and `go vet ./...` on the shared imgproxy signing library. No Docker build or GAR push — `packages/imgproxy` is a Go module included in the build context of `cove-media`, `cove-catalog` and `cove-directory`, not a deployed service.
 
-After all five jobs succeed on main or `workflow_dispatch`, a sixth job (`bump-overlay-tags`) opens a PR against `danicajiao/homelab` that bumps the Kustomize overlay image tags to the new SHA. On main it updates both staging and prod overlays; on other branches (e.g. integration branch `workflow_dispatch`) it updates staging only.
+After all six jobs succeed on main or `workflow_dispatch`, a seventh job (`bump-overlay-tags`) opens a PR against `danicajiao/homelab` that bumps the Kustomize overlay image tags to the new SHA. On main it updates both staging and prod overlays; on other branches (e.g. integration branch `workflow_dispatch`) it updates staging only.
+
+The job's `SERVICES` list names the five deployed services. Before bumping, it checks that every overlay has an `images:` entry for each of them and fails if one is missing. The tag rewrite only touches existing entries, so without this check a new service would quietly deploy its base tag. When you add a service, add it to `SERVICES` and to both homelab overlays in the same change.
 
 **Required variables (not secrets):** `WIF_PROVIDER`, `WIF_SERVICE_ACCOUNT` — see [Backend Infrastructure](BACKEND_INFRASTRUCTURE.md) for the one-time GCP setup.
 
