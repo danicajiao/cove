@@ -40,7 +40,7 @@ Welcome to the documentation for the Cove iOS app.
 - **[Postgres Primer](POSTGRES_PRIMER.md)** - Schemas, indexes, EXPLAIN ANALYZE, transactions, JSONB, full-text search, and ltree — the concepts Cove's backend depends on
 - **[Media Architecture](MEDIA_ARCHITECTURE.md)** - Image storage in Garage, on-the-fly transformation via imgproxy, the variant catalog, producer upload normalization, signed-URL auth model, and Cloudflare caching
 - **[Database Migrations](DATABASE_MIGRATIONS.md)** - How to run golang-migrate against staging and production, dirty-state recovery, per-service migration tables, and superuser boundary rules
-- **[Category Taxonomy](CATEGORY_TAXONOMY.md)** - The full v1 category tree (242 nodes across 9 top-level categories), design principles for tree nodes vs attributes, and the add/remove runbook
+- **[Category Taxonomy](CATEGORY_TAXONOMY.md)** - The full v1 category tree (252 nodes across 10 top-level categories), design principles for tree nodes vs attributes, and the add/remove runbook
 
 ### Feature Planning
 - **[LLM Integration Ideas](LLM_INTEGRATION_IDEAS.md)** - Potential ways to incorporate LLMs as production features
