@@ -4,6 +4,17 @@
 -- Image keys are set at the end, from the path.
 
 INSERT INTO catalog.categories (id, name, path) VALUES
+  -- eat_drink (dishes and drinks made to order; level 2 nodes are leaves)
+  (gen_random_uuid(), 'Eat & Drink',      'eat_drink'),
+  (gen_random_uuid(), 'Cafés',            'eat_drink.cafes'),
+  (gen_random_uuid(), 'Juices',           'eat_drink.juices'),
+  (gen_random_uuid(), 'Bars',             'eat_drink.bars'),
+  (gen_random_uuid(), 'American',         'eat_drink.american'),
+  (gen_random_uuid(), 'Latin',            'eat_drink.latin'),
+  (gen_random_uuid(), 'European',         'eat_drink.european'),
+  (gen_random_uuid(), 'Mideast',          'eat_drink.mideast'),
+  (gen_random_uuid(), 'African',          'eat_drink.african'),
+  (gen_random_uuid(), 'Asian',            'eat_drink.asian'),
   -- food
   (gen_random_uuid(), 'Food',             'food'),
   (gen_random_uuid(), 'Coffee',           'food.coffee'),
