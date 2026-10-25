@@ -12,14 +12,13 @@ import Foundation
 /// ViewModels depend on this protocol rather than on a specific data source.
 /// Swap the injected implementation (Firebase, CoveAPI, mock) without touching any ViewModel.
 ///
-/// **Ordering:** `fetchHome()` and `fetchItems(inCategories:)` return results in
-/// insertion order as determined by the backing store. No stable sort is guaranteed
+/// **Ordering:** `fetchHome()` returns results in insertion order as
+/// determined by the backing store. No stable sort is guaranteed
 /// across implementations.
 ///
-/// **Polymorphism:** All methods that return `[any Item]` or `any Item` may
-/// return any concrete type conforming to `Item` (e.g. `CoffeeItem`, `MusicItem`,
-/// `ApparelItem`). Callers should use `is` / `as?` casts or the `categoryId` field
-/// to dispatch to the correct concrete type.
+/// **Polymorphism:** Methods return `[any Item]` or `any Item`. The cove-api
+/// implementation always returns `DiscoveryItem`; callers cast with `as?` to
+/// read its producer, brand, places and image variants.
 protocol ItemRepository {
     /// Fetches the full item catalogue for the home feed.
     func fetchHome() async throws -> [any Item]
@@ -31,9 +30,7 @@ protocol ItemRepository {
 
     /// Fetches the type-specific detail document for an item.
     ///
-    /// The returned `ItemDetails` concrete type is determined by the item's
-    /// `categoryId` — callers cast to `CoffeeItemDetails`, `MusicItemDetails`,
-    /// or `ApparelItemDetails` as needed.
+    /// The cove-api implementation returns `DiscoveryItemDetails`.
     func fetchDetails(for item: any Item) async throws -> any ItemDetails
 
     /// Fetches items in the same category as `categoryId`, capped at `limit` results.
@@ -42,12 +39,6 @@ protocol ItemRepository {
     /// Results may include the source item itself — callers are responsible for
     /// filtering it out if needed.
     func fetchSimilarItems(categoryId: String, limit: Int) async throws -> [any Item]
-
-    /// Fetches items whose `categoryId` is in the provided set.
-    ///
-    /// Used by `BagViewModel` to populate the "you might also like" shelf alongside
-    /// bag items. Implementations may cap the result set internally.
-    func fetchItems(inCategories categoryIds: [String]) async throws -> [any Item]
 
     /// Fetches items whose document IDs are in the provided set.
     ///

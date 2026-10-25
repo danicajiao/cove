@@ -9,7 +9,6 @@ import SwiftUI
 
 struct MainView: View {
     @EnvironmentObject var appState: AppState
-    @EnvironmentObject var bag: Bag
     @StateObject private var tabState = TabState()
 
     var body: some View {
@@ -25,13 +24,6 @@ struct MainView: View {
                     Text("Browse View")
                 }
             }
-
-            Tab("", systemImage: "bag", value: AppTab.bag) {
-                TabNavigationStack {
-                    BagView()
-                }
-            }
-            .badge(bag.totalItems)
 
             Tab("", systemImage: "heart", value: AppTab.favorites) {
                 TabNavigationStack {

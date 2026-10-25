@@ -59,7 +59,6 @@ struct CoveApp: App {
     // Inject into SwiftUI life-cycle via adaptor
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject var appState = AppState()
-    @StateObject var bag = Bag()
     @StateObject var favoritesStore = FavoritesStore()
     @StateObject private var networkMonitor = NetworkMonitor()
 
@@ -96,7 +95,6 @@ struct CoveApp: App {
             case .loggedIn:
                 MainView()
                     .environment(\.imageRepository, CoveAPIImageRepository())
-                    .environmentObject(bag)
                     .transition(.opacity)
             case .needsUsernameOnboarding:
                 UsernameOnboardingView(appState: appState)
