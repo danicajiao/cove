@@ -10,7 +10,6 @@ import Foundation
 enum AppTab {
     case home
     case browse
-    case bag
     case favorites
     case profile
 }

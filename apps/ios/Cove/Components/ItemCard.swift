@@ -29,20 +29,8 @@ struct ItemCard: View {
 
         if let discoveryItem = item as? DiscoveryItem {
             titleStr = discoveryItem.name
-            subtitleStr = discoveryItem.makerName
+            subtitleStr = discoveryItem.madeBy
             price = discoveryItem.defaultPrice
-        } else if let coffeeItem = item as? CoffeeItem {
-            titleStr = coffeeItem.info.name
-            subtitleStr = coffeeItem.info.roastery
-            price = coffeeItem.defaultPrice
-        } else if let musicItem = item as? MusicItem {
-            titleStr = musicItem.info.album
-            subtitleStr = musicItem.info.artist
-            price = musicItem.defaultPrice
-        } else if let apparelItem = item as? ApparelItem {
-            titleStr = apparelItem.info.name
-            subtitleStr = apparelItem.info.brand
-            price = apparelItem.defaultPrice
         }
     }
 
@@ -199,15 +187,22 @@ extension UIImage {
 
 #Preview {
     ItemCard(
-        item: ApparelItem(
+        item: DiscoveryItem(
             id: "12345aaa",
             createdAt: nil,
-            categoryId: "apparel category id",
+            categoryId: "",
             defaultPrice: 23,
-            defaultImageURL: "some url",
-            info: ApparelItem.ApparelInfo(brand: "Some brand", name: "Some name"),
+            defaultImageURL: "",
             isFavorite: true,
-            itemDetailsId: "12345"
+            itemDetailsId: "12345aaa",
+            name: "Southern Weather Blend",
+            producerName: "Onyx Coffee Lab",
+            producerID: nil,
+            brand: nil,
+            itemDescription: nil,
+            places: [],
+            primaryImage: nil,
+            media: []
         )
     )
 }

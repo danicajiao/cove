@@ -13,9 +13,7 @@ import Foundation
 /// `about`) are surfaced here when present; the raw blob can be accessed via
 /// `rawDetails` for richer rendering in future iterations.
 ///
-/// `ItemDetailTabs` checks for this type alongside the legacy
-/// `CoffeeItemDetails`, `MusicItemDetails`, and `ApparelItemDetails` types and
-/// renders a two-tab (Description / About) layout when detected.
+/// `ItemDetailTabs` renders it as a two-tab (Description / About) layout.
 struct DiscoveryItemDetails: ItemDetails {
     // MARK: - ItemDetails protocol
 

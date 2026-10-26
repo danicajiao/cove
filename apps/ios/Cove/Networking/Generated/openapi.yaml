@@ -2,13 +2,14 @@ openapi: "3.1.0"
 
 info:
   title: cove-api
-  version: "0.2.0"
+  version: "0.3.0"
   description: |
     Backend-for-frontend gateway for the Cove iOS app.
     Validates Firebase ID tokens and routes traffic to internal services:
-      - cove-image  →  /images/*
-      - cove-item   →  /discovery, /categories, /items/*, /makers/*, /storefronts/*
-      - cove-user   →  /users/me*, /recommendations/*
+      - cove-media      →  /images/*
+      - cove-catalog    →  /discovery, /categories, /items/*
+      - cove-directory  →  /producers/*, /places/*
+      - cove-user       →  /users/me*, /recommendations/*
 
     The gateway injects the verified Firebase UID as X-Cove-Uid on every
     forwarded request. Downstream services trust this header without
@@ -58,14 +59,14 @@ paths:
       operationId: getImageURL
       summary: Get a signed imgproxy URL for a stored image
       description: |
-        Proxied to cove-image. Returns a short-lived signed URL the iOS client
+        Proxied to cove-media. Returns a short-lived signed URL the iOS client
         can pass directly to AsyncImage. The URL routes through the /i/*
         reverse proxy to imgproxy, which resizes and re-encodes the image on
         first request; Cloudflare caches subsequent transforms at the edge.
 
         The URL embeds an `exp:` imgproxy processing option and is only valid
         until `expires_at` (default TTL: 1 hour, configurable via
-        IMGPROXY_URL_TTL on cove-image).
+        IMGPROXY_URL_TTL on cove-media).
       parameters:
         - name: filename
           in: path
@@ -127,14 +128,14 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  # ── Discovery (cove-item) ─────────────────────────────────────────────────
+  # ── Catalog (cove-catalog) ────────────────────────────────────────────────
 
   /discovery:
     get:
       operationId: getDiscovery
       summary: Discover items
       description: |
-        Proxied to cove-item. The core discovery query. Ranks items by a
+        Proxied to cove-catalog. The core discovery query. Ranks items by a
         blended score:
           score = 0.40 × trust + 0.30 × text_relevance + 0.30 × proximity
 
@@ -144,8 +145,9 @@ paths:
         Proximity scoring requires lat and lon together. radius defaults to
         50 000 m (50 km) when lat/lon are supplied without an explicit value.
 
-        Storefronts with a null location (e.g. online stores) are excluded
-        when a geo filter is active but are included in text-only queries.
+        Places with a null location (the placeholder online places) are
+        excluded when a geo filter is active but are included in text-only
+        queries.
       parameters:
         - name: q
           in: query
@@ -209,7 +211,7 @@ paths:
       operationId: getCategories
       summary: Get category tree
       description: |
-        Proxied to cove-item. Returns the full category tree (id, name, path,
+        Proxied to cove-catalog. Returns the full category tree (id, name, path,
         children) for the onboarding picker and browse surface. Results are
         ordered by ltree path.
       responses:
@@ -231,9 +233,9 @@ paths:
       operationId: getItem
       summary: Get item detail
       description: |
-        Proxied to cove-item. Returns full item detail including: all fields,
-        trust signals (item-level + maker-level + storefront-level), all
-        storefronts that carry the item, and signed imgproxy URLs for all five
+        Proxied to cove-catalog. Returns full item detail including: all
+        fields, trust signals (item-level + producer-level + place-level), all
+        places that carry the item, and signed imgproxy URLs for all five
         image variants across all media rows.
       parameters:
         - name: id
@@ -263,28 +265,30 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /makers/{id}:
+  # ── Directory (cove-directory) ────────────────────────────────────────────
+
+  /producers/{id}:
     get:
-      operationId: getMaker
-      summary: Get maker detail
+      operationId: getProducer
+      summary: Get producer detail
       description: |
-        Proxied to cove-item. Returns maker detail including: profile fields,
-        trust signals, and the list of storefronts operated by this maker.
+        Proxied to cove-directory. Returns producer detail including: profile
+        fields, trust signals, and the list of places run by this producer.
       parameters:
         - name: id
           in: path
           required: true
-          description: Maker UUID.
+          description: Producer UUID.
           schema:
             type: string
             format: uuid
       responses:
         "200":
-          description: Maker detail
+          description: Producer detail
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MakerDetail"
+                $ref: "#/components/schemas/ProducerDetail"
         "401":
           description: Unauthorized — Firebase token missing or invalid.
           content:
@@ -292,34 +296,34 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
-          description: Maker not found or inactive
+          description: Producer not found or inactive
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /storefronts/{id}:
+  /places/{id}:
     get:
-      operationId: getStorefront
-      summary: Get storefront detail
+      operationId: getPlace
+      summary: Get place detail
       description: |
-        Proxied to cove-item. Returns storefront detail including: location,
-        trust signals, and the list of items available at this storefront.
+        Proxied to cove-directory. Returns place detail including: location,
+        trust signals, and the list of items sold at this place.
       parameters:
         - name: id
           in: path
           required: true
-          description: Storefront UUID.
+          description: Place UUID.
           schema:
             type: string
             format: uuid
       responses:
         "200":
-          description: Storefront detail
+          description: Place detail
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/StorefrontDetail"
+                $ref: "#/components/schemas/PlaceDetail"
         "401":
           description: Unauthorized — Firebase token missing or invalid.
           content:
@@ -327,7 +331,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
-          description: Storefront not found or inactive
+          description: Place not found or inactive
           content:
             application/json:
               schema:
@@ -515,9 +519,9 @@ paths:
   /users/me/follows:
     get:
       operationId: getFollows
-      summary: List followed makers and storefronts
+      summary: List followed producers and places
       description: |
-        Proxied to cove-user. Returns the list of makers and storefronts the
+        Proxied to cove-user. Returns the list of producers and places the
         authenticated user follows.
       responses:
         "200":
@@ -540,10 +544,10 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
     post:
       operationId: addFollow
-      summary: Follow a maker or storefront
+      summary: Follow a producer or place
       description: |
-        Proxied to cove-user. Follows a maker or storefront. Exactly one of
-        maker_id or storefront_id must be provided. Returns 409 if already
+        Proxied to cove-user. Follows a producer or place. Exactly one of
+        producer_id or place_id must be provided. Returns 409 if already
         following.
       requestBody:
         required: true
@@ -582,15 +586,15 @@ paths:
   /users/me/follows/{entityId}:
     delete:
       operationId: removeFollow
-      summary: Unfollow a maker or storefront
+      summary: Unfollow a producer or place
       description: |
-        Proxied to cove-user. Unfollows an entity by UUID. Checks both maker
-        and storefront tables. Returns 404 if not currently following.
+        Proxied to cove-user. Unfollows an entity by UUID. Checks both
+        producer and place follows. Returns 404 if not currently following.
       parameters:
         - name: entityId
           in: path
           required: true
-          description: Maker or storefront UUID to unfollow.
+          description: Producer or place UUID to unfollow.
           schema:
             type: string
             format: uuid
@@ -671,23 +675,23 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /users/me/events:
+  /users/me/activity:
     post:
-      operationId: ingestEvent
-      summary: Ingest an attention event
+      operationId: ingestActivity
+      summary: Record activity
       description: |
-        Proxied to cove-user. Records a behavioral attention event for the
-        authenticated user. Used as signal input for personalized category
-        recommendations.
+        Proxied to cove-user. Records a behavioral activity (a tap, view,
+        dwell or search) for the authenticated user. Used as signal input for
+        personalized category recommendations.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/IngestEventRequest"
+              $ref: "#/components/schemas/IngestActivityRequest"
       responses:
         "204":
-          description: Event recorded
+          description: Activity recorded
         "400":
           description: Invalid request body
           content:
@@ -723,9 +727,9 @@ paths:
         2. The remaining level 1 categories, ordered by global engagement,
            then name.
 
-        Engagement is the profile.events count over the last 30 days, rolled
-        up to the level 1 ancestor (events on descendant categories, or on
-        items in them, count toward it). Users with no profile or no interests
+        Engagement is the profile.activity count over the last 30 days, rolled
+        up to the level 1 ancestor (activity on descendant categories, or on
+        items in them, counts toward it). Users with no profile or no interests
         get every level 1 category ordered by global engagement. Level 2
         interests don't affect this list.
       parameters:
@@ -814,7 +818,7 @@ components:
           description: RFC 3339 timestamp after which imgproxy rejects the URL.
           example: "2026-05-26T04:36:37Z"
 
-    # ── Image schemas (cove-item) ─────────────────────────────────────────────
+    # ── Image schemas (cove-catalog) ──────────────────────────────────────────
 
     ImageVariants:
       description: |
@@ -881,10 +885,10 @@ components:
           format: uri
           description: 3200×3200 fill crop — retina desktop / future web client.
 
-    # ── Shared sub-schemas (cove-item) ────────────────────────────────────────
+    # ── Shared sub-schemas (cove-catalog, cove-directory) ─────────────────────
 
     Signal:
-      description: A trust signal attached to a maker, storefront, or item.
+      description: A trust signal attached to a producer, place, or item.
       required: [code, name, weight, status]
       properties:
         code:
@@ -909,7 +913,7 @@ components:
         cert_number:
           type: string
 
-    MakerSummary:
+    ProducerSummary:
       required: [id, name, trust_score]
       properties:
         id:
@@ -922,7 +926,7 @@ components:
           type: number
           example: 3
 
-    StorefrontSummary:
+    PlaceSummary:
       required: [id, name, type]
       properties:
         id:
@@ -932,8 +936,9 @@ components:
           type: string
         type:
           type: string
-          enum: [shop, gallery, studio, market, taproom, online]
-          example: online
+          enum: [cafe, restaurant, bar, bakery, dessert_shop, shop, gallery, studio, market, venue, taproom, online]
+          description: The online value is temporary, used only by the placeholder seed places.
+          example: cafe
         distance_m:
           type: number
           description: |
@@ -944,10 +949,10 @@ components:
           type: string
           format: uri
 
-    # ── Discovery schemas (cove-item) ─────────────────────────────────────────
+    # ── Discovery schemas (cove-catalog) ──────────────────────────────────────
 
     DiscoveryResult:
-      required: [id, name, maker, nearest_storefront, storefronts, base_trust, score]
+      required: [id, name, nearest_place, places, base_trust, score]
       properties:
         id:
           type: string
@@ -960,20 +965,24 @@ components:
         price_cents:
           type: integer
           example: 2300
-        maker:
-          $ref: "#/components/schemas/MakerSummary"
-        nearest_storefront:
-          $ref: "#/components/schemas/StorefrontSummary"
-        storefronts:
+        brand:
+          type: string
+          description: Plain brand name, set when the item's brand isn't a producer.
+        producer:
+          description: Absent for brand-only and secondhand items, which have no producer.
+          $ref: "#/components/schemas/ProducerSummary"
+        nearest_place:
+          $ref: "#/components/schemas/PlaceSummary"
+        places:
           type: array
-          description: All storefronts that carry this item ("Where to find it").
+          description: All places that sell this item ("Sold at").
           items:
-            $ref: "#/components/schemas/StorefrontSummary"
+            $ref: "#/components/schemas/PlaceSummary"
         primary_image:
           $ref: "#/components/schemas/ImageVariants"
         base_trust:
           type: number
-          description: Maker trust score + nearest storefront trust score.
+          description: Producer trust score (0 when there is no producer) + nearest place trust score.
           example: 3
         score:
           type: number
@@ -988,7 +997,7 @@ components:
           items:
             $ref: "#/components/schemas/DiscoveryResult"
 
-    # ── Category schemas (cove-item) ──────────────────────────────────────────
+    # ── Category schemas (cove-catalog) ───────────────────────────────────────
 
     CategoryNode:
       required: [id, name, path]
@@ -1030,9 +1039,9 @@ components:
           items:
             $ref: "#/components/schemas/CategoryNode"
 
-    # ── Item detail schemas (cove-item) ───────────────────────────────────────
+    # ── Item detail schemas (cove-catalog) ────────────────────────────────────
 
-    StorefrontDetailSummary:
+    PlaceDetailSummary:
       required: [id, name, type]
       properties:
         id:
@@ -1047,7 +1056,7 @@ components:
           format: uri
 
     ItemDetail:
-      required: [id, name, category_id, maker, media]
+      required: [id, name, category_id, media]
       properties:
         id:
           type: string
@@ -1069,26 +1078,30 @@ components:
         category_id:
           type: string
           format: uuid
-        maker:
-          $ref: "#/components/schemas/MakerSummary"
+        brand:
+          type: string
+          description: Plain brand name, set when the item's brand isn't a producer.
+        producer:
+          description: Absent for brand-only and secondhand items, which have no producer.
+          $ref: "#/components/schemas/ProducerSummary"
         signals:
           type: [array, "null"]
-          description: Trust signals from all three levels (item, maker, storefront).
+          description: Trust signals from all three levels (item, producer, place).
           items:
             $ref: "#/components/schemas/Signal"
-        storefronts:
+        places:
           type: [array, "null"]
           items:
-            $ref: "#/components/schemas/StorefrontDetailSummary"
+            $ref: "#/components/schemas/PlaceDetailSummary"
         media:
           type: array
           description: Full gallery with all five signed variant URLs per image.
           items:
             $ref: "#/components/schemas/ItemMedia"
 
-    # ── Maker detail schemas (cove-item) ──────────────────────────────────────
+    # ── Producer detail schemas (cove-directory) ──────────────────────────────
 
-    MakerStorefront:
+    ProducerPlace:
       required: [id, name, type]
       properties:
         id:
@@ -1101,7 +1114,7 @@ components:
         slug:
           type: string
 
-    MakerDetail:
+    ProducerDetail:
       required: [id, name, tier, trust_score]
       properties:
         id:
@@ -1129,14 +1142,14 @@ components:
           type: [array, "null"]
           items:
             $ref: "#/components/schemas/Signal"
-        storefronts:
+        places:
           type: [array, "null"]
           items:
-            $ref: "#/components/schemas/MakerStorefront"
+            $ref: "#/components/schemas/ProducerPlace"
 
-    # ── Storefront detail schemas (cove-item) ─────────────────────────────────
+    # ── Place detail schemas (cove-directory) ─────────────────────────────────
 
-    StorefrontItem:
+    PlaceItem:
       required: [id, name]
       properties:
         id:
@@ -1152,7 +1165,7 @@ components:
         image:
           $ref: "#/components/schemas/ImageVariants"
 
-    StorefrontDetail:
+    PlaceDetail:
       required: [id, name, type, trust_score]
       properties:
         id:
@@ -1164,7 +1177,7 @@ components:
           type: string
         type:
           type: string
-          enum: [shop, gallery, studio, market, taproom, online]
+          enum: [cafe, restaurant, bar, bakery, dessert_shop, shop, gallery, studio, market, venue, taproom, online]
         trust_score:
           type: number
         city:
@@ -1176,10 +1189,11 @@ components:
         website_url:
           type: string
           format: uri
-        maker_id:
+        producer_id:
           type: string
           format: uuid
-        maker_name:
+          description: The producer that runs this place, if any.
+        producer_name:
           type: string
         signals:
           type: [array, "null"]
@@ -1188,7 +1202,7 @@ components:
         items:
           type: [array, "null"]
           items:
-            $ref: "#/components/schemas/StorefrontItem"
+            $ref: "#/components/schemas/PlaceItem"
 
     # ── User profile schemas (cove-user) ──────────────────────────────────────
 
@@ -1258,7 +1272,7 @@ components:
       properties:
         entity_type:
           type: string
-          enum: [maker, storefront]
+          enum: [producer, place]
         entity_id:
           type: string
           format: uuid
@@ -1280,12 +1294,12 @@ components:
     AddFollowRequest:
       type: object
       description: |
-        Exactly one of maker_id or storefront_id must be provided.
+        Exactly one of producer_id or place_id must be provided.
       properties:
-        maker_id:
+        producer_id:
           type: string
           format: uuid
-        storefront_id:
+        place_id:
           type: string
           format: uuid
 
@@ -1328,27 +1342,27 @@ components:
             type: string
             format: uuid
 
-    # ── Events schemas (cove-user) ────────────────────────────────────────────
+    # ── Activity schemas (cove-user) ──────────────────────────────────────────
 
-    IngestEventRequest:
+    IngestActivityRequest:
       type: object
-      required: [event_type]
+      required: [activity_type]
       properties:
-        event_type:
+        activity_type:
           type: string
           enum: [category_tap, item_view, result_dwell, search]
         category_id:
           type: string
           format: uuid
-          description: Category involved in the event (optional).
+          description: Category involved in the activity (optional).
         item_id:
           type: string
           format: uuid
-          description: Item involved in the event (optional).
+          description: Item involved in the activity (optional).
         metadata:
           type: object
           additionalProperties: true
-          description: Arbitrary event metadata.
+          description: Arbitrary activity metadata.
 
     # ── Recommendations schemas (cove-user) ───────────────────────────────────
 
