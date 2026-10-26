@@ -113,6 +113,11 @@ jobs:
     runs-on: macos-26
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
+      # fastlane runs `xcodebuild -showBuildSettings` before building, which
+      # resolves Swift packages on a cold runner. Its default (3s, doubling over
+      # 4 tries) times out on macos-26; start at 30s instead.
+      FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: "30"
+      FASTLANE_XCODEBUILD_SETTINGS_RETRIES: "4"
     defaults:
       run:
         working-directory: apps/ios
