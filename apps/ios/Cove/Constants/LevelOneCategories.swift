@@ -11,6 +11,7 @@ import SwiftUI
 /// listed here are shown after these, by name, with `fallbackColor`.
 enum LevelOneCategories {
     static let styles: [(path: String, color: Color)] = [
+        ("eat_drink", Color.Colors.Brand.coral),
         ("food", Color.Colors.Brand.amber),
         ("apparel", Color.Colors.Brand.blue),
         ("beauty", Color.Colors.Brand.coral),
