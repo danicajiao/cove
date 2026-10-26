@@ -6,8 +6,9 @@
 // algorithm so any service can produce URLs that imgproxy will accept.
 //
 // Two consumers exist today:
-//   - cove-image signs ad-hoc dimensions (vendor upload-preview flow)
-//   - cove-item signs the fixed variant catalog (discovery + detail responses)
+//   - cove-media signs ad-hoc dimensions (vendor upload-preview flow)
+//   - cove-catalog and cove-directory sign the fixed variant catalog (discovery,
+//     item, producer and place responses)
 //
 // Reference: https://docs.imgproxy.net/usage/signing_the_url
 package imgproxy

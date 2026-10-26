@@ -1,6 +1,6 @@
 # Media Architecture
 
-> **Status:** Phase 2 complete. `cove-image` is deployed and handling image uploads and signed-URL delivery. The full variant-serving pipeline (imgproxy + Cloudflare CDN) and the Postgres `catalog.media` table are Phase 3 work — those sections document the target design. v1 covers item images only; videos and documents are deferred.
+> **Status:** Phase 2 complete. `cove-media` is deployed and handling image uploads and signed-URL delivery. The full variant-serving pipeline (imgproxy + Cloudflare CDN) and the Postgres `catalog.media` table are Phase 3 work — those sections document the target design. v1 covers item images only; videos and documents are deferred.
 
 ## Contents
 
@@ -10,7 +10,7 @@
 - [Variant catalog](#variant-catalog)
 - [Serving variants](#serving-variants)
 - [Picking variants on iOS](#picking-variants-on-ios)
-- [Maker upload flow](#maker-upload-flow)
+- [Producer upload flow](#producer-upload-flow)
 - [The imgproxy URL — anatomy](#the-imgproxy-url--anatomy)
 - [Auth model](#auth-model)
 - [Caching](#caching)
@@ -26,23 +26,23 @@
 Every item in Cove has at least one image, and most have a small gallery. Those images need to:
 
 - Render fast and crisp on every device size (small iPhone to 4K desktop in a future web client)
-- Survive an upload from any maker's camera (HEIC, JPEG, PNG, oddly-rotated, with embedded GPS metadata)
+- Survive an upload from any producer's camera (HEIC, JPEG, PNG, oddly-rotated, with embedded GPS metadata)
 - Cache aggressively at the edge so the cluster doesn't re-do work
 - Stay safe from URL abuse without breaking how `<img>` and `AsyncImage` work
 
-This doc describes the system that delivers all of that. For the broader data model — including the polymorphic `media` table and item/brand/storefront schema — see [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md); for Postgres mechanics see [Postgres Primer](POSTGRES_PRIMER.md).
+This doc describes the system that delivers all of that. For the broader data model — including the polymorphic `media` table and item/producer/place schema — see [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md); for Postgres mechanics see [Postgres Primer](POSTGRES_PRIMER.md).
 
 ---
 
 ## Phase 2 signed-URL endpoint — lifecycle
 
-`cove-image` exposes `GET /images/{filename}/url`, which returns a short-lived HMAC-SHA256 signed imgproxy URL (1 hr TTL). This is the endpoint the iOS app calls today via `CoveAPIClient.imageURL(filename:width:height:)`.
+`cove-media` exposes `GET /images/{filename}/url`, which returns a short-lived HMAC-SHA256 signed imgproxy URL (1 hr TTL). This is the endpoint the iOS app calls today via `CoveAPIClient.imageURL(filename:width:height:)`.
 
-**Phase 2 role:** interim mechanism — lets the iOS app fetch images before `cove-item` exists to embed signed URLs in its responses.
+**Phase 2 role:** interim mechanism — lets the iOS app fetch images before `cove-catalog` exists to embed signed URLs in its responses.
 
-**Phase 3 onwards:** `cove-item` will generate and embed pre-signed variant URLs directly in item list and detail responses. iOS will stop calling `GET /images/{filename}/url` for day-to-day image loading; the signed URL will be available in the response payload alongside the item data.
+**Phase 3 onwards:** `cove-catalog` will generate and embed pre-signed variant URLs directly in item list and detail responses. iOS will stop calling `GET /images/{filename}/url` for day-to-day image loading; the signed URL will be available in the response payload alongside the item data.
 
-**Ongoing role:** the endpoint stays deployed and useful for maker-facing preview flows — e.g., preview a just-uploaded image before it is associated with an item.
+**Ongoing role:** the endpoint stays deployed and useful for producer-facing preview flows — e.g., preview a just-uploaded image before it is associated with an item.
 
 ---
 
@@ -56,11 +56,11 @@ Three pieces, each doing one thing well:
 | **imgproxy** | Generates resized / re-encoded variants on the fly from the canonical source. Open-source, libvips-backed, runs as a single Deployment in the cluster. |
 | **Cloudflare** | Caches every uniquely-URL'd variant at the edge. Once warmed, the cluster never sees that exact URL again. |
 
-The principle that ties them together: **one source of truth, infinite derived views.** Makers upload once. imgproxy turns that one source into whatever shape a screen needs. Cloudflare remembers every shape and serves it from the edge. The cluster pays the transformation cost exactly once per (image, variant) combination.
+The principle that ties them together: **one source of truth, infinite derived views.** Producers upload once. imgproxy turns that one source into whatever shape a screen needs. Cloudflare remembers every shape and serves it from the edge. The cluster pays the transformation cost exactly once per (image, variant) combination.
 
 ```mermaid
 flowchart LR
-    Maker["Maker app"] -->|"POST /images (bytes)"| CImg["cove-image<br/>rotate · strip EXIF<br/>WebP q90 · SHA-256"]
+    Producer["Producer app"] -->|"POST /images (bytes)"| CImg["cove-media<br/>rotate · strip EXIF<br/>WebP q90 · SHA-256"]
     CImg -->|"images/{sha256}.webp"| Garage[("Garage · cove-media<br/>canonical original")]
     Client["iOS app"] -->|"signed variant URL"| CF{"Cloudflare edge<br/>cache hit?"}
     CF -->|hit| Client
@@ -73,13 +73,13 @@ flowchart LR
 
 ## Data model
 
-Images are stored in the polymorphic `catalog.media` table — one row per image, attached to an item, maker (logo), or storefront (photo) via an exclusive arc. An item's `primary` image is used in every list view; `gallery` images show up on the detail screen carousel. The **canonical table definition lives in [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md)**; this doc covers the storage, transformation, and serving pipeline that sits on top of it.
+Images are stored in the polymorphic `catalog.media` table — one row per image, attached to an item, producer (logo), or place (photo) via an exclusive arc. An item's `primary` image is used in every list view; `gallery` images show up on the detail screen carousel. The **canonical table definition lives in [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md)**; this doc covers the storage, transformation, and serving pipeline that sits on top of it.
 
 The fields this pipeline relies on: `media_key` (the content-addressed Garage object key), `role` (`primary` / `gallery` / `logo`), `sort_order` (carousel order), `alt_text`, and source `width`/`height` (layout hints for the client).
 
 Notes:
 
-- **`media_key` is content-addressed.** `cove-image` writes objects under `<sha256-of-bytes>.webp`, so the same upload twice never wastes storage and never overwrites a different image.
+- **`media_key` is content-addressed.** `cove-media` writes objects under `<sha256-of-bytes>.webp`, so the same upload twice never wastes storage and never overwrites a different image.
 - **`width` / `height` are source dimensions.** Clients use these to reserve layout space *before* the image loads, eliminating layout shift in list views.
 - **No `image_key` column on `catalog.items`.** The primary image is `WHERE role = 'primary'` on this table; list queries pull it via a `LATERAL JOIN`.
 - **`ON DELETE CASCADE`.** Deleting an item removes its media rows automatically. (The Garage objects themselves are pruned by a separate cleanup job — see "Garbage collection" below.)
@@ -124,7 +124,7 @@ All variants resize with `fill` mode (crop overflow to exact square dimensions).
 
 When the future web client needs `2k` (2048 × 2048) for retina laptops:
 
-1. Add the row to the catalog (single config value in `cove-item` / `cove-image`)
+1. Add the row to the catalog (single config value in `cove-catalog` / `cove-media`)
 2. Server starts including `2k` in response shapes that already return the full set (or add it to specific endpoints)
 3. Clients that know about it use it; clients that don't ignore it
 
@@ -146,7 +146,7 @@ ItemSummary:
     id:         { type: string, format: uuid }
     name:       { type: string }
     priceCents: { type: integer }
-    makerName:  { type: string }
+    producerName: { type: string }   # null for brand-only and secondhand items
     primaryImage:
       $ref: '#/components/schemas/ImageVariants'
 
@@ -166,10 +166,10 @@ SQL backing it (search query, primary image only):
 ```sql
 SELECT
     p.id, p.name, p.price_cents,
-    mk.name AS maker_name,
+    pr.name AS producer_name,
     img.media_key, img.width, img.height, img.alt_text
 FROM catalog.items p
-JOIN directory.makers mk ON mk.id = p.maker_id
+LEFT JOIN directory.producers pr ON pr.id = p.producer_id
 LEFT JOIN LATERAL (
     SELECT media_key, width, height, alt_text
     FROM catalog.media
@@ -275,11 +275,11 @@ For a future web client, the same response shape maps directly to `<picture>` wi
 
 ---
 
-## Maker upload flow
+## Producer upload flow
 
-Makers upload once; the server handles everything that needs to be identical across items.
+Producers upload once; the server handles everything that needs to be identical across items.
 
-### Minimum requirements (enforced server-side in `cove-image`)
+### Minimum requirements (enforced server-side in `cove-media`)
 
 | Requirement | Value | Why |
 |---|---|---|
@@ -293,7 +293,7 @@ These are returned in a structured error response when violated so the client ca
 
 ### Normalization pipeline
 
-After accepting the upload, `cove-image` runs the bytes through libvips before writing to Garage:
+After accepting the upload, `cove-media` runs the bytes through libvips before writing to Garage:
 
 ```
 1. Decode source format            (handles JPEG, PNG, WebP — govips/libvips)
@@ -307,10 +307,10 @@ After accepting the upload, `cove-image` runs the bytes through libvips before w
 
 Why each step matters:
 
-- **Strip EXIF** — phone photos embed GPS coordinates by default. Without this, every item image leaks the maker's location.
+- **Strip EXIF** — phone photos embed GPS coordinates by default. Without this, every item image leaks the producer's location.
 - **Auto-rotate** — phones store the image with the sensor's native orientation and a separate rotation flag. Without rotating during decode, half the uploads display sideways.
 - **WebP quality 90** — visually lossless; ~40-60% smaller than the equivalent JPEG. Cheap storage win.
-- **Content-addressed key** — if a maker uploads the same image twice (different items, same source photo), Garage stores one object. If a maker mid-upload retries, we don't pollute storage with half-written objects.
+- **Content-addressed key** — if a producer uploads the same image twice (different items, same source photo), Garage stores one object. If a producer mid-upload retries, we don't pollute storage with half-written objects.
 
 Note: sRGB color-space normalization and HEIC acceptance are deferred to a future iteration (see "What's deferred").
 
@@ -318,11 +318,11 @@ Note: sRGB color-space normalization and HEIC acceptance are deferred to a futur
 
 Upload is decoupled from item association:
 
-1. Maker app calls `POST /images` with the image bytes → response: `{ media_key, width, height }`
-2. Maker app calls `POST /items` (or `PATCH`) with the desired role: `{ media_key, role: 'primary' }`
-3. `cove-item` inserts into `media`
+1. Producer app calls `POST /images` with the image bytes → response: `{ media_key, width, height }`
+2. Producer app calls `POST /items` (or `PATCH`) with the desired role: `{ media_key, role: 'primary' }`
+3. `cove-catalog` inserts into `media`
 
-This split means a maker can upload several images and then arrange them — no need for the upload endpoint to know about items.
+This split means a producer can upload several images and then arrange them — no need for the upload endpoint to know about items.
 
 ---
 
@@ -391,7 +391,7 @@ This is the most nuanced part of the architecture. Image URLs need to coexist wi
 |---|---|---|---|
 | **A. Public signed URLs** | Signature makes URL unguessable; anyone with the URL can fetch | ✅ Yes — same URL for all users | Public catalog images |
 | **B. Per-user signed URLs** | Server signs with user UID embedded; each user gets a unique URL | ❌ No — cache fragments per user | Private documents per user |
-| **C. Short-lived signed URLs** | Signature includes expiration; URL works for a window (e.g. 1 hour) | ⚠️ Within the validity window, yes; URLs rotate when keys do | Maker drafts, time-limited access |
+| **C. Short-lived signed URLs** | Signature includes expiration; URL works for a window (e.g. 1 hour) | ⚠️ Within the validity window, yes; URLs rotate when keys do | Producer drafts, time-limited access |
 | **D. Token-protected URLs** | Every fetch requires a Bearer header | ❌ No — every user pays full transformation cost | Genuinely private data with no cacheability requirement |
 
 ### Recommendation for Cove
@@ -401,16 +401,16 @@ This is the most nuanced part of the architecture. Image URLs need to coexist wi
 | Image class | Strategy | Expiry |
 |---|---|---|
 | Active catalog (`is_active = true` on the item) | Option A — public signed | Effectively unlimited |
-| Maker drafts (`is_active = false`, not yet published) | Option C — short-lived signed | 1 hour, refreshed via authenticated endpoint |
-| Truly private (future: maker verification documents, receipts) | Option D — token-protected | Per-request auth, no CDN |
+| Producer drafts (`is_active = false`, not yet published) | Option C — short-lived signed | 1 hour, refreshed via authenticated endpoint |
+| Truly private (future: producer verification documents, receipts) | Option D — token-protected | Per-request auth, no CDN |
 
-The implementation is straightforward: `cove-item` checks the item state when constructing the URL and decides which signing mode to use. imgproxy's `IMGPROXY_TOKEN_EXP` config supports verifying the expiry portion of the signature.
+The implementation is straightforward: `cove-catalog` checks the item state when constructing the URL and decides which signing mode to use. imgproxy's `IMGPROXY_TOKEN_EXP` config supports verifying the expiry portion of the signature.
 
 ### "But the catalog is auth-only — why is the image URL public?"
 
 Image **URLs** are public; the **API that produces them** is not. To discover an item image's URL, a client must first call `/items/search` or `/items/{id}` with a valid Firebase ID Token. The Bearer-token check at `cove-api` happens *before* the URL is returned.
 
-Once a URL is in hand, anyone can fetch the bytes — but the URL is unguessable (HMAC-SHA256 signature), and you can't enumerate them without going through the authenticated API. This is the same pattern Etsy, Shopify storefronts, Amazon product images, and every major marketplace uses. Authenticated image serving is reserved for things like medical records, financial documents, and other categories where bytes leaking would be a real harm — not for item catalog images.
+Once a URL is in hand, anyone can fetch the bytes — but the URL is unguessable (HMAC-SHA256 signature), and you can't enumerate them without going through the authenticated API. This is the same pattern Etsy, Shopify places, Amazon product images, and every major marketplace uses. Authenticated image serving is reserved for things like medical records, financial documents, and other categories where bytes leaking would be a real harm — not for item catalog images.
 
 ---
 
@@ -468,7 +468,7 @@ The first two are normal cache-warm scenarios. The third is operationally signif
 
 ## Pre-warming
 
-Optionally, `cove-image` can pre-warm Cloudflare's cache right after a successful upload:
+Optionally, `cove-media` can pre-warm Cloudflare's cache right after a successful upload:
 
 ```go
 go func(key string) {
@@ -488,7 +488,7 @@ For items with very high traffic, the variants stay warm at the Cloudflare edge 
 
 ## Garbage collection
 
-When an item is deleted, `ON DELETE CASCADE` removes its `media` rows. The Garage objects themselves are **not** automatically removed — we want to keep them briefly in case a maker changes their mind, and content-addressing means the same image might still be referenced by another item.
+When an item is deleted, `ON DELETE CASCADE` removes its `media` rows. The Garage objects themselves are **not** automatically removed — we want to keep them briefly in case a producer changes their mind, and content-addressing means the same image might still be referenced by another item.
 
 A small periodic job sweeps unreferenced objects:
 
@@ -500,7 +500,7 @@ SELECT DISTINCT media_key FROM catalog.media;
 
 The job lists Garage objects, diffs against the SELECT, and deletes any object that is:
 - Not referenced in `media`
-- Older than 30 days (gives makers a window to recover)
+- Older than 30 days (gives producers a window to recover)
 
 This stays out of the hot path entirely.
 
@@ -510,14 +510,14 @@ This stays out of the hot path entirely.
 
 These are real future requirements but explicitly out of scope for v1:
 
-- **HEIC input** — iPhone's default capture format. govips supports it when built with HEIC support; defer until maker upload UX exists and we can test end-to-end.
+- **HEIC input** — iPhone's default capture format. govips supports it when built with HEIC support; defer until producer upload UX exists and we can test end-to-end.
 - **sRGB color-space normalization** — Adobe RGB and P3 sources render with shifted colors when imgproxy converts at delivery time. Normalizing on upload avoids surprises; deferred because most phone uploads are already sRGB.
 - **Videos** — would need a separate pipeline (HLS/DASH transcoding, manifest generation, per-bandwidth renditions). No imgproxy equivalent for video that fits this stack cleanly.
-- **Documents** (maker certifications, ingredient lists as PDFs) — would use Option D (token-protected, no transformation, just signed-URL serving).
+- **Documents** (producer certifications, ingredient lists as PDFs) — would use Option D (token-protected, no transformation, just signed-URL serving).
 - **Watermarking** — imgproxy supports it; not a v1 requirement.
 - **AI-driven cropping** (face detection, salient-object detection) — imgproxy supports `gravity:smart`; defer until v1 catalog shows it's needed.
 - **AVIF output** — modern format, ~20% smaller than WebP. Add as a new variant suffix when iOS / web client adoption justifies the imgproxy CPU cost increase.
-- **Per-maker signing keys** — would let us revoke one maker's image access without rotating the global key. Defer until maker portal exists.
+- **Per-producer signing keys** — would let us revoke one producer's image access without rotating the global key. Defer until producer portal exists.
 
 Each of these can slot in without disturbing the v1 architecture — add a new endpoint, new variant, new field on `media`, or new background job. The data model and serving model don't need to change to accommodate them.
 

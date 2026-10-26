@@ -263,6 +263,12 @@ private struct CategoryPill: View {
 }
 
 #Preview("Collapsed and expanded") {
+    let eatDrink = InterestGroup(
+        id: "eat_drink", name: "Eat & Drink", path: "eat_drink", wideImageKey: nil,
+        options: ["African", "American", "Asian", "Bars", "Cafés", "European", "Juices", "Latin", "Mideast"]
+            .map { InterestOption(id: $0, name: $0) },
+        pillColor: LevelOneCategories.color(for: "eat_drink")
+    )
     let food = InterestGroup(
         id: "food", name: "Food", path: "food", wideImageKey: nil,
         options: ["Baked Goods", "Beverages", "Coffee", "Condiments", "Confections", "Dairy", "Tea"]
@@ -277,6 +283,11 @@ private struct CategoryPill: View {
 
     ScrollView {
         VStack(spacing: Spacing.lg) {
+            InterestGroupSection(
+                group: eatDrink, image: nil, isSelected: true,
+                selectedOptionIDs: ["Cafés", "Latin", "Asian"],
+                onToggleGroup: {}, onToggleOption: { _ in }
+            )
             InterestGroupSection(
                 group: food, image: foodImage, isSelected: true,
                 selectedOptionIDs: ["Baked Goods", "Coffee"],

@@ -1,0 +1,302 @@
+openapi: "3.1.0"
+
+info:
+  title: cove-directory
+  version: "0.1.0"
+  description: |
+    Producers and places for the Cove platform.
+    Handles producer detail (the places it runs) and place detail (the items
+    sold there). Reads trust signals, items and images from the catalog schema.
+
+    Authentication: this service does NOT validate Firebase tokens directly.
+    It trusts the X-Cove-Uid header injected by the upstream cove-api gateway.
+    All endpoints (except /health) reject requests missing this header.
+
+    Image URLs in responses are pre-signed imgproxy URLs. Each URL embeds an
+    exp: processing option and is valid for 1 hour (configurable via
+    IMGPROXY_URL_TTL). Clients should not cache these URLs beyond their expiry.
+
+servers:
+  - url: http://cove-directory.cove-directory.svc.cluster.local:8080
+    description: In-cluster (default)
+  - url: http://localhost:8080
+    description: Local development
+
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Health check
+      description: |
+        Returns service name, status, and Git commit SHA.
+        Unauthenticated — used by Kubernetes liveness/readiness probes.
+      security: []
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /producers/{id}:
+    get:
+      operationId: getProducer
+      summary: Get producer detail
+      description: |
+        Returns producer detail including: profile fields, trust signals,
+        and the list of places run by this producer.
+      parameters:
+        - name: X-Cove-Uid
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: Producer UUID.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Producer detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProducerDetail"
+        "401":
+          description: Missing or empty X-Cove-Uid header
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Producer not found or inactive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /places/{id}:
+    get:
+      operationId: getPlace
+      summary: Get place detail
+      description: |
+        Returns place detail including: location, trust signals,
+        and the list of items sold at this place.
+      parameters:
+        - name: X-Cove-Uid
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: Place UUID.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Place detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceDetail"
+        "401":
+          description: Missing or empty X-Cove-Uid header
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Place not found or inactive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        service:
+          type: string
+          example: cove-catalog
+        status:
+          type: string
+          example: ok
+        commit:
+          type: string
+          example: abc1234
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          example: item not found
+
+    ImageVariants:
+      description: |
+        Signed imgproxy URLs for the three list-view variants (thumb, sm, md).
+        width and height are the source image dimensions in pixels.
+      required: [width, height, thumb, sm, md]
+      properties:
+        width:
+          type: integer
+          description: Source image width in pixels.
+          example: 800
+        height:
+          type: integer
+          description: Source image height in pixels.
+          example: 800
+        thumb:
+          type: string
+          format: uri
+          description: 200×200 crop — search result thumbnails, small grid (1×).
+        sm:
+          type: string
+          format: uri
+          description: 400×400 crop — list views (2×), avatar-like contexts.
+        md:
+          type: string
+          format: uri
+          description: 800×800 crop — detail hero (1×) / list views (3× Pro).
+
+    Signal:
+      description: A trust signal attached to a producer, place, or item.
+      required: [code, name, weight, status]
+      properties:
+        code:
+          type: string
+          example: b_corp
+        name:
+          type: string
+          example: B Corp Certified
+        description:
+          type: string
+        weight:
+          type: number
+          description: Signal weight (1–3). Higher = more credibility.
+          example: 3
+        status:
+          type: string
+          enum: [verified, pending, community_vouched]
+          example: verified
+        verified_at:
+          type: string
+          format: date-time
+        cert_number:
+          type: string
+
+    # ── Producer detail ─────────────────────────────────────────────────────────
+
+    ProducerPlace:
+      required: [id, name, type]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+        slug:
+          type: string
+
+    ProducerDetail:
+      required: [id, name, tier, trust_score, signals, places]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: Onyx Coffee Lab
+        description:
+          type: string
+        tier:
+          type: string
+          enum: [verified_business, individual_lister]
+        trust_score:
+          type: number
+          example: 3
+        city:
+          type: string
+        state:
+          type: string
+        website_url:
+          type: string
+          format: uri
+        signals:
+          type: array
+          items:
+            $ref: "#/components/schemas/Signal"
+        places:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProducerPlace"
+
+    # ── Place detail ────────────────────────────────────────────────────
+
+    PlaceItem:
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        price_cents:
+          type: integer
+        listing_url:
+          type: string
+          format: uri
+        image:
+          $ref: "#/components/schemas/ImageVariants"
+
+    PlaceDetail:
+      required: [id, name, type, trust_score, signals, items]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [cafe, restaurant, bar, bakery, dessert_shop, shop, gallery, studio, market, venue, taproom, online]
+        trust_score:
+          type: number
+        city:
+          type: string
+        state:
+          type: string
+        address:
+          type: string
+        website_url:
+          type: string
+          format: uri
+        producer_id:
+          type: string
+          format: uuid
+          description: The producer that runs this place, if any.
+        producer_name:
+          type: string
+        signals:
+          type: array
+          items:
+            $ref: "#/components/schemas/Signal"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlaceItem"

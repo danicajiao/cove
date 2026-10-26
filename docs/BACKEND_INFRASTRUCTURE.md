@@ -1,6 +1,6 @@
 # Backend Infrastructure
 
-> **Status:** Phases 0–3 complete. The cluster is fully bootstrapped and running. All four services run in `cove-staging` behind the Cloudflare Tunnel. `cove-api` and `cove-image` are also live in `cove-prod`; `cove-item` and `cove-user` are still pinned to `sha-placeholder` in the prod overlay and promote to `cove-prod` automatically once the Phase 3 integration branch merges to `main` (`ci-services.yml` opens a homelab PR bumping the prod tags). Firebase Storage and Firestore have been retired; all structured data is served from Postgres via the cove-api gateway.
+> **Status:** Phases 0–3 complete. The cluster is fully bootstrapped and running. `cove-api`, `cove-image`, `cove-item` and `cove-user` run in `cove-staging` and `cove-prod` behind the Cloudflare Tunnel. Epic #393 renames `cove-image` to `cove-media` (#414) and splits `cove-item` into `cove-catalog` and `cove-directory` (#413) in this repo; the new services replace the old ones on the cluster with #415 and #416. Firebase Storage and Firestore have been retired; all structured data is served from Postgres via the cove-api gateway.
 
 ## Contents
 
@@ -25,9 +25,10 @@ flowchart TD
     iOS["iOS App"]
     iOS -->|"Firebase ID token<br/>Authorization: Bearer"| CF["api.coveapp.dev<br/>Cloudflare Tunnel — no open ports"]
     CF --> API["cove-api · K3s pod<br/>cove-staging / cove-prod<br/>validates ID token via Firebase Admin SDK,<br/>routes by path prefix"]
-    API -->|"/images/*"| IMG["cove-image"]
+    API -->|"/images/*"| IMG["cove-media"]
     API -->|"/i/*"| IMGPROXY["imgproxy<br/>image transforms"]
-    API -->|"/discovery · /categories<br/>/items/* · /makers/* · /storefronts/*"| ITEM["cove-item"]
+    API -->|"/discovery · /categories · /items/*"| CATALOG["cove-catalog"]
+    API -->|"/producers/* · /places/*"| DIRECTORY["cove-directory"]
     API -->|"/users/* · /recommendations/*"| USER["cove-user"]
 ```
 
@@ -76,8 +77,9 @@ danicajiao/cove                 ← all source code and docs
 │
 ├── services/
 │   ├── cove-api/               ← cove-api gateway service (Phase 1, deployed)
-│   ├── cove-image/             ← cove-image service (Phase 2, deployed)
-│   ├── cove-item/              ← item discovery service (Phase 3, complete)
+│   ├── cove-media/             ← cove-media service (Phase 2, deployed)
+│   ├── cove-catalog/           ← categories, items and discovery (Phase 3; split out of cove-item in #413)
+│   ├── cove-directory/         ← producers and places (split out of cove-item in #413)
 │   └── cove-user/              ← user profiles + recommendations service (Phase 3, complete)
 │
 ├── packages/                   ← shared code (API schema, types — as needed)
@@ -122,9 +124,10 @@ Services drop the `-svc` suffix. The pod, K8s Service, and image name are all th
 | Service | What it does | Phase |
 |---|---|---|
 | `cove-api` | BFF gateway — validates Firebase token, routes to backend services | Phase 1 (deployed) |
-| `cove-image` | Image upload (`POST /images`), signed-URL serving (`GET /images/{filename}/url`), normalization to WebP, content-addressed storage in Garage | Phase 2 (deployed) |
-| `cove-item` | Item ingestion, category catalog, `GET /discovery` endpoint | Phase 3 (complete) |
-| `cove-user` | User profiles, interests, `GET /recommendations/categories`, `POST /users/me/events` | Phase 3 (complete) |
+| `cove-media` | Image upload (`POST /images`), signed-URL serving (`GET /images/{filename}/url`), normalization to WebP, content-addressed storage in Garage | Phase 2 (deployed) |
+| `cove-catalog` | Categories, items, signals, `GET /discovery` endpoint. Owns the `catalog` schema | Phase 3 (split out in #413) |
+| `cove-directory` | Producers and places, `GET /producers/{id}`, `GET /places/{id}`. Owns the `directory` schema | Split out of `cove-item` in #413 |
+| `cove-user` | User profiles, interests, `GET /recommendations/categories`, `POST /users/me/activity` | Phase 3 (complete) |
 
 In Kubernetes, each service runs as a `Deployment` in `cove-staging` or `cove-prod`, with a matching `Service` of the same name.
 
@@ -218,7 +221,7 @@ These go in **Variables** (not Secrets) in GitHub → Settings → Secrets and v
 
 **Decision: trust the gateway, propagate UID via header.**
 
-`cove-api` is the only service that validates Firebase ID tokens. After successful validation it forwards the caller's UID to downstream services as an `X-Cove-Uid` HTTP header. Downstream services (`cove-image`, `cove-item`, `cove-user`) read the header and trust it — they do not re-validate the Bearer token.
+`cove-api` is the only service that validates Firebase ID tokens. After successful validation it forwards the caller's UID to downstream services as an `X-Cove-Uid` HTTP header. Downstream services (`cove-media`, `cove-catalog`, `cove-directory`, `cove-user`) read the header and trust it — they do not re-validate the Bearer token.
 
 ```
 iOS App
@@ -228,13 +231,13 @@ cove-api
   │  validates token via Firebase Admin SDK
   │  X-Cove-Uid: <uid>          ← injected, Bearer token stripped
   ▼
-cove-image / cove-item / cove-user
+cove-media / cove-catalog / cove-directory / cove-user
      reads X-Cove-Uid from header, no Firebase SDK required
 ```
 
 ### Why this is safe
 
-Downstream services are never exposed to public traffic. They are reachable only via in-cluster Kubernetes Service DNS (`cove-image.cove-staging.svc.cluster.local`). An attacker on the public internet cannot send a forged `X-Cove-Uid` header — they can only reach `cove-api` via Cloudflare Tunnel, and `cove-api` overwrites the header on every request regardless of what the client sent.
+Downstream services are never exposed to public traffic. They are reachable only via in-cluster Kubernetes Service DNS (`cove-media.cove-staging.svc.cluster.local`). An attacker on the public internet cannot send a forged `X-Cove-Uid` header — they can only reach `cove-api` via Cloudflare Tunnel, and `cove-api` overwrites the header on every request regardless of what the client sent.
 
 NetworkPolicy manifests (added in `danicajiao/homelab#25`) enforce this at the cluster level: downstream services only accept traffic from `cove-api`, not from arbitrary pods. (Note: K3s ships with flannel, which does not enforce NetworkPolicy — these manifests are declarative intent that becomes active if the cluster migrates to a policy-enforcing CNI such as Cilium or Calico.)
 
@@ -285,8 +288,8 @@ Images are stored in Google Artifact Registry under the `cove-6a685` project:
 
 ```
 us-central1-docker.pkg.dev/cove-6a685/services/cove-api:sha-abc1234
-us-central1-docker.pkg.dev/cove-6a685/services/cove-image:sha-abc1234
-us-central1-docker.pkg.dev/cove-6a685/services/cove-item:sha-abc1234
+us-central1-docker.pkg.dev/cove-6a685/services/cove-media:sha-abc1234
+us-central1-docker.pkg.dev/cove-6a685/services/cove-catalog:sha-abc1234
 us-central1-docker.pkg.dev/cove-6a685/services/cove-user:sha-abc1234
 ```
 
@@ -315,34 +318,32 @@ Each phase is independently shippable. The iOS app is updated incrementally — 
 
 ### Phase 2 — Image service ✅ complete
 
-- `cove-image` deployed to `cove-staging` and `cove-prod`
+- `cove-media` deployed to `cove-staging` and `cove-prod`
 - `POST /images` — accepts JPEG/PNG/WebP, normalizes to WebP quality 90, strips EXIF (including GPS), stores content-addressed object in Garage `cove-media` bucket (`images/<sha256>.webp`)
-- `GET /images/{filename}/url` — generates a short-lived HMAC-SHA256 signed imgproxy URL (1 hr TTL); interim mechanism until `cove-item` embeds pre-signed URLs in Phase 3
-- `cove-api` proxies `/images/*` to `cove-image` and `/i/*` to imgproxy
+- `GET /images/{filename}/url` — generates a short-lived HMAC-SHA256 signed imgproxy URL (1 hr TTL); interim mechanism until `cove-catalog` embeds pre-signed URLs in Phase 3
+- `cove-api` proxies `/images/*` to `cove-media` and `/i/*` to imgproxy
 - iOS app loads all images via `CoveAPIClient.imageURL(filename:width:height:)` through the `ImageRepository` protocol; `CoveAPIImageRepository` is the active implementation
 - Firebase Storage fully retired; `FirebaseStorage` unlinked from the iOS Xcode target
 - Firestore `products.defaultImageURL` and `brands.imageURL` now store Garage keys (`images/<sha256>.webp`) instead of `gs://` URLs
 
 ### Phase 3 — Data services ✅ complete
 
-See [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md) for the canonical schema (maker / storefront / item / signals) and full data model.
+See [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md) for the canonical schema (producer / place / item / signals) and full data model.
 
-- Provision a single CNPG `Cluster` (`cove-db`, with PostGIS + ltree) hosting the `cove` database with three schemas: `directory`, `catalog`, and `profile`. The `directory` schema (makers + storefronts) is pre-positioned for a future `cove-directory` service — no service owns it in Phase 3. PostGIS enables radius-based discovery queries.
+- Provision a single CNPG `Cluster` (`cove-db`, with PostGIS + ltree) hosting the `cove` database with three schemas: `directory`, `catalog`, and `profile`. The `directory` schema (producers + places) is pre-positioned for a future `cove-directory` service — no service owns it in Phase 3. PostGIS enables radius-based discovery queries.
 - `profile.user_flags` migration added to `cove-db`
-- Deploy `cove-item` (item ingestion, `GET /discovery` endpoint) and `cove-user` (user profiles, interests, `GET /recommendations/categories`, `POST /users/me/events`) to `cove-staging`; the prod overlay keeps both at `sha-placeholder` until the integration branch merges to `main`, at which point `ci-services.yml` promotes them to `cove-prod`
+- Deploy `cove-catalog` (item ingestion, `GET /discovery` endpoint) and `cove-user` (user profiles, interests, `GET /recommendations/categories`, `POST /users/me/activity`) to `cove-staging`; the prod overlay keeps both at `sha-placeholder` until the integration branch merges to `main`, at which point `ci-services.yml` promotes them to `cove-prod`
 - Postgres replaces Firestore for all structured data; cross-schema foreign keys preserve referential integrity for user-centric features (favorites, follows, interests)
 - iOS app calls `api.coveapp.dev/discovery`, `api.coveapp.dev/recommendations/*`, `api.coveapp.dev/users/*`, and `api.coveapp.dev/categories`
 - Firestore retired upon completion
 
-### Phase 4 (planned) — Directory service
+### Phase 4 (planned) — Self-serve directory
 
-Not yet planned in detail; tracked separately. Scope:
+`cove-directory` exists since #413 and owns the `directory` schema, with data seeded by migrations. Not yet planned in detail; tracked separately. Scope:
 
-- Build `cove-directory` at `services/cove-directory/`
-- Self-serve onboarding flow (maker + storefront, business/individual verification)
-- Maker and storefront profile management; trust-signal verification
+- Self-serve onboarding flow (producer + place, business/individual verification)
+- Producer and place profile management; trust-signal verification
 - Producer-facing dashboard API (separate iOS/web surface)
-- Take ownership of the `directory` schema via a permissions flip — no schema migration, no data move; `cove-item` keeps SELECT for discovery reads
 
 ---
 

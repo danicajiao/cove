@@ -2,9 +2,9 @@ openapi: "3.1.0"
 
 info:
   title: cove-user
-  version: "0.2.0"
+  version: "0.3.0"
   description: |
-    User profile, favorites, follows, interests, attention events, and
+    User profile, favorites, follows, interests, activity, and
     personalized category recommendations for the Cove platform.
 
     Authentication: this service does NOT validate Firebase tokens directly.
@@ -241,9 +241,9 @@ paths:
   /users/me/follows:
     get:
       operationId: getFollows
-      summary: List followed makers and storefronts
+      summary: List followed producers and places
       description: |
-        Returns the list of makers and storefronts the authenticated user follows.
+        Returns the list of producers and places the authenticated user follows.
       parameters:
         - name: X-Cove-Uid
           in: header
@@ -271,9 +271,9 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
     post:
       operationId: addFollow
-      summary: Follow a maker or storefront
+      summary: Follow a producer or place
       description: |
-        Follows a maker or storefront. Exactly one of maker_id or storefront_id
+        Follows a producer or place. Exactly one of producer_id or place_id
         must be provided. Returns 409 if already following.
       parameters:
         - name: X-Cove-Uid
@@ -318,9 +318,9 @@ paths:
   /users/me/follows/{entityId}:
     delete:
       operationId: removeFollow
-      summary: Unfollow a maker or storefront
+      summary: Unfollow a producer or place
       description: |
-        Unfollows an entity by UUID. Checks both maker and storefront tables.
+        Unfollows an entity by UUID. Checks both producer and place follows.
         Returns 404 if not currently following this entity.
       parameters:
         - name: X-Cove-Uid
@@ -331,7 +331,7 @@ paths:
         - name: entityId
           in: path
           required: true
-          description: Maker or storefront UUID to unfollow.
+          description: Producer or place UUID to unfollow.
           schema:
             type: string
             format: uuid
@@ -422,12 +422,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /users/me/events:
+  /users/me/activity:
     post:
-      operationId: ingestEvent
-      summary: Ingest an attention event
+      operationId: ingestActivity
+      summary: Record activity
       description: |
-        Records a behavioral attention event for the authenticated user.
+        Records a behavioral activity (a tap, view, dwell or search) for the
+        authenticated user.
         Used as signal input for personalized category recommendations.
       parameters:
         - name: X-Cove-Uid
@@ -440,10 +441,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/IngestEventRequest"
+              $ref: "#/components/schemas/IngestActivityRequest"
       responses:
         "204":
-          description: Event recorded
+          description: Activity recorded
         "400":
           description: Invalid request body
           content:
@@ -476,9 +477,9 @@ paths:
         2. The remaining level 1 categories, ordered by global engagement,
            then name.
 
-        Engagement is the profile.events count over the last 30 days, rolled
-        up to the level 1 ancestor (events on descendant categories, or on
-        items in them, count toward it). Users with no profile or no interests
+        Engagement is the profile.activity count over the last 30 days, rolled
+        up to the level 1 ancestor (activity on descendant categories, or on
+        items in them, counts toward it). Users with no profile or no interests
         get every level 1 category ordered by global engagement. Level 2
         interests don't affect this list.
       parameters:
@@ -590,7 +591,7 @@ components:
       properties:
         entity_type:
           type: string
-          enum: [maker, storefront]
+          enum: [producer, place]
         entity_id:
           type: string
           format: uuid
@@ -612,12 +613,12 @@ components:
     AddFollowRequest:
       type: object
       description: |
-        Exactly one of maker_id or storefront_id must be provided.
+        Exactly one of producer_id or place_id must be provided.
       properties:
-        maker_id:
+        producer_id:
           type: string
           format: uuid
-        storefront_id:
+        place_id:
           type: string
           format: uuid
 
@@ -660,27 +661,27 @@ components:
             type: string
             format: uuid
 
-    # ── Events ───────────────────────────────────────────────────────────────
+    # ── Activity ─────────────────────────────────────────────────────────────
 
-    IngestEventRequest:
+    IngestActivityRequest:
       type: object
-      required: [event_type]
+      required: [activity_type]
       properties:
-        event_type:
+        activity_type:
           type: string
           enum: [category_tap, item_view, result_dwell, search]
         category_id:
           type: string
           format: uuid
-          description: Category involved in the event (optional).
+          description: Category involved in the activity (optional).
         item_id:
           type: string
           format: uuid
-          description: Item involved in the event (optional).
+          description: Item involved in the activity (optional).
         metadata:
           type: object
           additionalProperties: true
-          description: Arbitrary event metadata.
+          description: Arbitrary activity metadata.
 
     # ── Recommendations ──────────────────────────────────────────────────────
 

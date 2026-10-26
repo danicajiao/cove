@@ -8,12 +8,7 @@
 import SwiftUI
 
 struct TabNavigationStack<Content: View>: View {
-    @EnvironmentObject var bag: Bag
-    let content: Content
-
-    init(@ViewBuilder content: () -> Content) {
-        self.content = content()
-    }
+    @ViewBuilder let content: Content
 
     var body: some View {
         NavigationStack {
@@ -22,10 +17,8 @@ struct TabNavigationStack<Content: View>: View {
                     switch path {
                     case let .item(id):
                         ItemDetailView(itemId: id)
-                            .environmentObject(bag)
                     case let .categoryResults(categoryPath, name):
                         CategoryResultsView(categoryPath: categoryPath, title: name)
-                            .environmentObject(bag)
                     default:
                         let _ = assertionFailure("Unhandled navigation path: \(path)")
                         EmptyView()

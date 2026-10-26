@@ -10,7 +10,7 @@ Let users query items in plain English (e.g. "affordable consciously sourced cof
 **Note:** Requires a reasonably populated catalog to feel useful. Seed the `catalog` schema with 20-30 items across categories before building this out.
 
 ### Admin Item Ingestion
-Paste a brand's website URL or item description into an admin form. An LLM extracts structured data (name, price, category, tags, ethical certifications) and pre-fills a `catalog.items` row (via `cove-item`) for review and publishing.
+Paste a brand's website URL or item description into an admin form. An LLM extracts structured data (name, price, category, tags, ethical certifications) and pre-fills a `catalog.items` row (via `cove-catalog`) for review and publishing.
 
 **Why build this:** Directly solves the sparse-data problem while demonstrating LLM integration. A two-for-one.
 
@@ -21,7 +21,7 @@ Surface items with an explanation of why they were recommended ("Based on your i
 When item reviews are added, summarize sentiment into a "what buyers say" blurb shown on the item detail screen.
 
 ### Brand Storytelling
-A "tell me about this brand" button that synthesizes a maker's catalog data into a short narrative paragraph shown on the brand page.
+A "tell me about this brand" button that synthesizes a producer's catalog data into a short narrative paragraph shown on the brand page.
 
 ### Onboarding Quiz
 Ask a few free-text questions about the user's values (sustainability priorities, budget, preferred categories). Use an LLM to interpret answers into structured user preferences stored as `profile.interests` (via `cove-user`) and used for personalization.
@@ -37,7 +37,7 @@ The **admin item ingestion** tool is the best starting point:
 - Unblocks the data problem
 - Scoped and buildable without a full backend
 - Clearly demonstrates LLM-in-production experience
-- Can be a simple SwiftUI admin form + a backend endpoint that writes to the `catalog` schema (via `cove-item`)
+- Can be a simple SwiftUI admin form + a backend endpoint that writes to the `catalog` schema (via `cove-catalog`)
 
 ## Stack Considerations
 

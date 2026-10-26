@@ -60,7 +60,7 @@ func main() {
 		r.Delete("/users/me/follows/{entityId}", deps.RemoveFollowHandler)
 		r.Get("/users/me/interests", deps.GetInterestsHandler)
 		r.Put("/users/me/interests", deps.ReplaceInterestsHandler)
-		r.Post("/users/me/events", deps.IngestEventHandler)
+		r.Post("/users/me/activity", deps.IngestActivityHandler)
 		r.Get("/recommendations/categories", deps.RecommendedCategoriesHandler)
 	})
 

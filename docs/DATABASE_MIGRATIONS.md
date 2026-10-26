@@ -19,19 +19,25 @@ Cove uses [golang-migrate](https://github.com/golang-migrate/migrate) for schema
 
 | Service | Migrations path | Schemas owned |
 |---|---|---|
-| `cove-item` | `services/cove-item/migrations/` | `directory`, `catalog` |
+| `cove-directory` | `services/cove-directory/migrations/` | `directory` |
+| `cove-catalog` | `services/cove-catalog/migrations/` | `catalog` |
 | `cove-user` | `services/cove-user/migrations/` | `profile` |
 
 Migrations are plain SQL files in numbered pairs (`000001_name.up.sql` / `000001_name.down.sql`). golang-migrate tracks the current version in a per-service table in the `public` schema of the `cove` database:
 
 | Service | Tracking table |
 |---|---|
-| `cove-item` | `public.schema_migrations_cove_item` |
+| `cove-directory` | `public.schema_migrations_cove_directory` |
+| `cove-catalog` | `public.schema_migrations_cove_catalog` |
 | `cove-user` | `public.schema_migrations_cove_user` |
 
-Both services share the same `cove` database, so a separate table per service is required — a single shared `schema_migrations` table would conflict when the two services are at different migration versions. The table name is passed to golang-migrate via `x-migrations-table` in the connection string (see [Running migrations](#running-migrations)).
+All services share the same `cove` database, so a separate table per service is required — a single shared `schema_migrations` table would conflict when services are at different migration versions. The table name is passed to golang-migrate via `x-migrations-table` in the connection string (see [Running migrations](#running-migrations)).
 
-**cove-item migrations must run before cove-user** — the `profile` schema has cross-schema foreign keys into `catalog` and `directory`.
+**Run order: cove-directory, then cove-catalog, then cove-user.** Roll back in the reverse order.
+
+- `catalog` has foreign keys into `directory` (items, availability, signals and media reference producers and places).
+- `profile` has foreign keys into `catalog` and `directory` (favorites, follows, interests, activity).
+- `directory` has no foreign keys into other schemas. `directory.place_categories.category_id` is a plain ID, checked against `catalog.categories` by a trigger when a tag is written.
 
 ---
 
@@ -82,18 +88,24 @@ kubectl get secret -n cove-prod cove-db-app \
 
 Run from the root of the `cove` repo with the port-forward active.
 
-Each service uses its own tracking table via `x-migrations-table` — both services write to the same `cove` database, so without this flag they would share one `schema_migrations` table and conflict when migration versions don't align.
+Each service uses its own tracking table via `x-migrations-table` — all services write to the same `cove` database, so without this flag they would share one `schema_migrations` table and conflict when migration versions don't align.
 
 ### Apply all pending migrations
 
 ```bash
-# 1. cove-item (directory + catalog schemas)
+# 1. cove-directory (directory schema)
 migrate \
-  -path services/cove-item/migrations \
-  -database "postgres://app:<password>@localhost:5432/cove?sslmode=disable&x-migrations-table=schema_migrations_cove_item" \
+  -path services/cove-directory/migrations \
+  -database "postgres://app:<password>@localhost:5432/cove?sslmode=disable&x-migrations-table=schema_migrations_cove_directory" \
   up
 
-# 2. cove-user (profile schema) — run after cove-item
+# 2. cove-catalog (catalog schema) — run after cove-directory
+migrate \
+  -path services/cove-catalog/migrations \
+  -database "postgres://app:<password>@localhost:5432/cove?sslmode=disable&x-migrations-table=schema_migrations_cove_catalog" \
+  up
+
+# 3. cove-user (profile schema) — run after cove-catalog
 migrate \
   -path services/cove-user/migrations \
   -database "postgres://app:<password>@localhost:5432/cove?sslmode=disable&x-migrations-table=schema_migrations_cove_user" \
@@ -104,8 +116,8 @@ migrate \
 
 ```bash
 migrate \
-  -path services/cove-item/migrations \
-  -database "postgres://app:<password>@localhost:5432/cove?sslmode=disable&x-migrations-table=schema_migrations_cove_item" \
+  -path services/cove-catalog/migrations \
+  -database "postgres://app:<password>@localhost:5432/cove?sslmode=disable&x-migrations-table=schema_migrations_cove_catalog" \
   down 1
 ```
 
@@ -113,8 +125,8 @@ migrate \
 
 ```bash
 migrate \
-  -path services/cove-item/migrations \
-  -database "postgres://app:<password>@localhost:5432/cove?sslmode=disable&x-migrations-table=schema_migrations_cove_item" \
+  -path services/cove-catalog/migrations \
+  -database "postgres://app:<password>@localhost:5432/cove?sslmode=disable&x-migrations-table=schema_migrations_cove_catalog" \
   version
 ```
 
@@ -148,7 +160,7 @@ Roles are managed separately via the CNPG cluster bootstrap (`postInitApplicatio
 
 | Object | Managed by | Privilege required |
 |---|---|---|
-| Roles (`cove_item`, `cove_user`) | CNPG `postInitApplicationSQL` | Superuser |
+| Roles (`cove_directory`, `cove_catalog`, `cove_user`) | CNPG `postInitApplicationSQL` | Superuser |
 | Extensions (`postgis`, `ltree`) | CNPG `postInitApplicationSQL` | Superuser |
 | Schemas, tables, grants | golang-migrate | App user |
 
@@ -170,10 +182,12 @@ Both `CREATE ROLE` and `ALTER ROLE` require superuser privileges. Neither can ru
 
 ```bash
 kubectl exec -n <namespace> cove-db-1 -c postgres -- psql -U postgres -d cove -c "
-DO \$\$ BEGIN CREATE ROLE cove_item WITH LOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END \$\$;
+DO \$\$ BEGIN CREATE ROLE cove_directory WITH LOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END \$\$;
+DO \$\$ BEGIN CREATE ROLE cove_catalog WITH LOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END \$\$;
 DO \$\$ BEGIN CREATE ROLE cove_user WITH LOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END \$\$;
-ALTER ROLE cove_item SET search_path = catalog, directory, public;
-ALTER ROLE cove_user  SET search_path = profile, public;
+ALTER ROLE cove_directory SET search_path = directory, catalog, public;
+ALTER ROLE cove_catalog   SET search_path = catalog, directory, public;
+ALTER ROLE cove_user      SET search_path = profile, public;
 "
 ```
 
@@ -184,7 +198,7 @@ kubectl exec -n <namespace> cove-db-1 -c postgres -- psql -U postgres -c "\du"
 
 # Confirms search_path is set — search_path lives in pg_db_role_setting, not \du
 kubectl exec -n <namespace> cove-db-1 -c postgres -- psql -U postgres -d cove -c \
-  "SELECT rolname, setconfig FROM pg_roles r LEFT JOIN pg_db_role_setting s ON r.oid = s.setrole WHERE rolname IN ('cove_item', 'cove_user');"
+  "SELECT rolname, setconfig FROM pg_roles r LEFT JOIN pg_db_role_setting s ON r.oid = s.setrole WHERE rolname IN ('cove_directory', 'cove_catalog', 'cove_user');"
 ```
 
 Role passwords are managed via ESO → GCP Secret Manager and set with `ALTER ROLE` — they are never stored in migration files.
@@ -203,9 +217,13 @@ error: Dirty database version 1. Fix and force version.
 
 **Check the state** (use the service-specific table name):
 ```bash
-# cove-item
+# cove-directory
 kubectl exec -n cove-staging cove-db-1 -c postgres -- psql -U postgres -d cove \
-  -c "SELECT * FROM schema_migrations_cove_item;"
+  -c "SELECT * FROM schema_migrations_cove_directory;"
+
+# cove-catalog
+kubectl exec -n cove-staging cove-db-1 -c postgres -- psql -U postgres -d cove \
+  -c "SELECT * FROM schema_migrations_cove_catalog;"
 
 # cove-user
 kubectl exec -n cove-staging cove-db-1 -c postgres -- psql -U postgres -d cove \
@@ -219,18 +237,18 @@ If the migration failed cleanly (Postgres rolled back the transaction — most D
 ```bash
 # Clear the dirty record (safe if the transaction rolled back)
 kubectl exec -n cove-staging cove-db-1 -c postgres -- psql -U postgres -d cove \
-  -c "DELETE FROM schema_migrations_cove_item;"  # or schema_migrations_cove_user
+  -c "DELETE FROM schema_migrations_cove_catalog;"  # or _cove_directory, _cove_user
 
 # Then rerun
-migrate -path services/cove-item/migrations \
-  -database "...&x-migrations-table=schema_migrations_cove_item" up
+migrate -path services/cove-catalog/migrations \
+  -database "...&x-migrations-table=schema_migrations_cove_catalog" up
 ```
 
 If the migration partially applied (some statements committed before the failure), use `migrate force <version>` to mark the version as clean, then manually fix the inconsistency before rerunning:
 
 ```bash
-migrate -path services/cove-item/migrations \
-  -database "...&x-migrations-table=schema_migrations_cove_item" force 1
+migrate -path services/cove-catalog/migrations \
+  -database "...&x-migrations-table=schema_migrations_cove_catalog" force 1
 ```
 
 ### Permission denied errors

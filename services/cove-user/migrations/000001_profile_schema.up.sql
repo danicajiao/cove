@@ -1,17 +1,20 @@
--- profile schema: users, favorites, follows, interests, events
+-- profile schema: users, user_flags, favorites, follows, interests, activity
 --
 -- Consolidates original 000001_user_schema + 000002_profile_schema_v2 + 000003_username_unique
--- into a single clean starting state:
+-- and the user_flags table from the old 000002_interests_onboarded into a single
+-- clean starting state:
 --
 --   profile.users       — surrogate UUID primary key (id), auth_uid (provider-agnostic),
 --                         unique username, no email (Firebase owns auth data)
+--   profile.user_flags,
 --   profile.favorites,
 --   profile.follows,
 --   profile.interests,
---   profile.events      — user_id uuid FK referencing profile.users(id)
+--   profile.activity    — user_id uuid FK referencing profile.users(id)
 --
--- Depends on cove-item migrations (000001–000003) having been applied first so that
--- catalog.items, catalog.categories, directory.makers, and directory.storefronts exist.
+-- Run order across services: cove-directory, then cove-catalog, then cove-user.
+-- Depends on catalog.items, catalog.categories, directory.producers and
+-- directory.places existing.
 
 CREATE SCHEMA IF NOT EXISTS profile;
 
@@ -24,6 +27,19 @@ CREATE TABLE profile.users (
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- Generic per-user flags table. Each row records that a named flag was set for
+-- a user, along with when. Presence of a row is the flag — no value column needed.
+-- Adding new flags requires no schema changes, only a new string constant in the service.
+--
+-- Current flags:
+--   interests_onboarded — set when PUT /users/me/interests is called (even with an empty array)
+CREATE TABLE profile.user_flags (
+    user_id    uuid        NOT NULL REFERENCES profile.users(id) ON DELETE CASCADE,
+    flag       text        NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (user_id, flag)
+);
+
 CREATE TABLE profile.favorites (
     user_id    uuid        NOT NULL REFERENCES profile.users(id)   ON DELETE CASCADE,
     item_id    uuid        NOT NULL REFERENCES catalog.items(id)   ON DELETE CASCADE,
@@ -33,13 +49,13 @@ CREATE TABLE profile.favorites (
 
 CREATE INDEX ON profile.favorites (user_id, created_at DESC);
 
--- Follows target a maker OR a storefront — exclusive arc enforces exactly one.
+-- Follows target a producer OR a place — exclusive arc enforces exactly one.
 CREATE TABLE profile.follows (
-    user_id       uuid        NOT NULL REFERENCES profile.users(id)         ON DELETE CASCADE,
-    maker_id      uuid        REFERENCES directory.makers(id)               ON DELETE CASCADE,
-    storefront_id uuid        REFERENCES directory.storefronts(id)          ON DELETE CASCADE,
-    created_at    timestamptz NOT NULL DEFAULT now(),
-    CHECK (num_nonnulls(maker_id, storefront_id) = 1)
+    user_id     uuid        NOT NULL REFERENCES profile.users(id)      ON DELETE CASCADE,
+    producer_id uuid        REFERENCES directory.producers(id)         ON DELETE CASCADE,
+    place_id    uuid        REFERENCES directory.places(id)            ON DELETE CASCADE,
+    created_at  timestamptz NOT NULL DEFAULT now(),
+    CHECK (num_nonnulls(producer_id, place_id) = 1)
 );
 
 CREATE INDEX ON profile.follows (user_id, created_at DESC);
@@ -54,24 +70,26 @@ CREATE TABLE profile.interests (
 
 CREATE INDEX ON profile.interests (user_id);
 
--- Implicit behavioral signals for recommendation ranking.
--- event_type: 'category_tap' | 'item_view' | 'result_dwell' | 'search'
-CREATE TABLE profile.events (
-    id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id     uuid        NOT NULL REFERENCES profile.users(id) ON DELETE CASCADE,
-    event_type  text        NOT NULL,
-    category_id uuid        REFERENCES catalog.categories(id),
-    item_id     uuid        REFERENCES catalog.items(id),
-    metadata    jsonb       NOT NULL DEFAULT '{}',
-    created_at  timestamptz NOT NULL DEFAULT now()
+-- Activity: implicit behavioral signals for recommendation ranking. Named
+-- "activity" so "events" can mean real-world events at places.
+-- activity_type: 'category_tap' | 'item_view' | 'result_dwell' | 'search'
+CREATE TABLE profile.activity (
+    id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id       uuid        NOT NULL REFERENCES profile.users(id) ON DELETE CASCADE,
+    activity_type text        NOT NULL,
+    category_id   uuid        REFERENCES catalog.categories(id),
+    item_id       uuid        REFERENCES catalog.items(id),
+    metadata      jsonb       NOT NULL DEFAULT '{}',
+    created_at    timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX ON profile.events (user_id, created_at DESC);
-CREATE INDEX ON profile.events (user_id, category_id) WHERE category_id IS NOT NULL;
-CREATE INDEX ON profile.events (user_id, item_id)     WHERE item_id     IS NOT NULL;
+CREATE INDEX ON profile.activity (user_id, created_at DESC);
+CREATE INDEX ON profile.activity (user_id, category_id) WHERE category_id IS NOT NULL;
+CREATE INDEX ON profile.activity (user_id, item_id)     WHERE item_id     IS NOT NULL;
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON profile.users     TO cove_user;
+GRANT SELECT, INSERT, DELETE         ON profile.user_flags TO cove_user;
 GRANT SELECT, INSERT, UPDATE, DELETE ON profile.favorites TO cove_user;
 GRANT SELECT, INSERT, UPDATE, DELETE ON profile.follows   TO cove_user;
 GRANT SELECT, INSERT, UPDATE, DELETE ON profile.interests TO cove_user;
-GRANT SELECT, INSERT, UPDATE, DELETE ON profile.events    TO cove_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON profile.activity  TO cove_user;

@@ -18,10 +18,6 @@ class ItemDetailViewModel: ObservableObject {
     enum DetailSelection {
         case description
         case about
-
-        case specifications
-        case origin
-        case tracklist
     }
 
     init(

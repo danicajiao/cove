@@ -4,8 +4,9 @@ on:
   pull_request:
     paths:
       - 'services/cove-api/api/**'
-      - 'services/cove-image/api/**'
-      - 'services/cove-item/api/**'
+      - 'services/cove-media/api/**'
+      - 'services/cove-catalog/api/**'
+      - 'services/cove-directory/api/**'
       - 'services/cove-user/api/**'
       - '.github/workflows/ci-openapi.yml'
 
@@ -24,11 +25,14 @@ jobs:
       - name: Lint cove-api openapi.yaml
         run: redocly lint --config services/cove-api/redocly.yaml services/cove-api/api/openapi.yaml
 
-      - name: Lint cove-image openapi.yaml
-        run: redocly lint --config services/cove-image/redocly.yaml services/cove-image/api/openapi.yaml
+      - name: Lint cove-media openapi.yaml
+        run: redocly lint --config services/cove-media/redocly.yaml services/cove-media/api/openapi.yaml
 
-      - name: Lint cove-item openapi.yaml
-        run: redocly lint --config services/cove-item/redocly.yaml services/cove-item/api/openapi.yaml
+      - name: Lint cove-catalog openapi.yaml
+        run: redocly lint --config services/cove-catalog/redocly.yaml services/cove-catalog/api/openapi.yaml
+
+      - name: Lint cove-directory openapi.yaml
+        run: redocly lint --config services/cove-directory/redocly.yaml services/cove-directory/api/openapi.yaml
 
       - name: Lint cove-user openapi.yaml
         run: redocly lint --config services/cove-user/redocly.yaml services/cove-user/api/openapi.yaml

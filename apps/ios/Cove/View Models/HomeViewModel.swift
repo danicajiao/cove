@@ -75,14 +75,14 @@ class HomeViewModel: ObservableObject {
         }
     }
 
-    /// Records a `category_tap` attention event. Fire-and-forget — a failure here
+    /// Records a `category_tap` activity. Fire-and-forget — a failure here
     /// must never block navigation to the category results.
     func recordCategoryTap(_ category: Components.Schemas.RecommendedCategory) {
         Task {
             do {
-                try await api.ingestEvent(eventType: .category_tap, categoryId: category.id)
+                try await api.ingestActivity(activityType: .category_tap, categoryId: category.id)
             } catch {
-                print("⚠️ category_tap event failed: \(error)")
+                print("⚠️ category_tap activity failed: \(error)")
             }
         }
     }

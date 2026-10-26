@@ -74,17 +74,6 @@ final class CoveAPIItemRepository: ItemRepository {
         return Array(results.prefix(limit).map { DiscoveryItem(discovery: $0) })
     }
 
-    /// Returns items from the general discovery feed.
-    ///
-    /// Category UUID → ltree path resolution is not yet implemented; the
-    /// discovery feed is used as a fallback for the bag's "you might also like"
-    /// shelf until path-based filtering is wired up.
-    func fetchItems(inCategories categoryIds: [String]) async throws -> [any Item] {
-        guard !categoryIds.isEmpty else { return [] }
-        let results = try await api.discovery()
-        return results.map { DiscoveryItem(discovery: $0) }
-    }
-
     /// Fetches items by ID in parallel, one `GET /items/{id}` call per ID.
     ///
     /// Used by `FavoritesViewModel` to hydrate the favorites list. Errors for
@@ -111,19 +100,19 @@ final class CoveAPIItemRepository: ItemRepository {
         }
     }
 
-    /// Returns unique storefronts from the discovery feed as `Brand` stubs.
+    /// Returns unique places from the discovery feed as `Brand` stubs.
     ///
-    /// cove-api does not have a dedicated "list all storefronts" endpoint yet.
+    /// cove-api does not have a dedicated "list all places" endpoint yet.
     /// Until one is added the home screen's stores shelf is populated from
-    /// the storefronts that appear in the discovery response.
+    /// the nearest places that appear in the discovery response.
     func fetchBrands() async throws -> [Brand] {
         let results = try await api.discovery()
         var seen = Set<String>()
         var brands: [Brand] = []
         for result in results {
-            let storefront = result.nearest_storefront
-            guard seen.insert(storefront.id).inserted else { continue }
-            brands.append(Brand(id: storefront.id, createdAt: nil, name: storefront.name, imageURL: ""))
+            let place = result.nearest_place
+            guard seen.insert(place.id).inserted else { continue }
+            brands.append(Brand(id: place.id, createdAt: nil, name: place.name, imageURL: ""))
         }
         return brands
     }

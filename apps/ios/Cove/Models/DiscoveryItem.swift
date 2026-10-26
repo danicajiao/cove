@@ -14,7 +14,7 @@ import UIKit
 /// no separate `ImageRepository.imageURL(for:)` call is required.
 ///
 /// `CoveAPIItemRepository` returns this type from every protocol method.
-/// Views that need the item name, maker, or image can read fields directly
+/// Views that need the item name, producer, or image can read fields directly
 /// rather than downcasting to a category-specific type.
 struct DiscoveryItem: Item {
     // MARK: - Item protocol
@@ -40,9 +40,20 @@ struct DiscoveryItem: Item {
     // MARK: - Display
 
     var name: String
-    var makerName: String
-    var makerID: String
+    /// Absent for brand-only and secondhand items, which have no producer.
+    var producerName: String?
+    var producerID: String?
+    /// Plain brand name, set when the item's brand isn't a producer.
+    var brand: String?
     var itemDescription: String?
+
+    /// "Made by" line: the producer when there is one, otherwise the brand.
+    var madeBy: String {
+        producerName ?? brand ?? ""
+    }
+
+    /// Places that sell this item ("Where to find it"), nearest first for discovery results.
+    var places: [Place]
 
     // MARK: - Pre-signed image variants
 
@@ -79,9 +90,13 @@ extension DiscoveryItem {
         itemDetailsId = discovery.id
 
         name = discovery.name
-        makerName = discovery.maker.name
-        makerID = discovery.maker.id
+        producerName = discovery.producer?.name
+        producerID = discovery.producer?.id
+        brand = discovery.brand
         itemDescription = discovery.description
+        places = discovery.places.map {
+            Place(id: $0.id, name: $0.name, type: $0._type.rawValue, listingURL: $0.listing_url)
+        }
 
         primaryImage = discovery.primary_image
         media = []
@@ -97,9 +112,13 @@ extension DiscoveryItem {
         itemDetailsId = detail.id
 
         name = detail.name
-        makerName = detail.maker.name
-        makerID = detail.maker.id
+        producerName = detail.producer?.name
+        producerID = detail.producer?.id
+        brand = detail.brand
         itemDescription = detail.description
+        places = (detail.places ?? []).map {
+            Place(id: $0.id, name: $0.name, type: $0._type, listingURL: $0.listing_url)
+        }
 
         media = detail.media
 
@@ -117,6 +136,25 @@ extension DiscoveryItem {
         } else {
             primaryImage = nil
             defaultImageURL = ""
+        }
+    }
+}
+
+// MARK: - Place
+
+extension DiscoveryItem {
+    /// A place that sells the item, from `DiscoveryResult.places` or `ItemDetail.places`.
+    struct Place: Codable, Hashable, Identifiable {
+        var id: String
+        var name: String
+        /// Place type code, e.g. `cafe` or `dessert_shop`.
+        var type: String
+        var listingURL: String?
+
+        /// Display label for `type`, e.g. `dessert_shop` → "Dessert shop".
+        var typeLabel: String {
+            let words = type.replacingOccurrences(of: "_", with: " ")
+            return words.prefix(1).uppercased() + words.dropFirst()
         }
     }
 }

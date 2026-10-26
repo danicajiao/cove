@@ -56,7 +56,7 @@ final class CoveAPIClient: @unchecked Sendable {
 
     /// Returns a signed imgproxy URL for the image stored at `filename` in Garage.
     ///
-    /// The URL is valid for 1 hour (configurable via `IMGPROXY_URL_TTL` on cove-image)
+    /// The URL is valid for 1 hour (configurable via `IMGPROXY_URL_TTL` on cove-media)
     /// and can be passed directly to `AsyncImage(url:)`. imgproxy resizes the image to
     /// the requested dimensions on first fetch; Cloudflare caches the transform at the edge.
     ///
@@ -131,7 +131,7 @@ final class CoveAPIClient: @unchecked Sendable {
 
     /// Fetches full item detail from `GET /items/{id}`.
     ///
-    /// Returns all item fields including trust signals, storefronts, and
+    /// Returns all item fields including trust signals, places, and
     /// signed imgproxy URLs for all five image variants across every media row.
     ///
     /// - Parameter id: Item UUID string.
@@ -152,16 +152,16 @@ final class CoveAPIClient: @unchecked Sendable {
         }
     }
 
-    // MARK: - Makers
+    // MARK: - Producers
 
-    /// Fetches maker detail from `GET /makers/{id}`.
+    /// Fetches producer detail from `GET /producers/{id}`.
     ///
-    /// Returns maker profile fields, trust signals, and the list of storefronts
-    /// operated by this maker.
+    /// Returns producer profile fields, trust signals, and the list of places
+    /// run by this producer.
     ///
-    /// - Parameter id: Maker UUID string.
-    func maker(id: String) async throws -> Components.Schemas.MakerDetail {
-        let response = try await client.getMaker(path: .init(id: id))
+    /// - Parameter id: Producer UUID string.
+    func producer(id: String) async throws -> Components.Schemas.ProducerDetail {
+        let response = try await client.getProducer(path: .init(id: id))
         switch response {
         case let .ok(okResult):
             return try okResult.body.json
@@ -174,15 +174,15 @@ final class CoveAPIClient: @unchecked Sendable {
         }
     }
 
-    // MARK: - Storefronts
+    // MARK: - Places
 
-    /// Fetches storefront detail from `GET /storefronts/{id}`.
+    /// Fetches place detail from `GET /places/{id}`.
     ///
-    /// Returns location, trust signals, and items available at this storefront.
+    /// Returns location, trust signals, and items sold at this place.
     ///
-    /// - Parameter id: Storefront UUID string.
-    func storefront(id: String) async throws -> Components.Schemas.StorefrontDetail {
-        let response = try await client.getStorefront(path: .init(id: id))
+    /// - Parameter id: Place UUID string.
+    func place(id: String) async throws -> Components.Schemas.PlaceDetail {
+        let response = try await client.getPlace(path: .init(id: id))
         switch response {
         case let .ok(okResult):
             return try okResult.body.json
@@ -277,27 +277,27 @@ final class CoveAPIClient: @unchecked Sendable {
         }
     }
 
-    // MARK: - Events
+    // MARK: - Activity
 
-    /// Records a behavioral attention event via `POST /users/me/events`.
+    /// Records a behavioral activity via `POST /users/me/activity`.
     ///
     /// Fire-and-forget signal input for personalized recommendations. Returns on 204.
     ///
     /// - Parameters:
-    ///   - eventType: The kind of attention event (e.g. `.category_tap`).
+    ///   - activityType: The kind of activity (e.g. `.category_tap`).
     ///   - categoryId: UUID of the category involved, when applicable.
     ///   - itemId: UUID of the item involved, when applicable.
-    func ingestEvent(
-        eventType: Components.Schemas.IngestEventRequest.event_typePayload,
+    func ingestActivity(
+        activityType: Components.Schemas.IngestActivityRequest.activity_typePayload,
         categoryId: String? = nil,
         itemId: String? = nil
     ) async throws {
-        let body = Components.Schemas.IngestEventRequest(
-            event_type: eventType,
+        let body = Components.Schemas.IngestActivityRequest(
+            activity_type: activityType,
             category_id: categoryId,
             item_id: itemId
         )
-        let response = try await client.ingestEvent(body: .json(body))
+        let response = try await client.ingestActivity(body: .json(body))
         switch response {
         case .noContent:
             return

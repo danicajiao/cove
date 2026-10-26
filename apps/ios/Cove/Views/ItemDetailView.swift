@@ -15,15 +15,12 @@ struct ViewSizeKey: PreferenceKey {
 
 struct ItemDetailView: View {
     @EnvironmentObject private var appState: AppState
-    @EnvironmentObject var bag: Bag
     @StateObject var viewModel: ItemDetailViewModel
 
     let itemId: String
 
     @State private var uiImage: UIImage?
     @State private var averageColor: Color = .Colors.Backgrounds.primary
-
-    @State var count: Int = 1
 
     init(itemId: String) {
         self.itemId = itemId
@@ -38,8 +35,7 @@ struct ItemDetailView: View {
                     item: item,
                     viewModel: viewModel,
                     uiImage: $uiImage,
-                    averageColor: $averageColor,
-                    count: $count
+                    averageColor: $averageColor
                 )
             } else {
                 // Loading state
@@ -64,11 +60,9 @@ private struct ItemDetailContent: View {
     @ObservedObject var viewModel: ItemDetailViewModel
     @Binding var uiImage: UIImage?
     @Binding var averageColor: Color
-    @Binding var count: Int
 
     @Environment(\.imageRepository) private var imageRepository
     @EnvironmentObject private var appState: AppState
-    @EnvironmentObject var bag: Bag
 
     // MARK: - Image fetch
 
@@ -109,29 +103,17 @@ private struct ItemDetailContent: View {
     // MARK: - Computed properties
 
     var titleStr: String {
-        if let discoveryItem = item as? DiscoveryItem {
-            return discoveryItem.name
-        } else if let coffeeItem = item as? CoffeeItem {
-            return coffeeItem.info.name
-        } else if let musicItem = item as? MusicItem {
-            return musicItem.info.album
-        } else if let apparelItem = item as? ApparelItem {
-            return apparelItem.info.name
-        }
-        return "Title"
+        (item as? DiscoveryItem)?.name ?? "Title"
     }
 
+    /// The producer when there is one, otherwise the brand.
     var subtitleStr: String {
-        if let discoveryItem = item as? DiscoveryItem {
-            return discoveryItem.makerName
-        } else if let coffeeItem = item as? CoffeeItem {
-            return coffeeItem.info.roastery
-        } else if let musicItem = item as? MusicItem {
-            return musicItem.info.artist
-        } else if let apparelItem = item as? ApparelItem {
-            return apparelItem.info.brand
-        }
-        return "Subtitle"
+        (item as? DiscoveryItem)?.madeBy ?? ""
+    }
+
+    /// Places that sell the item, for the "Where to find it" section.
+    var places: [DiscoveryItem.Place] {
+        (item as? DiscoveryItem)?.places ?? []
     }
 
     var price: Float {
@@ -211,6 +193,23 @@ private struct ItemDetailContent: View {
                     }
                     .padding(.horizontal, Spacing.xl)
 
+                    if !places.isEmpty {
+                        Rectangle()
+                            .frame(height: 3)
+                            .foregroundStyle(Color.Colors.Fills.quinary)
+
+                        VStack(spacing: Spacing.lg) {
+                            SectionHeader(title: "Where to find it")
+
+                            VStack(spacing: Spacing.md) {
+                                ForEach(places) { place in
+                                    PlaceRow(place: place)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, Spacing.xl)
+                    }
+
                     Rectangle()
                         .frame(height: 3)
                         .foregroundStyle(Color.Colors.Fills.quinary)
@@ -244,48 +243,26 @@ private struct ItemDetailContent: View {
             }
             .padding(.horizontal, Spacing.xl)
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            VStack(spacing: 0) {
-                Rectangle()
-                    .frame(height: 1)
-                    .foregroundStyle(Color.Colors.Fills.quinary)
-                HStack(spacing: Spacing.lg) {
-                    Button {
-                        if !bag.bagItems.contains(where: { bagItem in
-                            bagItem.item.id == item.id
-                        }) {
-                            bag.bagItems.append(BagItem(item: item, quantity: count))
-                            bag.totalItems += count
-                        } else {
-                            let indexOfExisting = bag.bagItems.firstIndex { bagItem in
-                                bagItem.item.id == item.id
-                            }
-                            guard let index = indexOfExisting else {
-                                print("Failed to get local index of existing item")
-                                return
-                            }
-                            bag.bagItems[index].quantity += count
-                            bag.totalItems += count
-                        }
+    }
+}
 
-                        if !bag.categories.contains(where: { category in
-                            category == item.categoryId
-                        }) {
-                            bag.categories.append(item.categoryId)
-                        }
+/// One place in the "Where to find it" list: name and place type.
+private struct PlaceRow: View {
+    let place: DiscoveryItem.Place
 
-                        print(bag.bagItems)
-                    } label: {
-                        Text("Add to visit list")
-                    }
-                    .buttonStyle(PrimaryButton())
-                }
-                .padding(.vertical, Spacing.sm)
-                .padding(.horizontal, Spacing.xl)
-                .background {
-                    Color.Colors.Fills.inverse.ignoresSafeArea()
-                }
-            }
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            Text(place.name)
+                .font(Font.custom("Lato-Bold", size: 16))
+                .foregroundStyle(Color.Colors.Text.primary)
+            Text(place.typeLabel)
+                .font(Font.custom("Lato-Regular", size: 14))
+                .foregroundStyle(Color.Colors.Text.tertiary)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Spacing.lg)
+        .background(Color.Colors.Fills.inverse)
+        .clipShape(RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: Radius.lg, style: .continuous).stroke(Color.Colors.Strokes.primary, lineWidth: 1))
     }
 }

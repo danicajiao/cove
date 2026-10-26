@@ -186,9 +186,9 @@ func TestCreateUserHandler_UsernameTaken(t *testing.T) {
 	}
 }
 
-// ── IngestEventHandler ────────────────────────────────────────────────────────
+// ── IngestActivityHandler ────────────────────────────────────────────────────────
 
-func TestIngestEventHandler_UserNotFound(t *testing.T) {
+func TestIngestActivityHandler_UserNotFound(t *testing.T) {
 	// lookupUserID QueryRow returns ErrNoRows → 404.
 	deps := &Deps{
 		DB: &mockStore{
@@ -199,20 +199,20 @@ func TestIngestEventHandler_UserNotFound(t *testing.T) {
 		CommitSHA: "test",
 	}
 
-	body := `{"event_type":"item_view"}`
-	req := httptest.NewRequest(http.MethodPost, "/users/me/events", strings.NewReader(body))
+	body := `{"activity_type":"item_view"}`
+	req := httptest.NewRequest(http.MethodPost, "/users/me/activity", strings.NewReader(body))
 	req.Header.Set("X-Cove-Uid", "uid-unknown")
 	rr := httptest.NewRecorder()
 
-	deps.IngestEventHandler(rr, req)
+	deps.IngestActivityHandler(rr, req)
 
 	if rr.Code != http.StatusNotFound {
 		t.Errorf("expected 404, got %d", rr.Code)
 	}
 }
 
-func TestIngestEventHandler_InvalidEventType(t *testing.T) {
-	// lookupUserID succeeds, then event_type validation fires before any DB write.
+func TestIngestActivityHandler_InvalidActivityType(t *testing.T) {
+	// lookupUserID succeeds, then activity_type validation fires before any DB write.
 	deps := &Deps{
 		DB: &mockStore{
 			queryRowFn: func(ctx context.Context, sql string, args ...any) Row {
@@ -222,19 +222,19 @@ func TestIngestEventHandler_InvalidEventType(t *testing.T) {
 		CommitSHA: "test",
 	}
 
-	body := `{"event_type":"click"}`
-	req := httptest.NewRequest(http.MethodPost, "/users/me/events", strings.NewReader(body))
+	body := `{"activity_type":"click"}`
+	req := httptest.NewRequest(http.MethodPost, "/users/me/activity", strings.NewReader(body))
 	req.Header.Set("X-Cove-Uid", "uid-123")
 	rr := httptest.NewRecorder()
 
-	deps.IngestEventHandler(rr, req)
+	deps.IngestActivityHandler(rr, req)
 
 	if rr.Code != http.StatusBadRequest {
 		t.Errorf("expected 400, got %d", rr.Code)
 	}
 }
 
-func TestIngestEventHandler_ValidRequest(t *testing.T) {
+func TestIngestActivityHandler_ValidRequest(t *testing.T) {
 	execCalled := false
 	deps := &Deps{
 		DB: &mockStore{
@@ -249,12 +249,12 @@ func TestIngestEventHandler_ValidRequest(t *testing.T) {
 		CommitSHA: "test",
 	}
 
-	body := `{"event_type":"category_tap","category_id":"11111111-1111-1111-1111-111111111111"}`
-	req := httptest.NewRequest(http.MethodPost, "/users/me/events", strings.NewReader(body))
+	body := `{"activity_type":"category_tap","category_id":"11111111-1111-1111-1111-111111111111"}`
+	req := httptest.NewRequest(http.MethodPost, "/users/me/activity", strings.NewReader(body))
 	req.Header.Set("X-Cove-Uid", "uid-123")
 	rr := httptest.NewRecorder()
 
-	deps.IngestEventHandler(rr, req)
+	deps.IngestActivityHandler(rr, req)
 
 	if rr.Code != http.StatusNoContent {
 		t.Errorf("expected 204, got %d", rr.Code)

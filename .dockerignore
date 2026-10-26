@@ -1,5 +1,5 @@
 # Applies to image builds that use the repo root as their Docker build context
-# (cove-image and cove-item — both reference the shared packages/imgproxy module,
+# (cove-media, cove-catalog and cove-directory — all reference the shared packages/imgproxy module,
 # which lives outside their service directory). cove-api keeps a service-scoped
 # context and is unaffected by this file.
 #
