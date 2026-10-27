@@ -367,22 +367,27 @@ The comment should list each AC item with ✅ or ❌ and a brief note on how it 
 
 GitHub's `Closes #<issue-id>` keyword in the PR body is the standard linking mechanism. When the PR targets `main` it auto-closes the issue and populates the Development sidebar automatically. When targeting an integration branch, GitHub ignores the keyword, so the PR has no Development link unless you add one.
 
-**Every PR that targets an integration branch must be linked right after `gh pr create`**, with the GraphQL `addCloseIssueReferences` mutation. It adds the same manual link as the gear icon in the PR's Development section:
+**Link these PRs to their issue right after `gh pr create`:**
+
+- every cove PR that targets an integration branch;
+- every `danicajiao/homelab` PR made for a cove issue. A cross-repo `Closes` never links, whatever the base branch. Link it to the issue in its `## Issue` section.
+
+Use the GraphQL `addCloseIssueReferences` mutation. It adds the same manual link as the gear icon in the PR's Development section, and works across repos:
 
 ```bash
-PR=420; ISSUE=398
-read -r ISSUE_ID PR_ID < <(gh api graphql -f query="{repository(owner:\"danicajiao\",name:\"cove\"){issue(number:$ISSUE){id} pullRequest(number:$PR){id}}}" \
-  -q '.data.repository|"\(.issue.id) \(.pullRequest.id)"')
+PR_REPO=cove; PR=420; ISSUE=398   # PR_REPO=homelab for a homelab PR
+ISSUE_ID=$(gh api graphql -f query="{repository(owner:\"danicajiao\",name:\"cove\"){issue(number:$ISSUE){id}}}" -q .data.repository.issue.id)
+PR_ID=$(gh api graphql -f query="{repository(owner:\"danicajiao\",name:\"$PR_REPO\"){pullRequest(number:$PR){id}}}" -q .data.repository.pullRequest.id)
 gh api graphql -f query='mutation($i:ID!,$p:[ID!]!){addCloseIssueReferences(input:{issueId:$i,pullRequestIds:$p}){clientMutationId}}' \
   -f i="$ISSUE_ID" -f 'p[]'="$PR_ID"
 
 # Verify
-gh pr view $PR --json closingIssuesReferences -q '[.closingIssuesReferences[].number]'
+gh pr view $PR --repo danicajiao/$PR_REPO --json closingIssuesReferences -q '[.closingIssuesReferences[].number]'
 ```
 
 - The target must be an issue, not a PR. One call links up to 10 PRs to one issue.
 - `removeCloseIssueReferences` undoes a manual link. It can't remove links that come from body keywords; edit the body instead.
-- A manual link on an integration-branch PR doesn't close the issue on merge. Issues are closed in the post-merge steps above.
+- A manual link never closes the issue on merge. Issues are closed in the post-merge steps above.
 - Quote `'p[]'` — zsh treats an unquoted `p[]` as a glob and the call fails.
 
 Don't use the REST API `issue` parameter (`gh api ... -F issue=<id>`). It converts an issue into a PR, and GitHub blocks it for any issue with a parent/sub-issue relationship, which is every issue in this repo.
