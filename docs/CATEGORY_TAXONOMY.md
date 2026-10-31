@@ -32,6 +32,8 @@ Category images live in Garage (`cove-media`) in two aspect-ratio variants. Keys
 
 Clients read keys from the API and never build them. A new category needs its image uploaded to Garage and its keys set in the same migration that adds it.
 
+[`category-images.csv`](../services/cove-catalog/media/category-images.csv) records which source photo each category uses, keyed by `path`. The source photos stay out of git. The `match` column says how each row was assigned: `exact` (same bytes as the Figma image), `visual` (matched against the Figma crop), or `subject+fingerprint` (chosen by subject, so check these first). `score` is blank for `subject+fingerprint` rows. [`category-images-contact-sheet.html`](../services/cove-catalog/media/category-images-contact-sheet.html) shows every assignment as a thumbnail; it is a static snapshot, so it does not update when the CSV changes.
+
 ---
 
 ## Design principles
