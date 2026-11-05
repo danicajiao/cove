@@ -72,12 +72,15 @@ kubectl port-forward -n cove-prod svc/cove-db-rw 5433:5432
 Leave the port-forward running in a separate terminal while you run migrations.
 
 **Getting the app user password:**
+
+Staging:
 ```bash
-# staging
 kubectl get secret -n cove-staging cove-db-app \
   -o jsonpath='{.data.password}' | base64 -d
+```
 
-# prod
+Prod:
+```bash
 kubectl get secret -n cove-prod cove-db-app \
   -o jsonpath='{.data.password}' | base64 -d
 ```
