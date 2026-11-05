@@ -16,3 +16,25 @@ func UIDMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
+// isGuest reports whether the caller signed in anonymously. cove-api always
+// sets X-Cove-Guest to "true" or "false" from the verified token, overwriting
+// anything the client sent; a missing header counts as not a guest.
+func isGuest(r *http.Request) bool {
+	return r.Header.Get("X-Cove-Guest") == "true"
+}
+
+// AccountRequiredMiddleware rejects guests with 403 account_required. Wrap the
+// routes that need a signed-up account (favorites and follows); the iOS app
+// turns this response into a sign-up prompt.
+func AccountRequiredMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if isGuest(r) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusForbidden)
+			_, _ = w.Write([]byte(`{"error":"account_required"}`))
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}

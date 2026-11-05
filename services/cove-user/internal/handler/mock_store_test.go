@@ -58,18 +58,30 @@ func (r *errRow) Scan(dest ...any) error { return r.err }
 
 // ── uuidRow ───────────────────────────────────────────────────────────────────
 
-// uuidRow scans a single pgtype.UUID. Used by lookupUserID.
-type uuidRow struct{ val pgtype.UUID }
+// uuidRow scans a pgtype.UUID, and optionally the is_guest bool that
+// lookupUserID selects alongside it.
+type uuidRow struct {
+	val   pgtype.UUID
+	guest bool
+}
 
 func (r *uuidRow) Scan(dest ...any) error {
-	if len(dest) != 1 {
-		return fmt.Errorf("uuidRow: expected 1 dest, got %d", len(dest))
+	if len(dest) != 1 && len(dest) != 2 {
+		return fmt.Errorf("uuidRow: expected 1 or 2 dest, got %d", len(dest))
 	}
-	if p, ok := dest[0].(*pgtype.UUID); ok {
-		*p = r.val
-		return nil
+	p, ok := dest[0].(*pgtype.UUID)
+	if !ok {
+		return fmt.Errorf("uuidRow: cannot scan into %T", dest[0])
 	}
-	return fmt.Errorf("uuidRow: cannot scan into %T", dest[0])
+	*p = r.val
+	if len(dest) == 2 {
+		pb, ok := dest[1].(*bool)
+		if !ok {
+			return fmt.Errorf("uuidRow: dest[1] is %T, want *bool", dest[1])
+		}
+		*pb = r.guest
+	}
+	return nil
 }
 
 // ── intRow ────────────────────────────────────────────────────────────────────
@@ -91,40 +103,46 @@ func (r *intRow) Scan(dest ...any) error {
 // ── profileRow ────────────────────────────────────────────────────────────────
 
 // profileRow scans the user profile columns.
-// GetMeHandler scans 4 columns (uid, username, created_at, interests_onboarded via EXISTS).
-// CreateUserHandler scans 3 (uid, username, created_at — new users always have no flags).
+// GetMeHandler and UpdateUserHandler scan 5 (uid, username, created_at,
+// is_guest, interests_onboarded via EXISTS). CreateUserHandler scans 4 — new
+// users never have flags. An empty username scans as NULL.
 type profileRow struct {
 	uid, username      string
 	createdAt          time.Time
+	isGuest            bool
 	interestsOnboarded bool
 }
 
 func (r *profileRow) Scan(dest ...any) error {
-	if len(dest) != 3 && len(dest) != 4 {
-		return fmt.Errorf("profileRow: expected 3 or 4 dest, got %d", len(dest))
+	if len(dest) != 4 && len(dest) != 5 {
+		return fmt.Errorf("profileRow: expected 4 or 5 dest, got %d", len(dest))
 	}
-	for i, d := range dest[:2] {
-		p, ok := d.(*string)
-		if !ok {
-			return fmt.Errorf("profileRow: dest[%d] is %T, want *string", i, d)
-		}
-		if i == 0 {
-			*p = r.uid
-		} else {
-			*p = r.username
-		}
+	pu, ok := dest[0].(*string)
+	if !ok {
+		return fmt.Errorf("profileRow: dest[0] is %T, want *string", dest[0])
+	}
+	*pu = r.uid
+	pn, ok := dest[1].(**string)
+	if !ok {
+		return fmt.Errorf("profileRow: dest[1] is %T, want **string", dest[1])
+	}
+	*pn = nil
+	if r.username != "" {
+		name := r.username
+		*pn = &name
 	}
 	pt, ok := dest[2].(*time.Time)
 	if !ok {
 		return fmt.Errorf("profileRow: dest[2] is %T, want *time.Time", dest[2])
 	}
 	*pt = r.createdAt
-	if len(dest) == 4 {
-		pb, ok := dest[3].(*bool)
+	bools := []bool{r.isGuest, r.interestsOnboarded}
+	for i, d := range dest[3:] {
+		pb, ok := d.(*bool)
 		if !ok {
-			return fmt.Errorf("profileRow: dest[3] is %T, want *bool", dest[3])
+			return fmt.Errorf("profileRow: dest[%d] is %T, want *bool", i+3, d)
 		}
-		*pb = r.interestsOnboarded
+		*pb = bools[i]
 	}
 	return nil
 }
