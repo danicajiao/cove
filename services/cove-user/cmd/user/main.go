@@ -48,16 +48,24 @@ func main() {
 	r.Get("/health", deps.HealthHandler)
 
 	// All other routes require X-Cove-Uid (injected by cove-api upstream).
+	// Guests (X-Cove-Guest: true) can use everything except favorites and follows.
 	r.Group(func(r chi.Router) {
 		r.Use(handler.UIDMiddleware)
 		r.Get("/users/me", deps.GetMeHandler)
 		r.Post("/users/me", deps.CreateUserHandler)
-		r.Get("/users/me/favorites", deps.GetFavoritesHandler)
-		r.Post("/users/me/favorites/{itemId}", deps.AddFavoriteHandler)
-		r.Delete("/users/me/favorites/{itemId}", deps.RemoveFavoriteHandler)
-		r.Get("/users/me/follows", deps.GetFollowsHandler)
-		r.Post("/users/me/follows", deps.AddFollowHandler)
-		r.Delete("/users/me/follows/{entityId}", deps.RemoveFollowHandler)
+		r.Patch("/users/me", deps.UpdateUserHandler)
+
+		// Favorites and follows need a signed-up account; guests get 403.
+		r.Group(func(r chi.Router) {
+			r.Use(handler.AccountRequiredMiddleware)
+			r.Get("/users/me/favorites", deps.GetFavoritesHandler)
+			r.Post("/users/me/favorites/{itemId}", deps.AddFavoriteHandler)
+			r.Delete("/users/me/favorites/{itemId}", deps.RemoveFavoriteHandler)
+			r.Get("/users/me/follows", deps.GetFollowsHandler)
+			r.Post("/users/me/follows", deps.AddFollowHandler)
+			r.Delete("/users/me/follows/{entityId}", deps.RemoveFollowHandler)
+		})
+
 		r.Get("/users/me/interests", deps.GetInterestsHandler)
 		r.Put("/users/me/interests", deps.ReplaceInterestsHandler)
 		r.Post("/users/me/activity", deps.IngestActivityHandler)
