@@ -7,6 +7,7 @@
 - [Overview](#overview)
 - [The core reframe: the trust layer is the product](#the-core-reframe-the-trust-layer-is-the-product)
 - [Entity model: producer, place, item](#entity-model-producer-place-item)
+- [Listings and ownership](#listings-and-ownership)
 - [Services](#services)
 - [Single Postgres cluster, schemas per service](#single-postgres-cluster-schemas-per-service)
 - [The trust signal system](#the-trust-signal-system)
@@ -110,6 +111,75 @@ See [Category Taxonomy](CATEGORY_TAXONOMY.md#places-reach-eat--drink-three-ways)
 
 ---
 
+## Listings and ownership
+
+> **Status:** Planned, not built (Product Brief amendments A10 to A12). Today every listing is seeded by a migration and managed by Cove.
+
+A listing can start with Cove or with the community, and the business can claim it later. Claiming gives a business control of its page. It gives no control over what the community says and no advantage in ranking.
+
+### Who controls what
+
+| Data | Before a claim | After a claim |
+|---|---|---|
+| **Facts:** name, address, hours, type, categories, linked producer | Anyone suggests a change; Cove approves it | The business edits directly; the community can flag errors |
+| **Official content:** description, photos, items, events | Cove or the community fills it in | The business controls it |
+| **Community voice:** visits, photos, reviews, vouches | Belongs to the community | Stays with the community; the business can reply or report, not delete |
+| **Trust signals** | Verified by Cove | Verified by Cove; the business can submit evidence |
+
+### How listings change hands
+
+- **Adding a place:** anyone can submit one. It needs a real Denver-area address and a duplicate check, and Cove approves it before it goes live. Review confirms that the place exists and is local; the trust layer still decides how it surfaces. Confirmations from other users could replace this review as volume grows.
+- **Editing a listing:** people suggest edits, and nobody edits an unclaimed page directly.
+- **Adding a producer:** anyone can submit a company. An individual appears only as a name attached to a place until they opt in, because a producer can be one person working from home.
+- **Claiming a listing:** Cove verifies the claim through a contact already tied to the business, such as its public phone number or website domain, never a contact the claimant supplies. A claim proves control of the listing. `tier` and the trust signals stay separate from it.
+- **Running a listing:** the claimant becomes the owner and can add admins and staff. These are normal Cove accounts, and one person can manage several listings.
+- **Leaving:** a business can give up its claim, which returns the listing to unclaimed. It cannot delete the listing or the community's content, except to remove a home address or to honor an individual's privacy request.
+
+The owner portal is a web app first, backed by `cove-directory`. Quick tasks can come to iOS later.
+
+### Rollout
+
+1. Seed Denver and build the internal admin and moderation tool. Its review queue covers submissions, edits, claims and disputes, and ships before anything public can be submitted.
+2. Add following places, plus "suggest a place" and "suggest an edit".
+3. Handle claims by hand with the first 50 businesses, through a minimal owner portal.
+4. Add public visits, photos and reviews.
+5. Open self-serve claiming and owner-managed events.
+
+Steps 1 to 3 belong to brief phase v2, and steps 4 and 5 to v3.
+
+### Schema direction
+
+These changes are additive, and all of them live in `directory` so `cove-directory` keeps to the ownership rule. Names are a starting point, to be settled in the migrations.
+
+- **Provenance on `producers` and `places`:** `source` (`seed`, `community`, `business`), `created_by`, and `published_at` so a submission can exist before it goes live. Once people can edit listings, a seed migration must not overwrite those rows.
+- **`claimed_at` on `producers` and `places`:** claim status is tracked apart from `tier`. Today `tier` defaults to `individual_lister`, which would wrongly label an unclaimed company, so it needs to become nullable until a tier is established.
+- **Individuals on `producers`:** a flag recording that the person opted in. Without it, only the name renders, and only on the place it is attached to.
+- **`directory.suggestions`:** proposed new listings and edits, with their status and reviewer.
+- **`directory.claims`:** claim requests, how each was verified, and the outcome.
+
+Memberships link a user to a listing with a named role:
+
+```sql
+-- Exclusive arc: a membership is to either a producer or a place, not both.
+CREATE TABLE directory.memberships (
+    user_id     uuid        NOT NULL REFERENCES profile.users(id)  ON DELETE CASCADE,
+    producer_id uuid        REFERENCES directory.producers(id)     ON DELETE CASCADE,
+    place_id    uuid        REFERENCES directory.places(id)        ON DELETE CASCADE,
+    role        text        NOT NULL CHECK (role IN ('owner', 'admin', 'staff')),
+    created_at  timestamptz NOT NULL DEFAULT now(),
+    CHECK (num_nonnulls(producer_id, place_id) = 1)
+);
+
+CREATE UNIQUE INDEX ON directory.memberships (user_id, producer_id) WHERE producer_id IS NOT NULL;
+CREATE UNIQUE INDEX ON directory.memberships (user_id, place_id)    WHERE place_id IS NOT NULL;
+CREATE INDEX ON directory.memberships (producer_id);
+CREATE INDEX ON directory.memberships (place_id);
+```
+
+Platform-level admin (Cove internal staff who can manage any listing) is handled separately via an `is_platform_admin` flag on `profile.users` or a dedicated internal tooling layer, not via memberships.
+
+---
+
 ## Services
 
 | Service | Path | Responsibility |
@@ -119,7 +189,7 @@ See [Category Taxonomy](CATEGORY_TAXONOMY.md#places-reach-eat--drink-three-ways)
 | `cove-directory` | `services/cove-directory/` | Producers, places and place categories: `GET /producers/{id}`, `GET /places/{id}`, and next places by category and places for you. Owns the `directory` schema; reads `catalog` for signals, items sold at a place, and category matching. Self-serve onboarding and listing management land here later. |
 | `cove-user` | `services/cove-user/` | User profiles, interest management, `GET /recommendations/categories` (level 1 home shelf ranking), `POST /users/me/activity` (attention activity). |
 | `cove-media` | `services/cove-media/` | Authenticated image uploads to Garage and signed-URL fetch via imgproxy. Stateless. |
-**Ownership rule:** each service writes only its own schema. Reads across schemas are allowed and granted explicitly: `cove-catalog` reads `directory` for discovery, `cove-directory` reads `catalog` for place and producer pages, and `cove-user` reads both. Directory data is seeded by migrations until self-serve onboarding ships.
+**Ownership rule:** each service writes only its own schema. Reads across schemas are allowed and granted explicitly: `cove-catalog` reads `directory` for discovery, `cove-directory` reads `catalog` for place and producer pages, and `cove-user` reads both. Directory data is seeded by migrations until community listings ship; see [Listings and ownership](#listings-and-ownership).
 
 The iOS app uses `swift-openapi-generator` to produce a typed Swift client per service. ViewModels never construct URLs or call `URLSession` directly — they consume repository protocols backed by the generated clients (see [iOS App Architecture](IOS_APP_ARCHITECTURE.md)).
 
@@ -796,34 +866,7 @@ See [Backend Infrastructure](BACKEND_INFRASTRUCTURE.md) for cluster topology and
 - **Community contributions** (visits, what people ordered, photos, reviews) — brief v3. Contributions will order items within trusted places and feed the Community Verified signal; they never decide which places surface
 - **Values signals beyond certifications** (LGBTQ+-owned, worker-owned, ...) and how each was established (certified, declared, community-confirmed) — brief v1.1 amendment A3; the source will extend `entity_signals.status`
 - **Multi-currency, historical pricing** — `price_cents` is informational USD
-- **Producer/place admin roles** — v1 data is seeded manually; self-serve ownership and role management ships with `cove-directory`. See below.
-
-### Producer/place ownership and admin roles (future, in `cove-directory`)
-
-In mature marketplaces (DoorDash for Merchants, Etsy seller portal, Airbnb host dashboard), the supply side is managed by the producers and place operators themselves — not by the platform team. A restaurant owner logs into a merchant portal and manages their own menu, photos, and hours. Cove follows the same model: `cove-directory` is the producer/place management portal.
-
-In v1, `directory` data is seeded once via migrations and managed by Cove internally. When self-serve onboarding ships in `cove-directory`, the following additive migration lands:
-
-```sql
--- Links a platform user to a producer or place with a named role.
--- Exclusive arc: a membership is to either a producer or a place, not both.
-CREATE TABLE profile.memberships (
-    uid         text        NOT NULL REFERENCES profile.users(uid) ON DELETE CASCADE,
-    producer_id uuid REFERENCES directory.producers(id)            ON DELETE CASCADE,
-    place_id    uuid REFERENCES directory.places(id)               ON DELETE CASCADE,
-    role        text        NOT NULL, -- 'owner' | 'admin' | 'staff'
-    created_at  timestamptz NOT NULL DEFAULT now(),
-    CHECK (num_nonnulls(producer_id, place_id) = 1)
-);
-
-CREATE INDEX ON profile.memberships (uid);
-CREATE INDEX ON profile.memberships (producer_id);
-CREATE INDEX ON profile.memberships (place_id);
-```
-
-This is additive — no existing tables change. `cove-directory` gets `SELECT, INSERT, UPDATE, DELETE` on `profile.memberships`; it already owns `directory`.
-
-Platform-level admin (Cove internal staff who can manage any listing) is handled separately via a `is_platform_admin` flag on `profile.users` or a dedicated internal tooling layer — not via `profile.memberships`.
+- **Community listings, claims and admin roles** — v1 data is seeded manually. The planned model is in [Listings and ownership](#listings-and-ownership).
 
 ---
 
@@ -841,6 +884,7 @@ Items still open:
 5. **Independent-place tier** — `tier` lives on `producer`. A registered independent place (a boutique that resells, with no producer of its own) earns trust via its signals, not a tier; revisit if places need their own tier.
 6. **`details` on products vs a separate table** — folded into a `details` JSONB column here; split back out only if payloads get large enough to hurt list queries.
 7. **`user_flags`** — the table and its one flag (`interests_onboarded`) are documented in the `profile` schema above; #368 tracks defining further flags and their owner.
+8. **Place sourcing** — whether people add a place by searching an existing maps source instead of typing it in, and which source's terms allow Cove to keep that data.
 
 ---
 
@@ -851,7 +895,7 @@ Items still open:
 - [Media Architecture](MEDIA_ARCHITECTURE.md) — image storage, transformation, serving, signed URLs
 - [iOS App Architecture](IOS_APP_ARCHITECTURE.md) — iOS app structure, ViewModels, repository layer
 - [Category Taxonomy](CATEGORY_TAXONOMY.md) — full v1 tree, design principles, add/remove runbook
-- Product Brief v1.1 — the trust layer, the wedge, the signal taxonomy; amendments A1–A9 cover the producer/place model, Eat & Drink and community contributions
+- Product Brief v1.2 — the trust layer, the wedge, the signal taxonomy; amendments A1–A12 cover the producer/place model, Eat & Drink, community contributions, and community listings and claiming
 
 ---
 
@@ -870,3 +914,4 @@ Items still open:
 - **Version 6.0** (October 2026) — **Producers and places (epic #393).** Renamed `maker` → `producer` and `storefront` → `place` everywhere, with `operated_by_maker_id` → `run_by_producer_id`; "producer" and "place" are now consumer-facing words too ("Made by", "Sold at", "Made here", "From local producers"). `items.producer_id` became nullable and `items.brand` was added (brand-only and secondhand items). Place types grew to café, restaurant, bar, bakery, dessert shop, shop, gallery, studio, market, venue and taproom, enforced by a `CHECK`; dropped the online-only place. Added `directory.place_categories` and the three ways a place reaches a category. Renamed `profile.events` → `profile.activity` and `/users/me/events` → `/users/me/activity`. Reframed Cove as local community discovery (Product Brief v1.1), and moved events, community contributions and values signals from out of scope to planned v3 work.
 - **Version 6.1** (October 2026) — **Services named after their schemas (#413).** Split `cove-item` into `cove-catalog` (catalog schema, discovery) and `cove-directory` (directory schema, producer and place endpoints), each with its own migrations, role and migration history. Migrations run directory → catalog → user. `place_categories.category_id` became a plain ID checked by a trigger, so `directory` has no foreign keys into other schemas.
 - **Version 6.2** (October 2026) — **cove-user rename (#397).** `profile.activity.event_type` → `activity_type`; follows target `producer_id` / `place_id`; `profile.user_flags` folded into cove-user's first migration and documented in the `profile` schema.
+- **Version 6.3** (November 2026) — **Listings and ownership.** Added the planned model for community listings, claiming and owner administration (Product Brief A10 to A12). `profile.memberships` became `directory.memberships`, keyed on `user_id`, so `cove-directory` keeps to the ownership rule. Listing moderation now ships before community submissions, ahead of the v3 contributions work.
