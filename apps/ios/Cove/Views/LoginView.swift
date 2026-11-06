@@ -30,7 +30,7 @@ struct LoginView: View {
 
                 Group {
                     Text("Log in to your account")
-                        .font(.custom("Lato-Bold", size: 28))
+                        .textStyle(.headingLG)
                         .foregroundStyle(Color.Colors.Text.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -94,7 +94,7 @@ struct LoginView: View {
                     )
                 } label: {
                     if !loading {
-                        Text("Log In")
+                        Text("Log in")
                     } else {
                         ProgressView()
                             .tint(.white)

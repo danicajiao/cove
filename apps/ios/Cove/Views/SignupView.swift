@@ -30,7 +30,7 @@ struct SignupView: View {
 
                 Group {
                     Text("Create your account")
-                        .font(.custom("Lato-Bold", size: 28))
+                        .textStyle(.headingLG)
                         .foregroundStyle(Color.Colors.Text.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -83,7 +83,7 @@ struct SignupView: View {
                         )
                     } label: {
                         if !loading {
-                            Text("Sign Up")
+                            Text("Sign up")
                         } else {
                             ProgressView()
                                 .tint(.white)
