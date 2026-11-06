@@ -116,8 +116,9 @@ func envOr(key, def string) string {
 }
 
 // uidProxy returns an http.Handler that reverse-proxies all requests to the
-// given upstream URL, injecting the verified Firebase UID as X-Cove-Uid so
-// the upstream service can trust the identity without re-validating the token.
+// given upstream URL, injecting the verified Firebase UID as X-Cove-Uid and the
+// caller's guest status as X-Cove-Guest ("true" or "false") so the upstream
+// service can trust the identity without re-validating the token.
 func uidProxy(name, targetURL string) http.Handler {
 	target, err := url.Parse(targetURL)
 	if err != nil {
@@ -131,9 +132,7 @@ func uidProxy(name, targetURL string) http.Handler {
 		_, _ = w.Write([]byte(`{"error":"upstream service unavailable"}`))
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if uid, ok := covauth.UIDFromContext(r.Context()); ok {
-			r.Header.Set("X-Cove-Uid", uid)
-		}
+		covauth.SetIdentityHeaders(r)
 		proxy.ServeHTTP(w, r)
 	})
 }
