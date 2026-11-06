@@ -277,7 +277,8 @@ All components are defined in the **Components page** of the Figma file. Views s
 | Buttons / Secondary | `apps/ios/Cove/Styles/SecondaryButton.swift` | Outlined style, uses `strokes/primary` |
 | Buttons / Social Login | `apps/ios/Cove/Components/` | Google, Facebook, Apple variants |
 | Text Field | `apps/ios/Cove/Components/CustomTextField.swift` | One component: Label, Placeholder, Leading Icon, Secure (eye toggle). Helper text lives in the view |
-| Section Header | `apps/ios/Cove/Components/` | Title + optional "See all →" in `brand/accent` |
+| Section Header | `apps/ios/Cove/Components/SectionHeader.swift` | Title (Body LG) + optional "See all →" link (Body MD) in `brand/accent` |
+| Wordmark | `apps/ios/Cove/Components/Wordmark.swift` | The "Cove." logo in Gazpacho Heavy: `.large` (60, -5%) on Welcome, `.regular` (40) above the auth and onboarding forms. Not a text style |
 | Divider | `apps/ios/Cove/Components/` | Plain line and "OR" variants |
 | Item | `apps/ios/Cove/Components/ItemCard.swift` | Name (Heading XS), producer (Caption), price (Body SM Bold). The `On Sale` variant is design-only for now |
 | Category Card | `apps/ios/Cove/Components/CategoryCard.swift` | Home shelf card, 130×60: parent (Caption SM), name (Heading XS). One variant per category image |

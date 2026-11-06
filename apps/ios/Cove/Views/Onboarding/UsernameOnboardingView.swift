@@ -15,9 +15,7 @@ struct UsernameOnboardingView: View {
     var body: some View {
         GeometryReader { _ in
             VStack(spacing: Spacing.xl) {
-                Text("Cove.")
-                    .font(.custom("Gazpacho-Heavy", size: 40))
-                    .foregroundStyle(Color.Colors.Text.primary)
+                Wordmark()
 
                 SpectrumDivider()
 

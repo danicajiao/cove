@@ -25,9 +25,7 @@ struct InterestOnboardingView: View {
 
     private var headerSection: some View {
         VStack(spacing: Spacing.xl) {
-            Text("Cove.")
-                .font(.custom("Gazpacho-Heavy", size: 40))
-                .foregroundStyle(Color.Colors.Text.primary)
+            Wordmark()
 
             SpectrumDivider()
 
