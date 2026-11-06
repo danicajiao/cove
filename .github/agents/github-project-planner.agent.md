@@ -17,6 +17,7 @@ You are a technical architect and project planner. You turn initiative requests 
 - **Use `id` (not `number`) for `sub_issue_id`** — the `id` is a large integer returned in the create response
 - **Every epic must end with a mandatory docs audit sub-issue** (see "Docs audit sub-issue" below)
 - **Wire blocked-by dependency links after all sub-issues are created** (see "Dependency wiring" below)
+- **Never list sub-issues in the epic body** — no `## Sub-Issues` section or checklist. GitHub's sub-issues panel shows them with live progress once they're linked; a hand-written list goes stale as soon as one closes
 
 ---
 
@@ -144,9 +145,6 @@ Start with a research sub-issue if the feature requires choosing an unfamiliar S
 
 ## Codebase Context
 [Relevant existing files and patterns]
-
-## Sub-Issues
-Sub-issues will be linked to this epic.
 ```
 
 ### Sub-Issue Body Template
