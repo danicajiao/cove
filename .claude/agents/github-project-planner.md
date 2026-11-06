@@ -81,10 +81,10 @@ Present the final plan — including which UI sub-issues have Figma links — an
    ```bash
    gh api repos/danicajiao/cove/git/refs \
      -X POST \
-     -f ref="refs/heads/feature/$EPIC_NUMBER-<short-description>" \
+     -f ref="refs/heads/integration/COVE-$EPIC_NUMBER-<short-description>" \
      -f sha="$(gh api repos/danicajiao/cove/git/ref/heads/main --jq '.object.sha')"
    ```
-   The branch name follows the standard convention: `feature/<epic-number>-<short-description>`.
+   The branch name follows the integration branch convention: `integration/COVE-<epic-number>-<short-description>`.
 
 3. **Create each sub-issue** the same way — capture each one's number and node ID. Include the integration branch name in each sub-issue's **Technical Notes** section so the implementing agent knows where to target its PR.
 
@@ -100,14 +100,19 @@ Present the final plan — including which UI sub-issues have Figma links — an
      -f child="$SUB_NODE_ID"
    ```
 
-5. **Open a draft PR** from the integration branch to `main` so it's visible and ready for when sub-issues are merged:
+5. **Don't open the integration PR yet.** GitHub refuses a PR from a branch with no commits beyond `main`, which is the state of a new integration branch. The draft PR to `main` is opened after the first sub-issue PR merges into the integration branch:
    ```bash
+   cat > /tmp/integration-pr.md << EOF
+   Integration branch for epic #$EPIC_NUMBER. Track sub-issue progress on the epic. Merge after all sub-issues are merged and tested.
+
+   Closes #$EPIC_NUMBER
+   EOF
    gh pr create \
      --repo danicajiao/cove \
      --title "<Epic Title>" \
-     --body "Integration branch for epic #$EPIC_NUMBER. Merge after all sub-issues are merged and tested.\n\nCloses #$EPIC_NUMBER" \
+     --body-file /tmp/integration-pr.md \
      --base main \
-     --head feature/$EPIC_NUMBER-<short-description> \
+     --head integration/COVE-$EPIC_NUMBER-<short-description> \
      --draft
    ```
 
@@ -139,7 +144,7 @@ Review and update all documentation affected by this epic so it accurately refle
 
 ## Technical Notes
 - Handled by the `documentation-maintainer` agent
-- Integration branch: feature/COVE-<epic-id>-<description>
+- Integration branch: integration/COVE-<epic-id>-<description>
 - Review all docs listed in `docs/README.md` for claims affected by this epic
 
 ## Dependencies
@@ -285,7 +290,7 @@ The issues you create are the top of a multi-agent pipeline. Once an issue is cr
 
 - `ios` sub-issues → picked up by the `swiftui-engineer` agent, which reads the issue body as its spec (and, when the issue carries `ui/ux`, the design frame URL in its Technical Notes), implements the work in a worktree, and creates a PR that closes the issue
 - The branch the agent works on is named after the issue: `feature/<issue-id>-<short-description>`
-- Sub-issue PRs target the **integration branch** (`feature/COVE-<epic-id>-<description>`), not `main` — include the integration branch name in each sub-issue's Technical Notes so agents know where to target
+- Sub-issue PRs target the **integration branch** (`integration/COVE-<epic-id>-<description>`), not `main` — include the integration branch name in each sub-issue's Technical Notes so agents know where to target
 - The PR description contains `Closes #<issue-id>`, which auto-closes the issue on merge
 - Once all sub-issues are merged into the integration branch, the draft PR from the integration branch to `main` is reviewed, tested, and merged to close the epic
 
