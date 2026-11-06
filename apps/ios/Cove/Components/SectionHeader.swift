@@ -9,29 +9,39 @@ import SwiftUI
 
 struct SectionHeader: View {
     var title: String
+    /// The link label on the trailing side. `nil` hides the link, like turning
+    /// off the Figma component's Navigation property.
+    var navigationText: String? = "See all"
+
     var body: some View {
         HStack {
             Text(title)
-                .font(Font.custom("Lato-Bold", size: 20))
+                .textStyle(.bodyLG)
                 .foregroundStyle(Color.Colors.Text.primary)
             Spacer()
-            Button {
-                // TODO: Navigate to Categories View // swiftlint:disable:this todo
-            } label: {
-                HStack(spacing: Spacing.xs) {
-                    Text("See all")
-                        .textStyle(.bodySM)
-                    Image(systemName: "arrow.right")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 14)
+            if let navigationText {
+                Button {
+                    // TODO: Navigate to Categories View // swiftlint:disable:this todo
+                } label: {
+                    HStack(spacing: Spacing.sm) {
+                        Text(navigationText)
+                            .textStyle(.bodyMD)
+                        Image(systemName: "arrow.right")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 14)
+                    }
+                    .foregroundStyle(Color.Colors.Brand.accent)
                 }
-                .foregroundStyle(Color.Colors.Brand.accent)
             }
         }
     }
 }
 
 #Preview {
-    SectionHeader(title: "Preview")
+    VStack(spacing: Spacing.xl) {
+        SectionHeader(title: "Popular")
+        SectionHeader(title: "Similar to this", navigationText: nil)
+    }
+    .padding()
 }

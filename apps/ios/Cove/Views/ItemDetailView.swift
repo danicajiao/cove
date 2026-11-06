@@ -215,7 +215,7 @@ private struct ItemDetailContent: View {
                         .foregroundStyle(Color.Colors.Fills.quinary)
 
                     VStack(spacing: Spacing.lg) {
-                        SectionHeader(title: "Similar to this")
+                        SectionHeader(title: "Similar to this", navigationText: nil)
 
                         ScrollView(.horizontal) {
                             HStack(spacing: Spacing.md) {
