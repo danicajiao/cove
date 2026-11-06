@@ -68,7 +68,7 @@ struct ItemCard: View {
             VStack(spacing: Spacing.sm) {
                 VStack(spacing: 0) {
                     Text(titleStr)
-                        .font(Font.custom("Gazpacho-Black", size: 12))
+                        .textStyle(.headingXS)
                         .foregroundStyle(Color.Colors.Text.primary)
                         .lineLimit(1)
                         .truncationMode(.tail)
@@ -83,7 +83,7 @@ struct ItemCard: View {
                 }
 
                 Text("$\(Int(price))")
-                    .font(Font.custom("Lato-SemiBold", size: 14))
+                    .textStyle(.bodySMBold)
                     .foregroundStyle(Color.Colors.Text.primary)
                     .lineLimit(1)
                     .truncationMode(.tail)

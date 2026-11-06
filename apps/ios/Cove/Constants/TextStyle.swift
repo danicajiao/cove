@@ -22,6 +22,8 @@ enum TextStyle: CaseIterable {
     case headingMD
     /// Gazpacho/Heading SM
     case headingSM
+    /// Gazpacho/Heading XS
+    case headingXS
     /// Lato/Body LG
     case bodyLG
     /// Lato/Body MD
@@ -38,7 +40,7 @@ enum TextStyle: CaseIterable {
     /// PostScript name of the font file.
     var fontName: String {
         switch self {
-        case .display, .headingXL, .headingLG, .headingMD, .headingSM: "Gazpacho-Black"
+        case .display, .headingXL, .headingLG, .headingMD, .headingSM, .headingXS: "Gazpacho-Black"
         case .bodyLG, .bodySMBold, .captionBold: "Lato-Bold"
         case .bodyMD, .bodySM, .caption: "Lato-Regular"
         }
@@ -51,6 +53,7 @@ enum TextStyle: CaseIterable {
         case .headingLG: 28
         case .headingMD: 24
         case .headingSM: 20
+        case .headingXS: 12
         case .bodyLG: 18
         case .bodyMD: 16
         case .bodySM, .bodySMBold: 14
@@ -66,6 +69,7 @@ enum TextStyle: CaseIterable {
         case .headingLG: 34
         case .headingMD: 30
         case .headingSM: 26
+        case .headingXS: 16
         case .bodyLG: 28
         case .bodyMD: 24
         case .bodySM, .bodySMBold: 20
@@ -76,7 +80,7 @@ enum TextStyle: CaseIterable {
     /// Figma letter spacing as a fraction of the font size (-5% is -0.05).
     var letterSpacing: CGFloat {
         switch self {
-        case .display, .headingXL, .headingLG, .headingMD, .headingSM: -0.05
+        case .display, .headingXL, .headingLG, .headingMD, .headingSM, .headingXS: -0.05
         case .bodyLG, .bodyMD, .bodySM, .bodySMBold, .caption, .captionBold: 0
         }
     }

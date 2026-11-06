@@ -178,6 +178,7 @@ Font files live in `apps/ios/Cove/Resources/`. Always use `Font.custom()` — ne
 | Gazpacho/Heading LG | Gazpacho-Black | 28pt | 34 | -5% | `.textStyle(.headingLG)` |
 | Gazpacho/Heading MD | Gazpacho-Black | 24pt | 30 | -5% | `.textStyle(.headingMD)` |
 | Gazpacho/Heading SM | Gazpacho-Black | 20pt | 26 | -5% | `.textStyle(.headingSM)` |
+| Gazpacho/Heading XS | Gazpacho-Black | 12pt | 16 | -5% | `.textStyle(.headingXS)` |
 | Lato/Body LG | Lato-Bold | 18pt | 28 | 0 | `.textStyle(.bodyLG)` |
 | Lato/Body MD | Lato-Regular | 16pt | 24 | 0 | `.textStyle(.bodyMD)` |
 | Lato/Body SM | Lato-Regular | 14pt | 20 | 0 | `.textStyle(.bodySM)` |
