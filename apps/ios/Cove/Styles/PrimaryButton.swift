@@ -9,6 +9,9 @@ import SwiftUI
 
 struct PrimaryButton: PrimitiveButtonStyle {
     @State private var isPressed = false
+    /// `.disabled(true)` blocks taps but doesn't change a custom style's look,
+    /// so dim it to match the Large Button's Disabled state in Figma.
+    @Environment(\.isEnabled) private var isEnabled
     let width: CGFloat?
     let height: CGFloat?
 
@@ -29,7 +32,7 @@ struct PrimaryButton: PrimitiveButtonStyle {
                     .fill(Color.Colors.Fills.primary)
             }
             // animation defaults
-            .opacity(isPressed ? 0.2 : 1)
+            .opacity(isPressed ? 0.2 : isEnabled ? 1 : 0.4)
             .animation(.default, value: isPressed)
             .gesture(
                 DragGesture(minimumDistance: 0)
@@ -48,9 +51,15 @@ struct PrimaryButton: PrimitiveButtonStyle {
 }
 
 #Preview {
-    Button("Press Me") {
-        print("Button pressed!")
+    VStack {
+        Button("Press Me") {
+            print("Button pressed!")
+        }
+        .buttonStyle(PrimaryButton())
+
+        Button("Disabled") {}
+            .buttonStyle(PrimaryButton())
+            .disabled(true)
     }
-    .buttonStyle(PrimaryButton())
     .padding()
 }

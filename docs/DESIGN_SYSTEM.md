@@ -273,10 +273,10 @@ All components are defined in the **Components page** of the Figma file. Views s
 
 | Figma component | Swift file(s) | Notes |
 |---|---|---|
-| Buttons / Primary | `apps/ios/Cove/Styles/PrimaryButton.swift` | `PrimitiveButtonStyle`, uses `fills/primary` + `fills/inverse` |
-| Buttons / Secondary | `apps/ios/Cove/Styles/SecondaryButton.swift` | Outlined style, uses `strokes/primary` |
+| Buttons / Primary | `apps/ios/Cove/Styles/PrimaryButton.swift` | `PrimitiveButtonStyle`, uses `fills/primary` + `fills/inverse`. Dims to 40% when disabled (Large Button `State=Disabled`) |
+| Buttons / Secondary | `apps/ios/Cove/Styles/SecondaryButton.swift` | Outlined style, uses `strokes/primary`. Dims to 40% when disabled |
 | Buttons / Social Login | `apps/ios/Cove/Components/` | Google, Facebook, Apple variants |
-| Text Field | `apps/ios/Cove/Components/CustomTextField.swift` | One component: Label, Placeholder, Leading Icon, Secure (eye toggle). Helper text lives in the view |
+| Text Field | `apps/ios/Cove/Components/CustomTextField.swift` | `State` Empty (placeholder) or Filled (`Value` in `text/primary`); Label, Placeholder, Leading Icon (off by default), Secure (eye toggle), Helper. Helper text lives in the view |
 | Section Header | `apps/ios/Cove/Components/SectionHeader.swift` | Title (Body LG) + optional "See all →" link (Body MD) in `brand/accent` |
 | Wordmark | `apps/ios/Cove/Components/Wordmark.swift` | The "Cove." logo in Gazpacho Heavy: `.large` (60/66, -5%) on Welcome, `.regular` (40/44) above the auth and onboarding forms. Not a text style |
 | Divider | `apps/ios/Cove/Components/` | Plain line and "OR" variants |
