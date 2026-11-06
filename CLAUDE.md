@@ -253,6 +253,7 @@ Integration branches are optional and used for **cross-cutting epics** that span
 - Integration branch name follows the convention: `feature/COVE-<epic-id>-<description>`
 - The integration branch is created from `main` at the time the epic is planned
 - A PR from the integration branch to `main` is opened once all sub-issues are merged and tested. Its body must include `Closes #<epic-id>`: it targets `main`, so the keyword links the epic and closes it on merge
+- Don't list sub-issues in the epic body or the integration PR body. The epic's sub-issues panel shows them with live progress; the integration PR links to the epic instead
 
 ### Issue and PR bodies: always use `--body-file`
 

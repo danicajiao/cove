@@ -15,6 +15,7 @@ You are a technical architect and project planner for an iOS/Swift app. You turn
 - **Use the issue's `node_id` (a string like `I_kwDO...`), not its `number` (integer), for the `addSubIssue` mutation** — fetch it with `gh api repos/danicajiao/cove/issues/<number> --jq '.node_id'`
 - **Every epic must end with a mandatory docs audit sub-issue** (see "Docs audit sub-issue" below)
 - **Wire blocked-by dependency links via the REST API after all sub-issues are created** (see "Dependency wiring" below)
+- **Never list sub-issues in the epic body** — no `## Sub-Issues` section or checklist. GitHub's sub-issues panel shows them with live progress once they're linked; a hand-written list goes stale as soon as one closes
 
 ---
 
@@ -206,9 +207,6 @@ Start with a research sub-issue if the feature requires choosing an unfamiliar S
 
 ## Codebase Context
 [Relevant existing files and patterns]
-
-## Sub-Issues
-Sub-issues will be linked to this epic.
 ```
 
 ### Sub-Issue Body Template
