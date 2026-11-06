@@ -53,7 +53,7 @@ struct HomeView: View {
                 .padding(.horizontal, Spacing.xl)
 
                 VStack {
-                    SectionHeader(title: "Categories")
+                    SectionHeader(title: "Search by category")
 
                     if viewModel.isLoadingCategories {
                         ProgressView()
@@ -111,7 +111,7 @@ struct HomeView: View {
                     .padding(.horizontal, Spacing.xl)
 
                 VStack(spacing: Spacing.lg) {
-                    SectionHeader(title: "Stores")
+                    SectionHeader(title: "Producers")
 
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(alignment: .top, spacing: Spacing.md) {
