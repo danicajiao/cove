@@ -23,8 +23,7 @@ struct UsernameOnboardingView: View {
 
                 VStack(alignment: .leading, spacing: Spacing.sm) {
                     Text("Choose a username")
-                        .font(.custom("Gazpacho-Black", size: 28))
-                        .tracking(-1.4) // Figma letter spacing -5% × 28pt
+                        .gazpachoHeading(size: 28)
                         .foregroundStyle(Color.Colors.Text.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
 

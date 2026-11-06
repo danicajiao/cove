@@ -148,7 +148,7 @@ private struct ItemDetailContent: View {
                     VStack(spacing: Spacing.lg) {
                         VStack(spacing: 0) {
                             Text(titleStr)
-                                .font(Font.custom("Gazpacho-Black", size: 20))
+                                .gazpachoHeading(size: 20)
                                 .foregroundStyle(Color.Colors.Text.primary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
 

@@ -32,7 +32,7 @@ struct ProfileHeaderView: View {
 
             VStack(spacing: Spacing.xs) {
                 Text(viewModel.displayName)
-                    .font(Font.custom("Gazpacho-Black", size: 24))
+                    .gazpachoHeading(size: 24)
                     .foregroundStyle(Color.Colors.Text.primary)
 
                 Text(viewModel.username)

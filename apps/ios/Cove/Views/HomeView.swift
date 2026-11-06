@@ -28,8 +28,8 @@ struct HomeView: View {
                 HStack(spacing: Spacing.md) {
                     // TODO: Implement time-based greeting message // swiftlint:disable:this todo
                     Text("Good morning, Daniel")
+                        .gazpachoHeading(size: 28)
                         .frame(width: 300, alignment: .leading)
-                        .font(Font.custom("Gazpacho-Black", size: 28))
                         .lineSpacing(6) // SwiftUI lineSpacing = Figma line height - Font size
                         .foregroundStyle(Color.Colors.Text.primary)
                     Spacer()
