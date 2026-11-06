@@ -69,7 +69,7 @@ struct LoginView: View {
                                 print("TODO: auth with Face ID")
                             } label: {
                                 Text("Face ID \(Image(systemName: "faceid"))")
-                                    .textStyle(.bodySM)
+                                    .textStyle(.caption)
                                     .foregroundStyle(Color.Colors.Text.tertiary)
                             }
                         }
