@@ -35,7 +35,7 @@ See `docs/` for architecture details: `IOS_APP_ARCHITECTURE.md`, `QUICK_START.md
 Always `git pull` immediately after switching to an existing branch — integration branches, `main`, and long-lived feature branches all receive commits from other contributors and agents. Starting work on a stale branch causes unnecessary conflicts.
 
 ```bash
-git checkout feature/228-phase-1-gateway
+git checkout integration/COVE-228-phase-1-gateway
 git pull  # always — before touching anything
 ```
 
@@ -67,11 +67,15 @@ The `<REPO>` prefix is always ALL CAPS and identifies which repo's issue tracker
 | `bugfix/` | Bug fixes |
 | `docs/` | Documentation-only changes |
 | `chore/` | Refactoring, cleanup, config, tooling |
+| `integration/` | An epic's integration branch only (see "Integration branches"). Never used for a branch that makes changes of its own |
 
 Examples — with issue:
 - `feature/COVE-137-profile-view-model`
 - `enhancement/COVE-66-improve-tab-navigation`
 - `bugfix/COVE-3-fix-login-crash`
+
+Example — integration branch:
+- `integration/COVE-430-guest-browsing`
 
 Examples — no issue (off-cycle fixes):
 - `docs/update-readme`
@@ -234,7 +238,7 @@ Claude agents run in isolated git worktrees — each agent gets its own director
 ```
 github-project-planner
   └── creates epic + sub-issues on GitHub
-        └── (optional) creates integration branch: feature/<epic-id>-<description>
+        └── (optional) creates integration branch: integration/COVE-<epic-id>-<description>
               └── sub-issue is picked up by an agent
                     └── harness spins up a worktree: branch claude/<name>, isolated directory
                           └── agent renames branch: feature/COVE-<issue-id>-<desc>
@@ -250,9 +254,10 @@ Multiple sub-issues can be in-flight simultaneously, each in its own worktree, e
 
 Integration branches are optional and used for **cross-cutting epics** that span multiple apps/services (e.g. iOS + a backend service in the same epic). Single-area epics can target `main` directly.
 
-- Integration branch name follows the convention: `feature/<epic-id>-<description>`
+- Integration branch name follows the convention: `integration/COVE-<epic-id>-<description>`. The `integration/` label marks a branch that collects sub-issue PRs; the sub-issue branches keep their own labels (`feature/`, `docs/`, ...)
 - The integration branch is created from `main` at the time the epic is planned
 - A PR from the integration branch to `main` is opened once all sub-issues are merged and tested. Its body must include `Closes #<epic-id>`: it targets `main`, so the keyword links the epic and closes it on merge
+- Don't list sub-issues in the epic body or the integration PR body. The epic's sub-issues panel shows them with live progress; the integration PR links to the epic instead
 
 ### Issue and PR bodies: always use `--body-file`
 
