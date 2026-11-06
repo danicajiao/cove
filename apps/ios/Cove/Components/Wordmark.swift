@@ -21,6 +21,14 @@ struct Wordmark: View {
             }
         }
 
+        /// Figma line height in points. Recorded but not applied, like `TextStyle`.
+        var lineHeight: CGFloat {
+            switch self {
+            case .regular: 44
+            case .large: 66
+            }
+        }
+
         /// Matches Figma: only the Welcome wordmark is tightened, by -5%.
         var tracking: CGFloat {
             switch self {
