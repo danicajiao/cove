@@ -33,16 +33,17 @@ The app talks to two separate backends:
 ```
 apps/ios/Cove/
 ├── Supporting Files/     # App entry point (CoveApp.swift), Info.plist
-├── Models/               # Data models and global state (AppState, Bag, TabState, etc.)
+├── Models/               # Data models and global state (AppState, FavoritesStore, TabState, DiscoveryItem, etc.)
 │                         #   Note: Path, AuthState, AuthMethod enums are defined in AppState.swift
 ├── View Models/          # Business logic (HomeViewModel, FavoritesViewModel, etc.)
 ├── Views/                # SwiftUI views organized by feature
+│   ├── Onboarding/       # UsernameOnboardingView, InterestOnboardingView
 │   ├── Profile/          # ProfileHeaderView, StatsRowView, ProfileRowView
-│   └── ...               # HomeView, BagView, ItemDetailView, auth views
+│   └── ...               # HomeView, FavoritesView, ItemDetailView, auth views
 ├── Components/           # Reusable UI components (ItemCard, CategoryCard, LikeButton, etc.)
+├── Networking/           # CoveAPIClient, APIEnvironment, repositories, generated OpenAPI spec
 ├── Styles/               # Custom button styles and shadow modifiers
-├── Enums/                # AuthPath (ProductTypes removed in Phase 3)
-├── Constants/            # Design token constants (Spacing.swift, Radius.swift)
+├── Constants/            # Design token constants (Spacing.swift, Radius.swift) and LevelOneCategories
 └── Resources/            # Assets, fonts (Gazpacho, Lato), Rive animations
 ```
 
@@ -67,7 +68,7 @@ flowchart TD
     IO -.->|"interests_onboarded"| Main
 ```
 
-`AppState` holds `@Published var authState: AuthState` (`.loggedOut`, `.needsUsernameOnboarding`, `.needsInterestOnboarding`, `.loggedIn`). Auth navigation is owned locally by `CoveApp` via `@State private var authPath: [AuthPath]`, which is reset to `[]` via `.onChange(of: appState.authState)` on logout.
+`AppState` holds `@Published var authState: AuthState` (`.loggedOut`, `.needsUsernameOnboarding`, `.needsInterestOnboarding`, `.loggedIn`). Auth navigation is owned locally by `CoveApp` via `@State private var authScreen: Path?`: `nil` shows `WelcomeView`, `.login` and `.signup` show those screens. It is reset to `nil` via `.onChange(of: appState.authState)` on logout.
 
 ### Post-sign-in onboarding
 
@@ -89,25 +90,15 @@ Once both checks pass, `authState` flips to `.loggedIn` and `MainView` is shown.
 
 ### Navigation Enums
 
-`AuthPath` drives the auth `NavigationStack` in `CoveApp`. It is defined in `Enums/AuthPath.swift`:
-
-```swift
-enum AuthPath: Hashable {
-    case login
-    case signup
-}
-```
-
-`Path` drives in-app navigation within `TabNavigationStack`. It is defined in `Models/AppState.swift` alongside `AuthState` and `AuthMethod`:
+`Path` is defined in `Models/AppState.swift` alongside `AuthState` and `AuthMethod`. `CoveApp` uses its `.login` and `.signup` cases to pick the auth screen; `TabNavigationStack` uses the rest for in-tab navigation via `.navigationDestination(for: Path.self)`:
 
 ```swift
 enum Path: Hashable {
-    case welcome
     case login
     case signup
-    case main
-    case home
     case item(id: String)
+    /// Discovery results scoped to a category subtree (ltree path + display name).
+    case categoryResults(path: String, name: String)
 }
 ```
 
@@ -115,17 +106,16 @@ enum Path: Hashable {
 
 ## Tab Structure
 
-`MainView` hosts a `TabView` with 5 tabs. Each tab is wrapped in a `TabNavigationStack` to support in-tab navigation (e.g., tapping an item from the Home tab pushes `ItemDetailView` without leaving the tab).
+`MainView` hosts a `TabView` with 4 tabs. Each tab is wrapped in a `TabNavigationStack` to support in-tab navigation (e.g., tapping an item from the Home tab pushes `ItemDetailView` without leaving the tab).
 
-| Tab | Tag | View | Status |
+| Tab | Value | View | Status |
 |-----|-----|------|--------|
-| Home | `"home"` | `HomeView` | Implemented |
-| Browse | `"browse"` | Placeholder `Text` | Not implemented |
-| Bag | `"bag"` | `BagView` | Implemented (badge shows item count); planned replacement is VisitList (see below) |
-| Favorites | `"favorites"` | `FavoritesView` | Implemented |
-| Profile | `"profile"` | `ProfileView` | Implemented |
+| Home | `AppTab.home` | `HomeView` | Implemented |
+| Browse | `AppTab.browse` | Placeholder `Text` | Not implemented |
+| Favorites | `AppTab.favorites` | `FavoritesView` | Implemented |
+| Profile | `AppTab.profile` | `ProfileView` | Implemented |
 
-Tab selection is managed by `TabState` (`Models/TabState.swift`) — an `ObservableObject` that tracks `currentTab` and `previousTab` as `String` values matching the tab tags above.
+Tab selection is managed by `TabState` (`Models/TabState.swift`) — an `ObservableObject` that tracks `currentTab` and `previousTab` as `AppTab` values.
 
 ---
 
@@ -135,18 +125,13 @@ Tab selection is managed by `TabState` (`Models/TabState.swift`) — an `Observa
 Serves `HomeView`. Fetches items and brands via `ItemRepository` (`CoveAPIItemRepository`). Items are cached in-memory with a 5-minute TTL; `fetchItems()` early-returns unless the cache is expired or `forceRefresh` is true. Also fetches the home category shelf from `GET /recommendations/categories` via `CoveAPIClient` (`fetchCategories()`): every level 1 category, with the user's picks first, kept in server order. It prefetches each card's signed image URL, and records `category_tap` attention events when a card is tapped.
 
 ### ItemDetailViewModel
-Serves `ItemDetailView`. Initialized with an `itemId`, it runs three async fetches on init: the item itself, its type-specific details, and up to 5 similar items (same `categoryId`). Also manages `detailSelection` — the currently active tab (Description / Origin / Tracklist / Specifications / About), which varies by item type.
-
-### BagViewModel
-Serves `BagView`. Manages the user's bag — products they intend to purchase or revisit. Fetches product recommendations based on the categories of items in the bag.
-
-> **v1 note:** The Bag is a v1 stand-in. Because Cove does not handle fulfillment or transactions in v1, a full cart/checkout model isn't warranted. The planned replacement is **VisitList** — a saved list of items the user intends to visit or purchase, without requiring checkout infrastructure. VisitList will replace `Bag` and `BagViewModel` in a future phase.
+Serves `ItemDetailView`. Initialized with an `itemId`, it runs three async fetches on init: the item itself, its type-specific details, and up to 5 similar items (same `categoryId`). Also manages `detailSelection` — the currently active tab, Description or About.
 
 ### FavoritesViewModel
-Serves `FavoritesView`. Fetches the current user's favorited items via the `FavoritesRepository` and `ItemRepository` protocols (backed by `CoveAPIFavoritesRepository` and `CoveAPIItemRepository`). Reads favorite item IDs from `cove-user`, then hydrates each one by fetching the corresponding item from `cove-item`. Publishes `favorites: [any Item]` and `isLoading`.
+Serves `FavoritesView`. Fetches the current user's favorited items via the `FavoritesRepository` and `ItemRepository` protocols (backed by `CoveAPIFavoritesRepository` and `CoveAPIItemRepository`). Reads favorite item IDs from `cove-user`, then hydrates each one by fetching the corresponding item from `cove-catalog` through the gateway. Publishes `favorites: [any Item]` and `isLoading`.
 
 ### ProfileViewModel
-Serves `ProfileView`. Lightweight — all data is derived from `Auth.auth().currentUser` (display name, initials, photo URL, member since date). No repository calls, no local state mutations.
+Serves `ProfileView`. Reads display name, initials and photo URL from `Auth.auth().currentUser`, and loads the `cove-user` profile via `UserRepository` (`CoveAPIUserRepository`) in `fetchProfile()`.
 
 ---
 
@@ -156,14 +141,6 @@ Serves `ProfileView`. Lightweight — all data is derived from `Auth.auth().curr
 Injected at the root via `.environmentObject`. Owns:
 - `authState` — drives the root UI split between auth flow and main app
 - All sign-in/sign-out methods for every auth provider
-
-### Bag
-`Bag` (`Models/Bag.swift`) is injected at the root (`CoveApp`) via `.environmentObject` and available throughout the app. Owns:
-- `items: [BagItem]` — products the user has added to their bag
-- `totalItems: Int` — computed count used to badge the Bag tab
-- `categories: [String]` — categoryIds of items in the bag, used to fetch recommendations in `BagViewModel`
-
-**Planned replacement — VisitList:** `Bag` will be superseded by `VisitList` in a future phase. Since v1 does not include fulfillment or transaction processing, a lightweight "visit list" (items the user wants to remember or visit in person) is a better fit than a purchase cart. `VisitList` will replace `Bag`, `BagItem`, and `BagViewModel`; the tab icon and global state injection point will carry over.
 
 ### FavoritesStore
 Injected at the root (`CoveApp`) via `.environmentObject` and available throughout the entire app. Owns:
@@ -306,25 +283,9 @@ The environment key provides a default of `CoveAPIImageRepository()`, so views r
 
 ## Item Type System
 
-The app uses a polymorphic `Item` protocol to represent different kinds of discoverable items (coffee, music, apparel). Each concrete type carries type-specific `info` and `details` structs that power the type-specific tabs in `ItemDetailView`.
+Items are modelled by two protocols in `Models/`: `Item` (list and card data) and `ItemDetails` (the detail screen). Every item from the gateway is a `DiscoveryItem`, built from `GET /discovery` and `GET /items/{id}`; its details are a `DiscoveryItemDetails`. `CoveAPIItemRepository` returns these from every method, so views read fields such as `name`, `madeBy`, `places` and the pre-signed image variants directly, with no downcasting by category.
 
-`ProductTypes.swift` and `FirebaseProductRepository` were both removed in Phase 3. Categories are now served as data from `GET /categories` on cove-api; items are fetched via `CoveAPIItemRepository`.
-
-### Protocol Hierarchy
-
-```
-Item (protocol)
-├── CoffeeItem   → info: CoffeeInfo  { name, roastery }
-├── MusicItem    → info: MusicInfo   { artist, album }
-└── ApparelItem  → info: ApparelInfo { brand, name }
-
-ItemDetails (protocol)
-├── CoffeeItemDetails   → description, about, origin: [OriginInfo]
-├── MusicItemDetails    → description, about, tracklist: [Track]
-└── ApparelItemDetails  → description, about, specifications: [Specification]
-```
-
-ViewModels and repositories work against `any Item` and `any ItemDetails`. Views type-cast to the concrete type to access type-specific fields (e.g., `(item as? CoffeeItem)?.info.roastery`).
+Category-specific types (coffee, music, apparel) and `ProductTypes.swift` were removed in Phase 3. Categories are data now, served by `GET /categories`. `ExampleItem` in `Models/Item.swift` is a placeholder conformance.
 
 ---
 
@@ -335,9 +296,9 @@ ViewModels and repositories work against `any Item` and `any ItemDetails`. Views
 ```
 1. CoveApp checks authState → .loggedIn
 2. MainView shown with HomeView in first tab
-3. HomeView.onAppear → viewModel.fetchItems() + viewModel.fetchBrands() + viewModel.fetchCategories() + favoritesStore.loadFavorites()
-4. CoveAPIItemRepository → GET /items (via CoveAPIClient)
-5. Each item decoded by type → CoffeeItem / MusicItem / ApparelItem
+3. HomeView.onAppear → viewModel.fetchCategories() + viewModel.fetchItems() + viewModel.fetchBrands()
+4. CoveAPIItemRepository → GET /discovery (via CoveAPIClient)
+5. Each result decoded into a DiscoveryItem
 6. items array published → HomeView renders ItemCard grid
 7. brands array published → HomeView renders brand logo row
 8. categories array published → HomeView renders CategoryCard scroll row
@@ -350,18 +311,7 @@ ViewModels and repositories work against `any Item` and `any ItemDetails`. Views
 2. NavigationLink(value: Path.item(id:)) fires
 3. TabNavigationStack routes to ItemDetailView(itemId:)
 4. ViewModel init → async fetch: item + details + similar items
-5. UI renders with type-specific tabs
-```
-
-### Add to Bag
-
-```
-1. User taps "Add to Bag" in ItemDetailView
-2. Check if item already in bag.items
-   ├── Yes → no-op or increment quantity
-   └── No  → append new BagItem
-3. bag.categories updated with product's categoryId
-4. BagView badge on tab updates via bag.totalItems
+5. UI renders with Description / About tabs
 ```
 
 ### Sign Out
@@ -371,7 +321,7 @@ ViewModels and repositories work against `any Item` and `any ItemDetails`. Views
 2. appState.logOut() called
 3. Provider-specific cleanup (GIDSignIn.signOut() / LoginManager().logOut())
 4. Firebase Auth signOut()
-5. authState = .loggedOut → CoveApp resets authPath = [] → WelcomeView shown
+5. authState = .loggedOut → CoveApp resets authScreen = nil → WelcomeView shown
 ```
 
 ---
@@ -382,8 +332,6 @@ ViewModels and repositories work against `any Item` and `any ItemDetails`. Views
 |---------|----------|
 | Browse tab | Placeholder `Text` in `MainView` |
 | Search | `TextField` in `HomeView` is present but not connected |
-| Bag actions | Add/remove items wired up; purchase confirmation not implemented |
-| VisitList | Planned replacement for `Bag` — lightweight saved-items list without checkout; replaces `Bag`, `BagItem`, and `BagViewModel` |
 | Reviews | `NavigationLink` exists in `ItemDetailView` but no destination |
 | Profile editing | `ProfileRowView` items are not wired up |
 | Notifications | Bell icon in `HomeView` has no action |
