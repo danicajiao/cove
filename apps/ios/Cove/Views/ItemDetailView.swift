@@ -153,9 +153,16 @@ private struct ItemDetailContent: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
 
                             Text(subtitleStr)
-                                .font(Font.custom("Lato-Regular", size: 20))
+                                .textStyle(.bodyMD)
                                 .foregroundStyle(Color.Colors.Text.tertiary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
+
+                            // Whole dollars, like ItemCard.
+                            Text("$\(Int(price))")
+                                .textStyle(.bodyLG)
+                                .foregroundStyle(Color.Colors.Brand.accent)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.top, Spacing.sm)
                         }
 
                         NavigationLink(destination: Text("Item Reviews!")) {
@@ -164,10 +171,11 @@ private struct ItemDetailContent: View {
                                     HStack(spacing: Spacing.md) {
                                         Rating(rating: 4)
                                         Text("4.3")
-                                            .textStyle(.bodySM)
+                                            .textStyle(.caption)
+                                            .foregroundStyle(Color.Colors.Text.tertiary)
                                     }
                                     Text("22 Reviews \(Image(systemName: "chevron.right"))")
-                                        .textStyle(.bodySM)
+                                        .textStyle(.caption)
                                         .foregroundStyle(Color.Colors.Text.tertiary)
                                 }
 
