@@ -171,21 +171,25 @@ Font files live in `apps/ios/Cove/Resources/`. Always use `Font.custom()` — ne
 
 ### Type Scale
 
-| Figma style | Font | Size | Swift usage |
-|---|---|---|---|
-| Gazpacho/Display | Gazpacho-Black | 34pt | `Font.custom("Gazpacho-Black", size: 34)` |
-| Gazpacho/Heading XL | Gazpacho-Black | 28pt | `Font.custom("Gazpacho-Black", size: 28)` |
-| Gazpacho/Heading LG | Gazpacho-Black | 22pt | `Font.custom("Gazpacho-Black", size: 22)` |
-| Gazpacho/Heading MD | Gazpacho-Black | 18pt | `Font.custom("Gazpacho-Black", size: 18)` |
-| Gazpacho/Heading SM | Gazpacho-Black | 15pt | `Font.custom("Gazpacho-Black", size: 15)` |
-| Lato/Body LG | Lato-Bold | 16pt | `Font.custom("Lato-Bold", size: 16)` |
-| Lato/Body MD | Lato-Regular | 14pt | `Font.custom("Lato-Regular", size: 14)` |
-| Lato/Body SM | Lato-Regular | 12pt | `Font.custom("Lato-Regular", size: 12)` |
-| Lato/Caption | Lato-Regular | 10pt | `Font.custom("Lato-Regular", size: 10)` |
+| Figma style | Font | Size | Line height | Letter spacing | Swift usage |
+|---|---|---|---|---|---|
+| Gazpacho/Display | Gazpacho-Black | 40pt | 44 | -5% | `Text(...).gazpachoHeading(size: 40)` |
+| Gazpacho/Heading XL | Gazpacho-Black | 32pt | 38 | -5% | `Text(...).gazpachoHeading(size: 32)` |
+| Gazpacho/Heading LG | Gazpacho-Black | 28pt | 34 | -5% | `Text(...).gazpachoHeading(size: 28)` |
+| Gazpacho/Heading MD | Gazpacho-Black | 24pt | 30 | -5% | `Text(...).gazpachoHeading(size: 24)` |
+| Gazpacho/Heading SM | Gazpacho-Black | 20pt | 26 | -5% | `Text(...).gazpachoHeading(size: 20)` |
+| Lato/Body LG | Lato-Bold | 18pt | 28 | 0 | `Font.custom("Lato-Bold", size: 18)` |
+| Lato/Body MD | Lato-Regular | 16pt | 24 | 0 | `Font.custom("Lato-Regular", size: 16)` |
+| Lato/Body SM | Lato-Regular | 14pt | 20 | 0 | `Font.custom("Lato-Regular", size: 14)` |
+| Lato/Caption | Lato-Regular | 12pt | 16 | 0 | `Font.custom("Lato-Regular", size: 12)` |
+
+`gazpachoHeading(size:)` (`Styles/GazpachoHeading.swift`) sets Gazpacho Black and the -5% letter spacing. Figma's percentage is relative to the font size, so the SwiftUI tracking is `size × -0.05` pt.
+
+Line heights aren't applied in the app yet: text uses each font's built-in line height. SwiftUI's `.lineSpacing(_:)` adds space on top of the font's own line height, so it isn't simply Figma line height minus font size.
 
 ### Rules
 
-- **Headings / display text:** Gazpacho-Black
+- **Headings / display text:** Gazpacho-Black, via `.gazpachoHeading(size:)`
 - **Body / UI text:** Lato-Regular (default) or Lato-Bold (emphasis)
 - **Poppins is removed** — do not use `Poppins-Regular` or `Poppins-SemiBold` anywhere
 
@@ -287,7 +291,7 @@ All components are defined in the **Components page** of the Figma file. Views s
 ### Always
 
 - Use `Color.Colors.*` for all colors
-- Use `Font.custom("Gazpacho-Black" / "Lato-Bold" / "Lato-Regular", size:)` for all text
+- Use `.gazpachoHeading(size:)` for Gazpacho headings and `Font.custom("Lato-Bold" / "Lato-Regular", size:)` for body text
 - Use `.customShadow()` for card/sheet elevation
 - Use spacing values from the 4pt grid
 - Use corner radius values from the token scale
