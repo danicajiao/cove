@@ -27,9 +27,10 @@ struct HomeView: View {
             VStack(spacing: Spacing.xl) {
                 HStack(spacing: Spacing.md) {
                     // TODO: Implement time-based greeting message // swiftlint:disable:this todo
-                    Text("Good morning, Daniel")
+                    // The greeting and the first name sit on separate lines.
+                    Text("Good morning,\nDaniel")
                         .textStyle(.headingLG)
-                        .frame(width: 300, alignment: .leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .lineSpacing(6) // SwiftUI lineSpacing = Figma line height - Font size
                         .foregroundStyle(Color.Colors.Text.primary)
                     Spacer()
