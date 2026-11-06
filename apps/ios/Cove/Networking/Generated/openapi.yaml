@@ -2,7 +2,7 @@ openapi: "3.1.0"
 
 info:
   title: cove-api
-  version: "0.3.0"
+  version: "0.4.0"
   description: |
     Backend-for-frontend gateway for the Cove iOS app.
     Validates Firebase ID tokens and routes traffic to internal services:
@@ -12,8 +12,14 @@ info:
       - cove-user       →  /users/me*, /recommendations/*
 
     The gateway injects the verified Firebase UID as X-Cove-Uid on every
-    forwarded request. Downstream services trust this header without
-    re-validating the Firebase token.
+    forwarded request, and X-Cove-Guest ("true" or "false") saying whether
+    the token belongs to an anonymous (guest) Firebase user. Both headers
+    are always overwritten, never passed through from the client.
+    Downstream services trust them without re-validating the Firebase token.
+
+    Guests can browse, create a profile without a username, save interests,
+    post activity and get recommendations. Routes that need a signed-up
+    account (favorites and follows) return 403 account_required for guests.
 
 servers:
   - url: https://api.coveapp.dev
@@ -372,9 +378,11 @@ paths:
         Proxied to cove-user. Creates a profile row for the authenticated user.
         Called once after Firebase Auth creates the account — the client
         supplies only the username; the UID comes from the validated token.
+        A guest may omit the username (or the whole body), which creates a
+        guest profile with a null username; everyone else must supply one.
         Returns 409 if the profile already exists (safe to retry).
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
@@ -387,7 +395,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/UserProfile"
         "400":
-          description: Missing or empty username
+          description: Missing or empty username (non-guest callers), or malformed JSON
           content:
             application/json:
               schema:
@@ -399,7 +407,52 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "409":
-          description: User profile already exists
+          description: User profile already exists, or username already taken
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateMe
+      summary: Set the authenticated user's username
+      description: |
+        Proxied to cove-user. Sets the username on an existing profile,
+        typically right after a guest signs up and links a real login to the
+        same Firebase UID. cove-user also records whether the caller is still
+        a guest, from X-Cove-Guest.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+      responses:
+        "200":
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "400":
+          description: Missing or empty username, or malformed JSON
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized — Firebase token missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: User profile not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Username already taken
           content:
             application/json:
               schema:
@@ -443,6 +496,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/AccountRequired"
         "404":
           description: User profile not found
           content:
@@ -474,6 +529,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/AccountRequired"
         "404":
           description: User profile not found
           content:
@@ -509,6 +566,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/AccountRequired"
         "404":
           description: Favorite not found
           content:
@@ -536,6 +595,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/AccountRequired"
         "404":
           description: User profile not found
           content:
@@ -570,6 +631,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/AccountRequired"
         "404":
           description: User profile not found
           content:
@@ -607,6 +670,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/AccountRequired"
         "404":
           description: Follow not found
           content:
@@ -765,6 +830,16 @@ components:
       description: |
         Firebase ID token obtained from the Firebase Auth SDK.
         Attach as "Authorization: Bearer <token>" on all requests except /health.
+
+  responses:
+    AccountRequired:
+      description: The caller is a guest; this route needs a signed-up account
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error: account_required
 
   schemas:
     # ── Gateway schemas ───────────────────────────────────────────────────────
@@ -1208,23 +1283,37 @@ components:
 
     UserProfile:
       type: object
-      required: [uid, username, created_at, interests_onboarded]
+      required: [uid, username, created_at, is_guest, interests_onboarded]
       properties:
         uid:
           type: string
           description: Auth UID (provider-agnostic; Firebase UID in Phase 1+).
           example: abc123
         username:
-          type: string
+          type: [string, "null"]
+          description: Null for a guest, and for a user who linked a login but hasn't picked a username yet.
           example: johndoe
         created_at:
           type: string
           format: date-time
+        is_guest:
+          type: boolean
+          description: True while the profile belongs to an anonymous (guest) Firebase user.
         interests_onboarded:
           type: boolean
           description: True once PUT /users/me/interests has been called at least once (even with an empty array). Used to gate the interest-picker onboarding screen.
 
     CreateUserRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          description: |
+            Desired display username. Must be non-empty after trimming
+            whitespace, except for guests, who may omit it.
+          example: johndoe
+
+    UpdateUserRequest:
       type: object
       required: [username]
       properties:

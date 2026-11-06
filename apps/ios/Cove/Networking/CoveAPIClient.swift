@@ -218,13 +218,25 @@ final class CoveAPIClient: @unchecked Sendable {
     /// Creates a profile for the authenticated user via `POST /users/me`.
     ///
     /// The Firebase UID is taken from the token — only the username is supplied.
-    /// Returns `CoveAPIError.unexpectedStatus(409)` when a profile already exists;
-    /// callers can treat 409 as a success (safe to retry).
+    /// Returns `CoveAPIError.unexpectedStatus(409)` when a profile already exists
+    /// or the username is taken.
     ///
     /// - Parameter username: Desired display username (non-empty after trimming).
     func createMe(username: String) async throws -> Components.Schemas.UserProfile {
-        let body = Components.Schemas.CreateUserRequest(username: username)
-        let response = try await client.createMe(body: .json(body))
+        try await createProfile(body: .json(.init(username: username)))
+    }
+
+    /// Creates a guest profile (no username) via `POST /users/me` with no body.
+    ///
+    /// Only valid for an anonymous Firebase user: the gateway marks the request
+    /// with `X-Cove-Guest: true`, and cove-user rejects a missing username for
+    /// anyone else with 400. A 409 means the guest profile already exists.
+    func createGuestProfile() async throws -> Components.Schemas.UserProfile {
+        try await createProfile(body: nil)
+    }
+
+    private func createProfile(body: Operations.createMe.Input.Body?) async throws -> Components.Schemas.UserProfile {
+        let response = try await client.createMe(body: body)
         switch response {
         case let .created(created):
             return try created.body.json
@@ -232,6 +244,29 @@ final class CoveAPIClient: @unchecked Sendable {
             throw CoveAPIError.unexpectedStatus(400)
         case .unauthorized:
             throw CoveAPIError.unexpectedStatus(401)
+        case .conflict:
+            throw CoveAPIError.unexpectedStatus(409)
+        case let .undocumented(statusCode, _):
+            throw CoveAPIError.unexpectedStatus(statusCode)
+        }
+    }
+
+    /// Sets the username on the authenticated user's existing profile via
+    /// `PATCH /users/me`. Used after a guest links a real login to the same UID.
+    ///
+    /// - Throws: `CoveAPIError.unexpectedStatus(409)` when the username is taken,
+    ///   `404` when there is no profile, `400` for a blank username.
+    func updateUsername(_ username: String) async throws -> Components.Schemas.UserProfile {
+        let response = try await client.updateMe(body: .json(.init(username: username)))
+        switch response {
+        case let .ok(okResult):
+            return try okResult.body.json
+        case .badRequest:
+            throw CoveAPIError.unexpectedStatus(400)
+        case .unauthorized:
+            throw CoveAPIError.unexpectedStatus(401)
+        case .notFound:
+            throw CoveAPIError.unexpectedStatus(404)
         case .conflict:
             throw CoveAPIError.unexpectedStatus(409)
         case let .undocumented(statusCode, _):
@@ -340,6 +375,7 @@ final class CoveAPIClient: @unchecked Sendable {
 
     /// Lists the authenticated user's favorited items from `GET /users/me/favorites`.
     ///
+    /// - Throws: `CoveAPIError.accountRequired` for a guest.
     /// - Parameters:
     ///   - limit: Maximum results (defaults to 25, max 100).
     ///   - offset: Pagination offset (defaults to 0).
@@ -350,6 +386,8 @@ final class CoveAPIClient: @unchecked Sendable {
             return try okResult.body.json
         case .unauthorized:
             throw CoveAPIError.unexpectedStatus(401)
+        case .forbidden:
+            throw CoveAPIError.accountRequired
         case .notFound:
             throw CoveAPIError.unexpectedStatus(404)
         case let .undocumented(statusCode, _):
@@ -360,6 +398,7 @@ final class CoveAPIClient: @unchecked Sendable {
     /// Adds an item to favorites via `POST /users/me/favorites/{itemId}`.
     ///
     /// Idempotent — a 409 (already favorited) is treated as success.
+    /// Throws `CoveAPIError.accountRequired` for a guest.
     ///
     /// - Parameter itemId: Item UUID string.
     func addFavorite(itemId: String) async throws {
@@ -369,6 +408,8 @@ final class CoveAPIClient: @unchecked Sendable {
             return
         case .unauthorized:
             throw CoveAPIError.unexpectedStatus(401)
+        case .forbidden:
+            throw CoveAPIError.accountRequired
         case .notFound:
             throw CoveAPIError.unexpectedStatus(404)
         case .conflict:
@@ -382,6 +423,7 @@ final class CoveAPIClient: @unchecked Sendable {
     /// Removes an item from favorites via `DELETE /users/me/favorites/{itemId}`.
     ///
     /// Idempotent — a 404 (not favorited) is treated as success.
+    /// Throws `CoveAPIError.accountRequired` for a guest.
     ///
     /// - Parameter itemId: Item UUID string.
     func removeFavorite(itemId: String) async throws {
@@ -391,6 +433,8 @@ final class CoveAPIClient: @unchecked Sendable {
             return
         case .unauthorized:
             throw CoveAPIError.unexpectedStatus(401)
+        case .forbidden:
+            throw CoveAPIError.accountRequired
         case .notFound:
             // Already removed — treat as success.
             return
@@ -452,29 +496,5 @@ private struct FirebaseAuthMiddleware: ClientMiddleware {
         var authenticated = request
         authenticated.headerFields[.authorization] = "Bearer \(result.token)"
         return try await next(authenticated, body, baseURL)
-    }
-}
-
-// MARK: - CoveAPIError
-
-/// Errors surfaced by `CoveAPIClient` for cases outside the documented API contract.
-enum CoveAPIError: Error {
-    /// The server returned an HTTP status code not defined in `openapi.yaml`.
-    case unexpectedStatus(Int)
-    /// The server returned a documented 2xx response whose body could not be interpreted.
-    /// The associated string describes what was wrong (e.g. a URL field that failed to parse).
-    case invalidResponseBody(String)
-}
-
-// MARK: - LocalizedError
-
-extension CoveAPIError: LocalizedError {
-    var errorDescription: String? {
-        switch self {
-        case let .unexpectedStatus(code):
-            "Unexpected HTTP status code \(code) — not defined in the API contract."
-        case let .invalidResponseBody(detail):
-            "API response body could not be interpreted: \(detail)"
-        }
     }
 }

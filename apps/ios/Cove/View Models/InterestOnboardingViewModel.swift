@@ -134,11 +134,11 @@ class InterestOnboardingViewModel: ObservableObject {
         } catch {
             print("❌ skip replaceInterests failed: \(error)")
         }
-        appState.setAuthState(.loggedIn)
+        appState.finishInterestOnboarding()
     }
 
     private func complete() {
-        appState.setAuthState(.loggedIn)
+        appState.finishInterestOnboarding()
     }
 
     /// Downloads every wide image once both the categories and the card size are
