@@ -14,7 +14,7 @@ struct EmailField: View {
     var body: some View {
         VStack(spacing: Spacing.xs) {
             Text("Email")
-                .font(.custom("Lato-Bold", size: 12))
+                .textStyle(.captionBold)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .foregroundStyle(Color.Colors.Text.tertiary)
             TextField(String("email@example.com"), text: $text)

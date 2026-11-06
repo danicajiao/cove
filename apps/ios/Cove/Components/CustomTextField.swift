@@ -67,7 +67,7 @@ struct CustomTextField: View {
         VStack(spacing: Spacing.xs) {
             if label != nil {
                 Text(label ?? "")
-                    .font(.custom("Lato-Bold", size: 12))
+                    .textStyle(.captionBold)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, Spacing.md)
                     .foregroundStyle(Color.Colors.Text.tertiary)
