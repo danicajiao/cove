@@ -2,6 +2,8 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -20,9 +22,10 @@ const (
 )
 
 type userProfile struct {
-	UID                string    `json:"uid"` // auth_uid — Firebase UID exposed as "uid" for API compatibility
-	Username           string    `json:"username"`
+	UID                string    `json:"uid"`      // auth_uid — Firebase UID exposed as "uid" for API compatibility
+	Username           *string   `json:"username"` // null for a guest, and for a linked user who hasn't picked one yet
 	CreatedAt          time.Time `json:"created_at"`
+	IsGuest            bool      `json:"is_guest"`
 	InterestsOnboarded bool      `json:"interests_onboarded"` // true once PUT /users/me/interests has been called
 }
 
@@ -32,13 +35,13 @@ func (d *Deps) GetMeHandler(w http.ResponseWriter, r *http.Request) {
 	authUID := r.Header.Get("X-Cove-Uid")
 
 	const q = `
-SELECT u.auth_uid, u.username, u.created_at,
+SELECT u.auth_uid, u.username, u.created_at, u.is_guest,
        EXISTS(SELECT 1 FROM profile.user_flags f WHERE f.user_id = u.id AND f.flag = 'interests_onboarded')
 FROM profile.users u
 WHERE u.auth_uid = $1`
 
 	var u userProfile
-	err := d.DB.QueryRow(r.Context(), q, authUID).Scan(&u.UID, &u.Username, &u.CreatedAt, &u.InterestsOnboarded)
+	err := d.DB.QueryRow(r.Context(), q, authUID).Scan(&u.UID, &u.Username, &u.CreatedAt, &u.IsGuest, &u.InterestsOnboarded)
 	if err != nil {
 		if isNotFound(err) {
 			writeError(w, http.StatusNotFound, "user profile not found")
@@ -49,31 +52,46 @@ WHERE u.auth_uid = $1`
 		return
 	}
 
+	if u.IsGuest && !isGuest(r) {
+		d.markLinked(r, authUID)
+		u.IsGuest = false
+	}
+
 	writeJSON(w, http.StatusOK, u)
 }
 
 // CreateUserHandler handles POST /users/me.
-// Creates a new profile row for the authenticated user.
+// Creates a new profile row for the authenticated user. A guest may omit the
+// username, which creates a guest profile; anyone else must supply one.
 // Returns 409 if the profile already exists (idempotent double-submit safety).
 func (d *Deps) CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 	authUID := r.Header.Get("X-Cove-Uid")
+	guest := isGuest(r)
 
 	var req struct {
 		Username string `json:"username"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.Username) == "" {
+	// A guest may send no body at all.
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && !(guest && errors.Is(err, io.EOF)) {
+		writeError(w, http.StatusBadRequest, "username is required")
+		return
+	}
+	var username *string
+	if trimmed := strings.TrimSpace(req.Username); trimmed != "" {
+		username = &trimmed
+	} else if !guest {
 		writeError(w, http.StatusBadRequest, "username is required")
 		return
 	}
 
 	const q = `
-INSERT INTO profile.users (auth_uid, username)
-VALUES ($1, $2)
-RETURNING auth_uid, username, created_at`
+INSERT INTO profile.users (auth_uid, username, is_guest)
+VALUES ($1, $2, $3)
+RETURNING auth_uid, username, created_at, is_guest`
 
 	var u userProfile
-	err := d.DB.QueryRow(r.Context(), q, authUID, strings.TrimSpace(req.Username)).
-		Scan(&u.UID, &u.Username, &u.CreatedAt)
+	err := d.DB.QueryRow(r.Context(), q, authUID, username, guest).
+		Scan(&u.UID, &u.Username, &u.CreatedAt, &u.IsGuest)
 	// New users have no flags yet — interests_onboarded is always false on creation.
 	if err != nil {
 		if isDuplicate(err) {
@@ -93,6 +111,48 @@ RETURNING auth_uid, username, created_at`
 	}
 
 	writeJSON(w, http.StatusCreated, u)
+}
+
+// UpdateUserHandler handles PATCH /users/me.
+// Sets the username on an existing profile, typically right after a guest signs
+// up and links a real login to their account. Also syncs is_guest from the
+// gateway header. Returns 404 if there is no profile, 409 if the name is taken.
+func (d *Deps) UpdateUserHandler(w http.ResponseWriter, r *http.Request) {
+	authUID := r.Header.Get("X-Cove-Uid")
+
+	var req struct {
+		Username string `json:"username"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.Username) == "" {
+		writeError(w, http.StatusBadRequest, "username is required")
+		return
+	}
+
+	const q = `
+UPDATE profile.users u
+SET username = $2, is_guest = $3
+WHERE u.auth_uid = $1
+RETURNING u.auth_uid, u.username, u.created_at, u.is_guest,
+          EXISTS(SELECT 1 FROM profile.user_flags f WHERE f.user_id = u.id AND f.flag = 'interests_onboarded')`
+
+	var u userProfile
+	err := d.DB.QueryRow(r.Context(), q, authUID, strings.TrimSpace(req.Username), isGuest(r)).
+		Scan(&u.UID, &u.Username, &u.CreatedAt, &u.IsGuest, &u.InterestsOnboarded)
+	if err != nil {
+		if isNotFound(err) {
+			writeError(w, http.StatusNotFound, "user profile not found")
+			return
+		}
+		if duplicateConstraint(err) == "users_username_key" {
+			writeError(w, http.StatusConflict, "username already taken")
+			return
+		}
+		log.Printf("ERROR UpdateUserHandler auth_uid=%s: %v", authUID, err)
+		writeError(w, http.StatusInternalServerError, "profile update failed")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, u)
 }
 
 // ── Favorites ─────────────────────────────────────────────────────────────────
@@ -618,10 +678,13 @@ VALUES ($1, $2, $3, $4, $5)`
 // lookupUserID resolves an auth_uid to the internal profile.users UUID.
 // On not-found it writes 404; on DB error it writes 500.
 // Returns ("", false) in either error case — callers should return immediately.
+// A stored guest whose request no longer carries the guest header has linked a
+// real login, so the row is marked as linked on the way through.
 func (d *Deps) lookupUserID(r *http.Request, w http.ResponseWriter, authUID string) (string, bool) {
 	var id pgtype.UUID
+	var storedGuest bool
 	err := d.DB.QueryRow(r.Context(),
-		`SELECT id FROM profile.users WHERE auth_uid = $1`, authUID).Scan(&id)
+		`SELECT id, is_guest FROM profile.users WHERE auth_uid = $1`, authUID).Scan(&id, &storedGuest)
 	if err != nil {
 		if isNotFound(err) {
 			writeError(w, http.StatusNotFound, "user profile not found")
@@ -631,5 +694,19 @@ func (d *Deps) lookupUserID(r *http.Request, w http.ResponseWriter, authUID stri
 		}
 		return "", false
 	}
+	if storedGuest && !isGuest(r) {
+		d.markLinked(r, authUID)
+	}
 	return formatUUID(id), true
+}
+
+// markLinked clears is_guest once a guest has linked a real login. Guest status
+// only ever goes from true to false: a new guest session gets a new UID. A
+// failure is logged and not returned, because the request itself can proceed
+// and the next request retries.
+func (d *Deps) markLinked(r *http.Request, authUID string) {
+	if _, err := d.DB.Exec(r.Context(),
+		`UPDATE profile.users SET is_guest = false WHERE auth_uid = $1 AND is_guest`, authUID); err != nil {
+		log.Printf("ERROR markLinked auth_uid=%s: %v", authUID, err)
+	}
 }

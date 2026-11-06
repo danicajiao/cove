@@ -92,7 +92,7 @@ struct CoveApp: App {
     private var rootView: some View {
         ZStack {
             switch appState.authState {
-            case .loggedIn:
+            case .loggedIn, .guest:
                 MainView()
                     .environment(\.imageRepository, CoveAPIImageRepository())
                     .transition(.opacity)
@@ -101,6 +101,9 @@ struct CoveApp: App {
                     .transition(.opacity)
             case .needsInterestOnboarding:
                 InterestOnboardingView(appState: appState)
+                    .transition(.opacity)
+            case .profileLoadFailed:
+                ProfileLoadErrorView()
                     .transition(.opacity)
             case .loggedOut:
                 authFlowView
@@ -127,7 +130,8 @@ struct CoveApp: App {
                 default:
                     WelcomeView(
                         onNavigateToLogin: { authScreen = .login },
-                        onNavigateToSignup: { authScreen = .signup }
+                        onNavigateToSignup: { authScreen = .signup },
+                        onContinueAsGuest: { appState.startGuestSession { _ in } }
                     )
                     .transition(.opacity)
                 }

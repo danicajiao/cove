@@ -2,7 +2,7 @@ openapi: "3.1.0"
 
 info:
   title: cove-user
-  version: "0.3.0"
+  version: "0.4.0"
   description: |
     User profile, favorites, follows, interests, activity, and
     personalized category recommendations for the Cove platform.
@@ -10,6 +10,12 @@ info:
     Authentication: this service does NOT validate Firebase tokens directly.
     It trusts the X-Cove-Uid header injected by the upstream cove-api gateway.
     All endpoints (except /health) reject requests missing this header.
+
+    Guests: cove-api also sets X-Cove-Guest to "true" for anonymous (guest)
+    Firebase users and "false" otherwise; a missing header counts as "false".
+    Guests can create a profile without a username, save interests, post
+    activity and get recommendations. Favorites and follows return 403
+    account_required for guests.
 
 servers:
   - url: http://cove-user.cove-user.svc.cluster.local:8080
@@ -74,6 +80,8 @@ paths:
         Creates a profile row for the authenticated user. Called once after
         Firebase Auth creates the account — the client supplies only the
         username; uid is taken from X-Cove-Uid (injected by cove-api).
+        A guest may omit the username (or the whole body), which creates a
+        guest profile with a null username; everyone else must supply one.
         Returns 409 if the profile already exists (safe to retry).
       parameters:
         - name: X-Cove-Uid
@@ -81,8 +89,9 @@ paths:
           required: true
           schema:
             type: string
+        - $ref: "#/components/parameters/CoveGuest"
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
@@ -95,7 +104,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/UserProfile"
         "400":
-          description: Missing or empty username
+          description: Missing or empty username (non-guest callers), or malformed JSON
           content:
             application/json:
               schema:
@@ -107,7 +116,58 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "409":
-          description: User profile already exists
+          description: User profile already exists, or username already taken
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateMe
+      summary: Set the authenticated user's username
+      description: |
+        Sets the username on an existing profile, typically right after a guest
+        signs up and links a real login to the same Firebase UID. Also records
+        whether the caller is still a guest, from X-Cove-Guest.
+      parameters:
+        - name: X-Cove-Uid
+          in: header
+          required: true
+          schema:
+            type: string
+        - $ref: "#/components/parameters/CoveGuest"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+      responses:
+        "200":
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "400":
+          description: Missing or empty username, or malformed JSON
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or empty X-Cove-Uid header
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: User profile not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Username already taken
           content:
             application/json:
               schema:
@@ -155,6 +215,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/AccountRequired"
         "404":
           description: User profile not found
           content:
@@ -191,6 +253,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/AccountRequired"
         "404":
           description: User profile not found
           content:
@@ -231,6 +295,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/AccountRequired"
         "404":
           description: Favorite not found
           content:
@@ -263,6 +329,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/AccountRequired"
         "404":
           description: User profile not found
           content:
@@ -302,6 +370,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/AccountRequired"
         "404":
           description: User profile not found
           content:
@@ -344,6 +414,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/AccountRequired"
         "404":
           description: Follow not found
           content:
@@ -503,6 +575,28 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
 components:
+  parameters:
+    CoveGuest:
+      name: X-Cove-Guest
+      in: header
+      required: false
+      description: |
+        "true" for an anonymous (guest) Firebase user, otherwise "false".
+        Set by cove-api from the verified token; a missing header counts as "false".
+      schema:
+        type: string
+        enum: ["true", "false"]
+
+  responses:
+    AccountRequired:
+      description: The caller is a guest; this route needs a signed-up account
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error: account_required
+
   schemas:
     HealthResponse:
       type: object
@@ -530,20 +624,37 @@ components:
 
     UserProfile:
       type: object
-      required: [uid, username, created_at]
+      required: [uid, username, created_at, is_guest, interests_onboarded]
       properties:
         uid:
           type: string
           description: Auth UID (provider-agnostic; Firebase UID in Phase 1+).
           example: abc123
         username:
-          type: string
+          type: [string, "null"]
+          description: Null for a guest, and for a user who linked a login but hasn't picked a username yet.
           example: johndoe
         created_at:
           type: string
           format: date-time
+        is_guest:
+          type: boolean
+          description: True while the profile belongs to an anonymous (guest) Firebase user.
+        interests_onboarded:
+          type: boolean
+          description: True once PUT /users/me/interests has been called.
 
     CreateUserRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          description: |
+            Desired display username. Must be non-empty after trimming
+            whitespace, except for guests, who may omit it.
+          example: johndoe
+
+    UpdateUserRequest:
       type: object
       required: [username]
       properties:

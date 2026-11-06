@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 
 	firebaseauth "firebase.google.com/go/v4/auth"
@@ -23,14 +24,28 @@ type contextKey string
 const (
 	uidKey    contextKey = "uid"
 	claimsKey contextKey = "claims"
+	guestKey  contextKey = "guest"
+)
+
+// anonymousProvider is the Firebase sign-in provider of an anonymous (guest)
+// user, as reported in the token's firebase.sign_in_provider claim.
+const anonymousProvider = "anonymous"
+
+// Identity headers the gateway sets on every forwarded request. Upstream
+// services trust them without re-validating the Firebase token, so they are
+// always overwritten (never passed through from the client).
+const (
+	HeaderUID   = "X-Cove-Uid"
+	HeaderGuest = "X-Cove-Guest"
 )
 
 // Middleware returns an http.Handler middleware that validates the Firebase ID
 // token supplied in the "Authorization: Bearer <token>" header.
 //
-// On success the verified UID and decoded claims are stored in the request
-// context (retrieve them with UIDFromContext and ClaimsFromContext) and the
-// next handler is called.
+// On success the verified UID, decoded claims and guest status are stored in
+// the request context (retrieve them with UIDFromContext, ClaimsFromContext
+// and IsGuestFromContext) and the next handler is called. A caller is a guest
+// when the token's sign-in provider is "anonymous".
 //
 // On any failure (missing header, malformed header, invalid or expired token)
 // the middleware responds with 401 and a generic JSON error body.  Validation
@@ -52,6 +67,7 @@ func Middleware(verifier TokenVerifier) func(http.Handler) http.Handler {
 
 			ctx := context.WithValue(r.Context(), uidKey, decoded.UID)
 			ctx = context.WithValue(ctx, claimsKey, decoded.Claims)
+			ctx = context.WithValue(ctx, guestKey, decoded.Firebase.SignInProvider == anonymousProvider)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -69,6 +85,29 @@ func UIDFromContext(ctx context.Context) (string, bool) {
 func ClaimsFromContext(ctx context.Context) (map[string]interface{}, bool) {
 	claims, ok := ctx.Value(claimsKey).(map[string]interface{})
 	return claims, ok
+}
+
+// IsGuestFromContext reports whether Middleware verified an anonymous (guest)
+// token for this request. It is false for unauthenticated requests.
+func IsGuestFromContext(ctx context.Context) bool {
+	guest, _ := ctx.Value(guestKey).(bool)
+	return guest
+}
+
+// SetIdentityHeaders writes the gateway's identity headers onto r before it is
+// forwarded upstream. X-Cove-Uid carries the verified UID and X-Cove-Guest is
+// always "true" or "false". Any client-sent values are replaced, and both
+// headers are removed when the request was not authenticated, so a client can
+// never choose its own identity.
+func SetIdentityHeaders(r *http.Request) {
+	uid, ok := UIDFromContext(r.Context())
+	if !ok {
+		r.Header.Del(HeaderUID)
+		r.Header.Del(HeaderGuest)
+		return
+	}
+	r.Header.Set(HeaderUID, uid)
+	r.Header.Set(HeaderGuest, strconv.FormatBool(IsGuestFromContext(r.Context())))
 }
 
 // bearerToken extracts the raw token string from an

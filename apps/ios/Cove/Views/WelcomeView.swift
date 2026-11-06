@@ -12,6 +12,9 @@ import SwiftUI
 struct WelcomeView: View {
     var onNavigateToLogin: () -> Void
     var onNavigateToSignup: () -> Void
+    /// Starts a guest session. A placeholder entry point until #435 replaces
+    /// "Join for free" with the designed "Get started".
+    var onContinueAsGuest: () -> Void
 
     var riveViewModel = RiveViewModel(
         fileName: "hero",
@@ -47,6 +50,16 @@ struct WelcomeView: View {
                     Text("Login")
                 }
                 .buttonStyle(SecondaryButton())
+
+                Button {
+                    onContinueAsGuest()
+                } label: {
+                    Text("Browse as a guest")
+                        .font(.custom("Lato-Regular", size: 14))
+                        .underline()
+                        .foregroundStyle(Color.Colors.Text.secondary)
+                }
+                .frame(maxWidth: .infinity)
             }
             .padding(Spacing.xl)
         }
@@ -57,6 +70,6 @@ struct WelcomeView: View {
 
 struct WelcomeView_Previews: PreviewProvider {
     static var previews: some View {
-        WelcomeView(onNavigateToLogin: {}, onNavigateToSignup: {})
+        WelcomeView(onNavigateToLogin: {}, onNavigateToSignup: {}, onContinueAsGuest: {})
     }
 }
