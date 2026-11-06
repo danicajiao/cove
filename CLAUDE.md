@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Cove is a monorepo containing the Cove iOS app and (eventually) a web client, backend services, and shared packages. The iOS app uses SwiftUI with MVVM, Firebase (Auth, Firestore), Swift Package Manager, and targets iOS 26+. Firebase Storage was retired in Phase 2; images are served through the `cove-media` service.
+Cove is a monorepo containing the Cove iOS app and (eventually) a web client, backend services, and shared packages. The iOS app uses SwiftUI with MVVM, Firebase Auth, Swift Package Manager, and targets iOS 26+. All app data comes from the Go services behind the `cove-api` gateway; Firebase is used only for sign-in (Firestore and Firebase Storage are retired).
 
 **Repo layout:**
 
@@ -11,9 +11,12 @@ cove/
 ├── apps/                   # Client applications
 │   └── ios/                # Swift / SwiftUI iOS app — see apps/ios/Cove/
 ├── services/               # Backend services
-│   ├── cove-api/           # Go gateway service (Phase 1) — see services/cove-api/
-│   └── cove-media/         # Go image service (Phase 2) — see services/cove-media/
-├── packages/               # Shared code (api-schema, design-tokens — planned)
+│   ├── cove-api/           # Go gateway: verifies Firebase tokens, routes to the services below
+│   ├── cove-media/         # Go image service (signed imgproxy URLs)
+│   ├── cove-catalog/       # Go service: categories and items
+│   ├── cove-directory/     # Go service: producers and places
+│   └── cove-user/          # Go service: profiles, favorites, follows, interests, recommendations
+├── packages/               # Shared Go code (imgproxy); api-schema and design-tokens planned
 └── docs/                   # Cross-cutting product/architecture docs
 ```
 
@@ -24,7 +27,7 @@ Backend services live under `services/` using the `cove-<name>` convention (e.g.
 - **Required Xcode version: 26.4+** — `objectVersion = 100` requires Xcode 26.4+. CI selects Xcode 26.4.1 via `DEVELOPER_DIR=/Applications/Xcode_26.4.1.app/Contents/Developer`.
 - All iOS commands (`swiftformat`, `swiftlint`, `bundle exec fastlane ...`) must be run from `apps/ios/`.
 
-See `docs/` for architecture details: `IOS_APP_ARCHITECTURE.md`, `QUICK_START.md`, `CI_CD_WORKFLOWS.md`.
+See `docs/README.md` for the full docs index. The most used: `IOS_APP_ARCHITECTURE.md`, `BACKEND_INFRASTRUCTURE.md`, `DATABASE_MIGRATIONS.md`, `MARKETPLACE_ARCHITECTURE.md`, `DESIGN_SYSTEM.md`, `QUICK_START.md`, `CI_CD_WORKFLOWS.md`.
 
 ---
 
@@ -101,10 +104,10 @@ The app talks to two completely independent backends. Never mix them up:
 
 | Backend | How to call it | Used for |
 |---|---|---|
-| Firebase | Firebase iOS SDK (`FirebaseAuth`, `FirebaseFirestore`) | Auth, Firestore data |
-| cove-api gateway | `CoveAPIClient` | All gateway endpoints, including image loading via `CoveAPIImageRepository` |
+| Firebase | Firebase iOS SDK (`FirebaseAuth`) | Sign-in only (email, Google, Facebook) and the ID token sent to the gateway |
+| cove-api gateway | `CoveAPIClient` | All app data, including image URLs via `CoveAPIImageRepository` |
 
-Note: `FirebaseStorage` was retired in Phase 2 and is no longer linked in the iOS Xcode target. All image loading now goes through `CoveAPIClient` → `cove-api` → `cove-media`.
+Firestore and Firebase Storage are retired and no longer linked in the iOS target. Don't add them back: new data goes through a service behind the gateway.
 
 ### CoveAPIClient — the only path to cove-api
 
@@ -121,7 +124,7 @@ let (data, _) = try await URLSession.shared.data(from: url)
 
 ### OpenAPI spec sync
 
-The iOS copy of the spec lives at `apps/ios/Cove/Networking/Generated/openapi.yaml`. It is **not** auto-synced from `services/cove-api/api/openapi.yaml`. When the gateway spec changes, copy it manually and regenerate:
+The iOS copy of the spec lives at `apps/ios/Cove/Networking/Generated/openapi.yaml`. It is **not** auto-synced from `services/cove-api/api/openapi.yaml`. The app only consumes the gateway spec; each backing service also has its own spec under `services/<service>/api/openapi.yaml`. When the gateway spec changes, copy it manually and regenerate:
 
 ```bash
 cp services/cove-api/api/openapi.yaml apps/ios/Cove/Networking/Generated/openapi.yaml
@@ -130,7 +133,7 @@ cp services/cove-api/api/openapi.yaml apps/ios/Cove/Networking/Generated/openapi
 
 ### Adding a new gateway endpoint
 
-1. Add the route to `services/cove-api/api/openapi.yaml`
+1. Add the route to the owning service's spec (e.g. `services/cove-user/api/openapi.yaml`) and to the gateway spec, `services/cove-api/api/openapi.yaml`
 2. Copy the updated spec into iOS (command above)
 3. Build — the generated `Client` now has a new method
 4. Add a method to `CoveAPIClient.swift` that calls the generated method and unwraps the response enum into a plain Swift type
@@ -151,14 +154,14 @@ cp services/cove-api/api/openapi.yaml apps/ios/Cove/Networking/Generated/openapi
 
 - **Views** (`apps/ios/Cove/Views/`, `apps/ios/Cove/Components/`): SwiftUI only, no business logic
 - **ViewModels** (`apps/ios/Cove/View Models/`): `ObservableObject`, marked `@MainActor`, one per major view
-- **Models** (`apps/ios/Cove/Models/`): Data structures and global state (e.g. `AppState`, `Bag`)
-- **Enums** (`apps/ios/Cove/Enums/`): Shared enum types (`ProductTypes` — Firestore era, removed in Phase 3; `AuthPath`); note that `AuthState`, `AuthMethod`, and `Path` are defined in `Models/AppState.swift`
+- **Models** (`apps/ios/Cove/Models/`): Data structures and global state (e.g. `AppState`, `FavoritesStore`). The shared enums `AuthState`, `AuthMethod` and `Path` live in `Models/AppState.swift`
+- **Networking** (`apps/ios/Cove/Networking/`): `CoveAPIClient`, `APIEnvironment`, and repositories. ViewModels depend on repository protocols (`ItemRepository`, `UserRepository`, `FavoritesRepository`, `ImageRepository`) with the `CoveAPI*Repository` implementations as defaults, so they can be swapped in tests and previews
 - **Styles** (`apps/ios/Cove/Styles/`): Custom `PrimitiveButtonStyle` implementations
 
 ### Naming
 
-- Types: `PascalCase` — `HomeView`, `ProductDetailViewModel`, `CoffeeProduct`
-- Properties/variables: `camelCase` — `viewModel`, `productId`, `averageColor`
+- Types: `PascalCase` — `HomeView`, `ItemDetailViewModel`, `DiscoveryItem`
+- Properties/variables: `camelCase` — `viewModel`, `itemId`, `averageColor`
 - Files: match the primary type — `HomeView.swift` contains `struct HomeView: View`
 
 ### View Patterns
@@ -176,15 +179,15 @@ struct ProfileHeaderView: View {
 }
 
 // Complex views: extract content into a private struct
-private struct ProductDetailContent: View { ... }
+private struct ItemDetailContent: View { ... }
 ```
 
 - Use `@StateObject` when the view owns and instantiates the ViewModel
 - Use `@ObservedObject` when passing a ViewModel down to a child component
-- Use `@EnvironmentObject` for global state (`AppState`, `Bag`, `FavoritesStore`)
+- Use `@EnvironmentObject` for global state (`AppState`, `FavoritesStore`)
 - Extract large `body` blocks into private structs or computed properties
 - Include `#Preview` at the bottom of every view file
-- Wrap async Firebase calls in `Task { try await viewModel.fetch...() }` inside `.onAppear`
+- Load data with `.task { await viewModel.fetch...() }` so the work is cancelled when the view disappears
 
 ### Colors & Fonts
 
@@ -215,9 +218,9 @@ apps/ios/Cove/
 ├── View Models/        # Business logic
 ├── Views/              # Screens (subfolders group related views, e.g. Profile/)
 ├── Components/         # Reusable UI components
+├── Networking/         # CoveAPIClient, APIEnvironment, repositories, generated OpenAPI spec
 ├── Styles/             # Button styles and view modifiers
-├── Enums/              # Shared enum types
-├── Constants/          # Design token constants (Spacing.swift, Radius.swift)
+├── Constants/          # Design token constants (Spacing.swift, Radius.swift) and LevelOneCategories
 └── Resources/          # Assets, fonts, Rive animations
 ```
 
