@@ -103,15 +103,22 @@ struct <ScreenName>View: View {
 //  Cove
 //
 
-import FirebaseFirestore
+import Foundation
 import FirebaseAuth  // only if Auth.auth() is used directly in this ViewModel
 
 @MainActor
 class <ScreenName>ViewModel: ObservableObject {
     @Published var <property>: <Type> = <default>
 
-    func fetch<Data>() async throws {
-        // Firebase fetch pattern — see HomeViewModel.swift for reference
+    private let <name>Repository: <Name>Repository
+
+    // Default to the CoveAPI implementation; inject a mock in tests and previews
+    init(<name>Repository: <Name>Repository = CoveAPI<Name>Repository()) {
+        self.<name>Repository = <name>Repository
+    }
+
+    func fetch<Data>() async {
+        // Call the repository; see ProfileViewModel.swift for reference
     }
 }
 ```
@@ -174,13 +181,13 @@ Use `github/issue_write` with `method: "update"` to write the updated body back.
 - Models: protocol-based — `any Product`, `CoffeeProduct`, `MusicProduct`, `ApparelProduct`
 - App state: `AppState` passed as `@EnvironmentObject`
 
-**Firebase patterns:**
-- Firestore reads use `async throws` — see `HomeViewModel.fetchProducts()` as the reference
-- Auth user: `Auth.auth().currentUser`
-- Storage images: `AsyncImage(url: URL(string: urlString))`
+**Data patterns:**
+- All app data comes from the cove-api gateway through a repository protocol (`ItemRepository`, `UserRepository`, `FavoritesRepository`, `ImageRepository`) backed by its `CoveAPI*Repository`. Never call Firestore or Firebase Storage: both are retired. If a screen needs a new endpoint, add it to `CoveAPIClient` (see `CLAUDE.md`, "Adding a new gateway endpoint")
+- Auth user: `Auth.auth().currentUser`. Firebase is used for sign-in only
+- Images: `DiscoveryItem` carries pre-signed image URLs; otherwise resolve one with `ImageRepository` (`CoveAPIImageRepository`)
 
 **Key decisions already made in the codebase:**
 - `@MainActor` on all ViewModels
 - `@StateObject private var viewModel = XxxViewModel()` inside the owning view
 - `.background(Color.Colors.Backgrounds.primary.ignoresSafeArea(.all))` on top-level screens
-- `.onAppear { Task { try await viewModel.fetch...() } }` for data loading
+- `.task { await viewModel.fetch...() }` for data loading
