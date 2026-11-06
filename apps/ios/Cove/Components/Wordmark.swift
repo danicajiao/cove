@@ -29,12 +29,9 @@ struct Wordmark: View {
             }
         }
 
-        /// Matches Figma: only the Welcome wordmark is tightened, by -5%.
+        /// -5%, like the Gazpacho text styles.
         var tracking: CGFloat {
-            switch self {
-            case .regular: 0
-            case .large: points * -0.05
-            }
+            points * -0.05
         }
     }
 
