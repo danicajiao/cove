@@ -138,7 +138,7 @@ Review and update all documentation affected by this epic so it accurately refle
 
 ## Technical Notes
 - Handled by the `documentation-maintainer` agent
-- Integration branch: feature/<epic-id>-<description>
+- Integration branch: feature/COVE-<epic-id>-<description>
 - Review all docs listed in `docs/README.md` for claims affected by this epic
 
 ## Dependencies
@@ -287,7 +287,7 @@ The issues you create are the top of a multi-agent pipeline. Once an issue is cr
 
 - `ios` sub-issues → picked up by the `swiftui-engineer` agent, which reads the issue body as its spec (and, when the issue carries `ui/ux`, the design frame URL in its Technical Notes), implements the work in a worktree, and creates a PR that closes the issue
 - The branch the agent works on is named after the issue: `feature/<issue-id>-<short-description>`
-- Sub-issue PRs target the **integration branch** (`feature/<epic-id>-<description>`), not `main` — include the integration branch name in each sub-issue's Technical Notes so agents know where to target
+- Sub-issue PRs target the **integration branch** (`feature/COVE-<epic-id>-<description>`), not `main` — include the integration branch name in each sub-issue's Technical Notes so agents know where to target
 - The PR description contains `Closes #<issue-id>`, which auto-closes the issue on merge
 - Once all sub-issues are merged into the integration branch, the draft PR from the integration branch to `main` is reviewed, tested, and merged to close the epic
 
