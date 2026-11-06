@@ -62,7 +62,7 @@ struct InterestOnboardingView: View {
             Button("Try again") {
                 Task { await viewModel.fetchCategories() }
             }
-            .font(.custom("Lato-Bold", size: 14))
+            .textStyle(.bodySMBold)
             .foregroundStyle(Color.Colors.Brand.accent)
             Spacer()
         } else {

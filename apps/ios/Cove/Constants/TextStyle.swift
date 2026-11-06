@@ -28,6 +28,8 @@ enum TextStyle: CaseIterable {
     case bodyMD
     /// Lato/Body SM
     case bodySM
+    /// Lato/Body SM Bold
+    case bodySMBold
     /// Lato/Caption
     case caption
 
@@ -35,7 +37,7 @@ enum TextStyle: CaseIterable {
     var fontName: String {
         switch self {
         case .display, .headingXL, .headingLG, .headingMD, .headingSM: "Gazpacho-Black"
-        case .bodyLG: "Lato-Bold"
+        case .bodyLG, .bodySMBold: "Lato-Bold"
         case .bodyMD, .bodySM, .caption: "Lato-Regular"
         }
     }
@@ -49,7 +51,7 @@ enum TextStyle: CaseIterable {
         case .headingSM: 20
         case .bodyLG: 18
         case .bodyMD: 16
-        case .bodySM: 14
+        case .bodySM, .bodySMBold: 14
         case .caption: 12
         }
     }
@@ -64,7 +66,7 @@ enum TextStyle: CaseIterable {
         case .headingSM: 26
         case .bodyLG: 28
         case .bodyMD: 24
-        case .bodySM: 20
+        case .bodySM, .bodySMBold: 20
         case .caption: 16
         }
     }
@@ -73,7 +75,7 @@ enum TextStyle: CaseIterable {
     var letterSpacing: CGFloat {
         switch self {
         case .display, .headingXL, .headingLG, .headingMD, .headingSM: -0.05
-        case .bodyLG, .bodyMD, .bodySM, .caption: 0
+        case .bodyLG, .bodyMD, .bodySM, .bodySMBold, .caption: 0
         }
     }
 

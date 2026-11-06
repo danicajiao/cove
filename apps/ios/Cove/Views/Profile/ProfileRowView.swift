@@ -20,7 +20,7 @@ struct ProfileRowView: View {
                     .foregroundStyle(foregroundColor)
 
                 Text(label)
-                    .font(Font.custom("Lato-Bold", size: 16))
+                    .textStyle(.bodySMBold)
                     .foregroundStyle(foregroundColor)
 
                 Spacer()

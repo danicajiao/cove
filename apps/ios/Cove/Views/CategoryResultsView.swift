@@ -81,7 +81,7 @@ struct CategoryResultsView: View {
             Button("Try again") {
                 Task { await viewModel.fetch(forceRefresh: true) }
             }
-            .font(.custom("Lato-Bold", size: 14))
+            .textStyle(.bodySMBold)
             .foregroundStyle(Color.Colors.Brand.accent)
         }
         .padding(Spacing.xl)

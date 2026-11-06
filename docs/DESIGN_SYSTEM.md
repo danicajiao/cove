@@ -181,6 +181,7 @@ Font files live in `apps/ios/Cove/Resources/`. Always use `Font.custom()` — ne
 | Lato/Body LG | Lato-Bold | 18pt | 28 | 0 | `.textStyle(.bodyLG)` |
 | Lato/Body MD | Lato-Regular | 16pt | 24 | 0 | `.textStyle(.bodyMD)` |
 | Lato/Body SM | Lato-Regular | 14pt | 20 | 0 | `.textStyle(.bodySM)` |
+| Lato/Body SM Bold | Lato-Bold | 14pt | 20 | 0 | `.textStyle(.bodySMBold)` |
 | Lato/Caption | Lato-Regular | 12pt | 16 | 0 | `.textStyle(.caption)` |
 
 `TextStyle` (`Constants/TextStyle.swift`) mirrors these styles. `.textStyle(_:)` sets the font and letter spacing; Figma's percentage letter spacing is relative to the font size, so the SwiftUI tracking is `size × letterSpacing`. When a Figma style changes, update its case there.
@@ -191,7 +192,7 @@ Line heights are recorded in `TextStyle` but not applied yet: text uses each fon
 
 - **Use `.textStyle(_:)`** for any text that matches a style above, instead of `Font.custom` with a size
 - **Headings / display text:** Gazpacho-Black
-- **Body / UI text:** Lato-Regular (default) or Lato-Bold (emphasis)
+- **Body / UI text:** Lato-Regular (default); Body SM Bold for button labels, tabs, links and row titles
 - **Poppins is removed** — do not use `Poppins-Regular` or `Poppins-SemiBold` anywhere
 
 ---
