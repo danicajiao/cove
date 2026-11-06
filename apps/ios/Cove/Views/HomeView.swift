@@ -86,7 +86,7 @@ struct HomeView: View {
 
                 VStack(spacing: Spacing.lg) {
                     SectionHeader(title: "Featured")
-                    BannerButton(bannerType: 1)
+                    PromotionalBanner(variant: .promo1)
                 }
                 .padding(.horizontal, Spacing.xl)
 
@@ -107,7 +107,7 @@ struct HomeView: View {
                 }
                 .padding(.horizontal, Spacing.xl)
 
-                BannerButton(bannerType: 2)
+                PromotionalBanner(variant: .promo2)
                     .padding(.horizontal, Spacing.xl)
 
                 VStack(spacing: Spacing.lg) {

@@ -209,7 +209,7 @@ private struct PillGrid: View {
     var body: some View {
         LazyVGrid(columns: columns, spacing: Spacing.sm) {
             ForEach(Array(options.enumerated()), id: \.element.id) { index, option in
-                CategoryPill(
+                Chip(
                     name: option.name,
                     isSelected: selectedIDs.contains(option.id),
                     selectedFill: selectedFill
@@ -224,36 +224,6 @@ private struct PillGrid: View {
             }
         }
         .onAppear { hasAppeared = true }
-    }
-}
-
-// MARK: - CategoryPill
-
-private struct CategoryPill: View {
-    let name: String
-    let isSelected: Bool
-    let selectedFill: Color
-
-    var body: some View {
-        // Text.primary on every fill: white fails WCAG contrast on all six brand colors.
-        Text(name)
-            .textStyle(.bodySM)
-            .foregroundStyle(Color.Colors.Text.primary)
-            .lineLimit(1)
-            .minimumScaleFactor(0.85)
-            .padding(.horizontal, Spacing.sm)
-            .padding(.vertical, Spacing.sm)
-            .frame(maxWidth: .infinity)
-            .background(isSelected ? selectedFill : Color.Colors.Fills.quinary)
-            .clipShape(Capsule())
-            .overlay {
-                if !isSelected {
-                    Capsule().stroke(Color.Colors.Strokes.primary.opacity(0.3), lineWidth: 1)
-                }
-            }
-            .contentShape(Capsule())
-            .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
-            .animation(.easeInOut(duration: 0.15), value: isSelected)
     }
 }
 
