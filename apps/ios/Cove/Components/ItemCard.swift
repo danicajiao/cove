@@ -75,7 +75,7 @@ struct ItemCard: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                     Text(subtitleStr)
-                        .font(Font.custom("Lato-Regular", size: 12))
+                        .textStyle(.caption)
                         .foregroundStyle(Color.Colors.Text.tertiary)
                         .lineLimit(1)
                         .truncationMode(.tail)

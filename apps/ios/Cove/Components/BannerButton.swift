@@ -56,7 +56,7 @@ struct BannerButton: View {
                     Text("New")
                         .font(Font.custom("Gazpacho-Black", size: 36))
                     Text("Stumpton Huye Mountain")
-                        .font(Font.custom("Lato-Regular", size: 14))
+                        .textStyle(.bodySM)
                 }
                 .foregroundStyle(Color.Colors.Fills.primary)
                 .frame(maxWidth: .infinity)

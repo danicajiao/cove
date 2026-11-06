@@ -28,7 +28,7 @@ struct HomeView: View {
                 HStack(spacing: Spacing.md) {
                     // TODO: Implement time-based greeting message // swiftlint:disable:this todo
                     Text("Good morning, Daniel")
-                        .gazpachoHeading(size: 28)
+                        .textStyle(.headingLG)
                         .frame(width: 300, alignment: .leading)
                         .lineSpacing(6) // SwiftUI lineSpacing = Figma line height - Font size
                         .foregroundStyle(Color.Colors.Text.primary)
@@ -61,7 +61,7 @@ struct HomeView: View {
                             .frame(maxWidth: .infinity)
                     } else if viewModel.categories.isEmpty {
                         Text("No categories yet")
-                            .font(Font.custom("Lato-Regular", size: 14))
+                            .textStyle(.bodySM)
                             .foregroundStyle(Color.Colors.Text.tertiary)
                             .frame(height: 80)
                             .frame(maxWidth: .infinity)
@@ -126,7 +126,7 @@ struct HomeView: View {
                                         }
 
                                     Text(brand.name)
-                                        .font(Font.custom("Lato-Regular", size: 12))
+                                        .textStyle(.caption)
                                         .foregroundStyle(Color.Colors.Text.primary)
                                         .frame(width: 100)
                                         .multilineTextAlignment(.center)

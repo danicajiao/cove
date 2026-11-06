@@ -148,7 +148,7 @@ private struct ItemDetailContent: View {
                     VStack(spacing: Spacing.lg) {
                         VStack(spacing: 0) {
                             Text(titleStr)
-                                .gazpachoHeading(size: 20)
+                                .textStyle(.headingSM)
                                 .foregroundStyle(Color.Colors.Text.primary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -164,10 +164,10 @@ private struct ItemDetailContent: View {
                                     HStack(spacing: Spacing.md) {
                                         Rating(rating: 4)
                                         Text("4.3")
-                                            .font(Font.custom("Lato-Regular", size: 14))
+                                            .textStyle(.bodySM)
                                     }
                                     Text("22 Reviews \(Image(systemName: "chevron.right"))")
-                                        .font(Font.custom("Lato-Regular", size: 14))
+                                        .textStyle(.bodySM)
                                         .foregroundStyle(Color.Colors.Text.tertiary)
                                 }
 
@@ -256,7 +256,7 @@ private struct PlaceRow: View {
                 .font(Font.custom("Lato-Bold", size: 16))
                 .foregroundStyle(Color.Colors.Text.primary)
             Text(place.typeLabel)
-                .font(Font.custom("Lato-Regular", size: 14))
+                .textStyle(.bodySM)
                 .foregroundStyle(Color.Colors.Text.tertiary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

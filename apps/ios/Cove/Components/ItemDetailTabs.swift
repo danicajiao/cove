@@ -23,12 +23,12 @@ struct ItemDetailTabs: View {
 
                 if viewModel.detailSelection == .description {
                     Text(discoveryDetails.description ?? "No description available.")
-                        .font(Font.custom("Lato-Regular", size: 16))
+                        .textStyle(.bodyMD)
                         .foregroundStyle(Color.Colors.Text.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 } else if viewModel.detailSelection == .about {
                     Text(discoveryDetails.about ?? "")
-                        .font(Font.custom("Lato-Regular", size: 16))
+                        .textStyle(.bodyMD)
                         .foregroundStyle(Color.Colors.Text.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }

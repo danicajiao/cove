@@ -62,7 +62,7 @@ struct LoginView: View {
                                 print("TODO: nav to forgot password view")
                             } label: {
                                 Text("Forgot password?")
-                                    .font(.custom("Lato-Regular", size: 12))
+                                    .textStyle(.caption)
                                     .underline()
                                     .foregroundStyle(Color.Colors.Text.tertiary)
                             }
@@ -71,7 +71,7 @@ struct LoginView: View {
                                 print("TODO: auth with Face ID")
                             } label: {
                                 Text("Face ID \(Image(systemName: "faceid"))")
-                                    .font(.custom("Lato-Regular", size: 14))
+                                    .textStyle(.bodySM)
                                     .foregroundStyle(Color.Colors.Text.tertiary)
                             }
                         }
@@ -113,7 +113,7 @@ struct LoginView: View {
                         .frame(width: 100, height: 2)
                         .padding(.horizontal, Spacing.md)
                     Text("OR")
-                        .font(.custom("Lato-Regular", size: 12))
+                        .textStyle(.caption)
                         .foregroundStyle(Color.Colors.Text.quaternary)
                     Capsule()
                         .fill(Color.Colors.Fills.quaternary)
@@ -130,13 +130,13 @@ struct LoginView: View {
 
                 HStack(spacing: Spacing.xs) {
                     Text("Don't have an account? ")
-                        .font(.custom("Lato-Regular", size: 14))
+                        .textStyle(.bodySM)
                         .foregroundStyle(Color.Colors.Text.tertiary)
                     Button {
                         onNavigateToSignup()
                     } label: {
                         Text("Sign up")
-                            .font(.custom("Lato-Regular", size: 14))
+                            .textStyle(.bodySM)
                             .underline()
                             .foregroundStyle(Color.Colors.Text.primary)
                     }

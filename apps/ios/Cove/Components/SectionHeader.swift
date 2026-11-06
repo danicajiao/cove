@@ -20,7 +20,7 @@ struct SectionHeader: View {
             } label: {
                 HStack(spacing: Spacing.xs) {
                     Text("See all")
-                        .font(Font.custom("Lato-Regular", size: 14))
+                        .textStyle(.bodySM)
                     Image(systemName: "arrow.right")
                         .resizable()
                         .aspectRatio(contentMode: .fit)

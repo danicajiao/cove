@@ -23,12 +23,12 @@ struct UsernameOnboardingView: View {
 
                 VStack(alignment: .leading, spacing: Spacing.sm) {
                     Text("Choose a username")
-                        .gazpachoHeading(size: 28)
+                        .textStyle(.headingLG)
                         .foregroundStyle(Color.Colors.Text.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                     Text("This is how others will find you on Cove.")
-                        .font(.custom("Lato-Regular", size: 14))
+                        .textStyle(.bodySM)
                         .foregroundStyle(Color.Colors.Text.tertiary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -50,12 +50,12 @@ struct UsernameOnboardingView: View {
 
                     if let error = viewModel.validationError ?? viewModel.serverError {
                         Text(error)
-                            .font(.custom("Lato-Regular", size: 12))
+                            .textStyle(.caption)
                             .foregroundStyle(Color.Colors.Support.Error.fg)
                             .padding(.horizontal, Spacing.md)
                     } else {
                         Text("3–30 characters. Letters, numbers, and underscores.")
-                            .font(.custom("Lato-Regular", size: 12))
+                            .textStyle(.caption)
                             .foregroundStyle(Color.Colors.Text.tertiary)
                             .padding(.horizontal, Spacing.md)
                     }

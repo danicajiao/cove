@@ -32,7 +32,7 @@ struct ProfileHeaderView: View {
 
             VStack(spacing: Spacing.xs) {
                 Text(viewModel.displayName)
-                    .gazpachoHeading(size: 24)
+                    .textStyle(.headingMD)
                     .foregroundStyle(Color.Colors.Text.primary)
 
                 Text(viewModel.username)
@@ -41,7 +41,7 @@ struct ProfileHeaderView: View {
 
                 if !viewModel.memberSinceText.isEmpty {
                     Text(viewModel.memberSinceText)
-                        .font(Font.custom("Lato-Regular", size: 14))
+                        .textStyle(.bodySM)
                         .foregroundStyle(Color.Colors.Text.tertiary)
                 }
             }

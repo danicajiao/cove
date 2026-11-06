@@ -32,7 +32,7 @@ struct CoffeeCategoryButton: View {
                         )
                     )
                 Text(category)
-                    .font(Font.custom("Lato-Regular", size: 16))
+                    .textStyle(.bodyMD)
                     .offset(x: -32, y: 0)
             }
             .frame(width: 140, height: 65)
@@ -57,7 +57,7 @@ struct CoffeeCategoryButton: View {
                         )
                     )
                 Text(category)
-                    .font(Font.custom("Lato-Regular", size: 14))
+                    .textStyle(.bodySM)
                     .offset(x: -32, y: 0)
             }
             .frame(width: 140, height: 65)
@@ -82,7 +82,7 @@ struct CoffeeCategoryButton: View {
                         )
                     )
                 Text(category)
-                    .font(Font.custom("Lato-Regular", size: 14))
+                    .textStyle(.bodySM)
                     .offset(x: -32, y: 0)
             }
             .frame(width: 140, height: 65)
@@ -107,7 +107,7 @@ struct CoffeeCategoryButton: View {
                         )
                     )
                 Text(category)
-                    .font(Font.custom("Lato-Regular", size: 14))
+                    .textStyle(.bodySM)
                     .offset(x: -32, y: 0)
             }
             .frame(width: 140, height: 65)
@@ -132,7 +132,7 @@ struct CoffeeCategoryButton: View {
                         )
                     )
                 Text(category)
-                    .font(Font.custom("Lato-Regular", size: 14))
+                    .textStyle(.bodySM)
                     .offset(x: -32, y: 0)
             }
             .frame(width: 140, height: 65)

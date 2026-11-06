@@ -19,7 +19,7 @@ struct SecondaryButton: PrimitiveButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.custom("Lato-Regular", size: 14))
+            .textStyle(.bodySM)
             .padding()
             .foregroundStyle(Color.Colors.Fills.primary)
             .frame(maxWidth: width, maxHeight: height)

@@ -33,12 +33,12 @@ struct InterestOnboardingView: View {
 
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 Text("What are you into?")
-                    .gazpachoHeading(size: 28)
+                    .textStyle(.headingLG)
                     .foregroundStyle(Color.Colors.Text.primary)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 Text("Pick categories that match your style. We'll use them to personalize your home feed.")
-                    .font(.custom("Lato-Regular", size: 14))
+                    .textStyle(.bodySM)
                     .foregroundStyle(Color.Colors.Text.tertiary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -57,7 +57,7 @@ struct InterestOnboardingView: View {
         } else if viewModel.groups.isEmpty {
             Spacer()
             Text("Couldn't load categories.")
-                .font(.custom("Lato-Regular", size: 14))
+                .textStyle(.bodySM)
                 .foregroundStyle(Color.Colors.Text.tertiary)
             Button("Try again") {
                 Task { await viewModel.fetchCategories() }
@@ -118,7 +118,7 @@ struct InterestOnboardingView: View {
         VStack(spacing: Spacing.md) {
             if let error = viewModel.serverError {
                 Text(error)
-                    .font(.custom("Lato-Regular", size: 12))
+                    .textStyle(.caption)
                     .foregroundStyle(Color.Colors.Support.Error.fg)
                     .frame(maxWidth: .infinity, alignment: .center)
             }
@@ -139,12 +139,12 @@ struct InterestOnboardingView: View {
                 Task { await viewModel.skip() }
             } label: {
                 Text("Skip for now")
-                    .font(.custom("Lato-Regular", size: 14))
+                    .textStyle(.bodySM)
                     .foregroundStyle(Color.Colors.Text.tertiary)
             }
 
             Text("Don't worry, you can change this later.")
-                .font(.custom("Lato-Regular", size: 12))
+                .textStyle(.caption)
                 .foregroundStyle(Color.Colors.Text.quaternary)
                 .multilineTextAlignment(.center)
         }
@@ -237,7 +237,7 @@ private struct CategoryPill: View {
     var body: some View {
         // Text.primary on every fill: white fails WCAG contrast on all six brand colors.
         Text(name)
-            .font(.custom("Lato-Regular", size: 14))
+            .textStyle(.bodySM)
             .foregroundStyle(Color.Colors.Text.primary)
             .lineLimit(1)
             .minimumScaleFactor(0.85)

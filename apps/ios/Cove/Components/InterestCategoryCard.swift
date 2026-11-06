@@ -36,7 +36,7 @@ struct InterestCategoryCard: View {
                 .overlay { imageLayer }
                 .overlay(alignment: .topLeading) {
                     Text(name)
-                        .gazpachoHeading(size: 24)
+                        .textStyle(.headingMD)
                         .foregroundStyle(Color.Colors.Text.primary)
                         .lineLimit(1)
                         .padding(.vertical, Spacing.xs)
