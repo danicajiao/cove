@@ -36,7 +36,7 @@ struct SignupView: View {
 
                     VStack(spacing: Spacing.xs) {
                         CustomTextField(
-                            placeholder: "email@provider.com",
+                            placeholder: "name@example.com",
                             text: $email,
                             returnKeyType: .next,
                             autocapitalizationType: UITextAutocapitalizationType.none,
@@ -46,7 +46,7 @@ struct SignupView: View {
                             tag: 0
                         )
                         CustomTextField(
-                            placeholder: "Password",
+                            placeholder: "",
                             text: $password,
                             isSecureTextEntry: true,
                             returnKeyType: .done,
