@@ -185,6 +185,7 @@ Font files live in `apps/ios/Cove/Resources/`. Always use `Font.custom()` — ne
 | Lato/Body SM Bold | Lato-Bold | 14pt | 20 | 0 | `.textStyle(.bodySMBold)` |
 | Lato/Caption | Lato-Regular | 12pt | 16 | 0 | `.textStyle(.caption)` |
 | Lato/Caption Bold | Lato-Bold | 12pt | 16 | 0 | `.textStyle(.captionBold)` |
+| Lato/Caption SM | Lato-Regular | 10pt | 12 | 0 | `.textStyle(.captionSM)` |
 
 `TextStyle` (`Constants/TextStyle.swift`) mirrors these styles. `.textStyle(_:)` sets the font and letter spacing; Figma's percentage letter spacing is relative to the font size, so the SwiftUI tracking is `size × letterSpacing`. When a Figma style changes, update its case there.
 
@@ -274,16 +275,17 @@ All components are defined in the **Components page** of the Figma file. Views s
 |---|---|---|
 | Buttons / Primary | `apps/ios/Cove/Styles/PrimaryButton.swift` | `PrimitiveButtonStyle`, uses `fills/primary` + `fills/inverse` |
 | Buttons / Secondary | `apps/ios/Cove/Styles/SecondaryButton.swift` | Outlined style, uses `strokes/primary` |
-| Buttons / Banner | `apps/ios/Cove/Components/BannerButton.swift` | Used inside promotional banners |
 | Buttons / Social Login | `apps/ios/Cove/Components/` | Google, Facebook, Apple variants |
-| Text Field | `apps/ios/Cove/Components/` | Email, password, search, text area variants |
+| Text Field | `apps/ios/Cove/Components/CustomTextField.swift` | One component: Label, Placeholder, Leading Icon, Secure (eye toggle). Helper text lives in the view |
 | Section Header | `apps/ios/Cove/Components/` | Title + optional "See all →" in `brand/accent` |
 | Divider | `apps/ios/Cove/Components/` | Plain line and "OR" variants |
-| Card / Item | `apps/ios/Cove/Components/ItemCard.swift` | Item image, name, roaster, price |
-| Card / Category | `apps/ios/Cove/Components/CoffeeCategoryButton.swift` | Uses `category/*` fill colors |
+| Item | `apps/ios/Cove/Components/ItemCard.swift` | Name (Heading XS), producer (Caption), price (Body SM Bold). The `On Sale` variant is design-only for now |
+| Category Card | `apps/ios/Cove/Components/CategoryCard.swift` | Home shelf card, 130×60: parent (Caption SM), name (Heading XS). One variant per category image |
+| Interest Category Card | `apps/ios/Cove/Components/InterestCategoryCard.swift` | Onboarding card: name (Heading MD), selected badge |
+| Chip | `apps/ios/Cove/Components/Chip.swift` | Onboarding interest pill (Body SM) |
 | Bag Item | `apps/ios/Cove/Components/` | Quantity stepper in `brand/accent`, price in `text/primary` |
 | Store Card | `apps/ios/Cove/Components/` | Circular logo + store name |
-| Promotional Banner | `apps/ios/Cove/Components/` | Two variants: full-bleed image and compact |
+| Promotional Banner | `apps/ios/Cove/Components/PromotionalBanner.swift` | `.promo1` (image with card) and `.promo2` (compact) |
 | Hero Art | `apps/ios/Cove/Resources/` | Illustrative identity tiles — fixed colors by design |
 | Tiles | `apps/ios/Cove/Resources/` | Decorative loading indicator tiles — fixed colors by design |
 | Icons | `apps/ios/Cove/Resources/` | Social auth icons — third-party brand colors, intentionally fixed |

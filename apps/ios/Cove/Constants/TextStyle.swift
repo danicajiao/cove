@@ -36,13 +36,15 @@ enum TextStyle: CaseIterable {
     case caption
     /// Lato/Caption Bold
     case captionBold
+    /// Lato/Caption SM
+    case captionSM
 
     /// PostScript name of the font file.
     var fontName: String {
         switch self {
         case .display, .headingXL, .headingLG, .headingMD, .headingSM, .headingXS: "Gazpacho-Black"
         case .bodyLG, .bodySMBold, .captionBold: "Lato-Bold"
-        case .bodyMD, .bodySM, .caption: "Lato-Regular"
+        case .bodyMD, .bodySM, .caption, .captionSM: "Lato-Regular"
         }
     }
 
@@ -58,6 +60,7 @@ enum TextStyle: CaseIterable {
         case .bodyMD: 16
         case .bodySM, .bodySMBold: 14
         case .caption, .captionBold: 12
+        case .captionSM: 10
         }
     }
 
@@ -74,6 +77,7 @@ enum TextStyle: CaseIterable {
         case .bodyMD: 24
         case .bodySM, .bodySMBold: 20
         case .caption, .captionBold: 16
+        case .captionSM: 12
         }
     }
 
@@ -81,7 +85,7 @@ enum TextStyle: CaseIterable {
     var letterSpacing: CGFloat {
         switch self {
         case .display, .headingXL, .headingLG, .headingMD, .headingSM, .headingXS: -0.05
-        case .bodyLG, .bodyMD, .bodySM, .bodySMBold, .caption, .captionBold: 0
+        case .bodyLG, .bodyMD, .bodySM, .bodySMBold, .caption, .captionBold, .captionSM: 0
         }
     }
 
