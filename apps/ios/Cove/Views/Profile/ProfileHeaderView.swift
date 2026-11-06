@@ -36,7 +36,7 @@ struct ProfileHeaderView: View {
                     .foregroundStyle(Color.Colors.Text.primary)
 
                 Text(viewModel.username)
-                    .font(Font.custom("Lato-SemiBold", size: 16))
+                    .textStyle(.bodyMD)
                     .foregroundStyle(Color.Colors.Text.primary)
 
                 if !viewModel.memberSinceText.isEmpty {

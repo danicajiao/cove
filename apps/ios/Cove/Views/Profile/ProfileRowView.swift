@@ -36,7 +36,7 @@ struct ProfileRowView: View {
     }
 
     private var foregroundColor: Color {
-        isDestructive ? Color.red : Color.Colors.Text.primary
+        isDestructive ? Color.Colors.Support.Error.fg : Color.Colors.Text.primary
     }
 }
 
