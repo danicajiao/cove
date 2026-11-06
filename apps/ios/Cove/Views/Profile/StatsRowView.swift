@@ -28,11 +28,11 @@ private struct StatBox: View {
     var body: some View {
         VStack(spacing: 0) {
             Text("\(count)")
-                .font(Font.custom("Lato-Bold", size: 18))
+                .textStyle(.bodyLG)
                 .foregroundStyle(Color.Colors.Text.primary)
 
             Text(label)
-                .font(Font.custom("Lato-Regular", size: 12))
+                .textStyle(.caption)
                 .foregroundStyle(Color.Colors.Text.tertiary)
         }
         .padding(Spacing.md)

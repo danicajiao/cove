@@ -24,21 +24,19 @@ struct SignupView: View {
     var body: some View {
         GeometryReader { _ in
             VStack(spacing: Spacing.xl) {
-                Text("Cove.")
-                    .font(.custom("Gazpacho-Heavy", size: 40))
-                    .foregroundStyle(Color.Colors.Text.primary)
+                Wordmark()
 
                 SpectrumDivider()
 
                 Group {
                     Text("Create your account")
-                        .font(.custom("Lato-Bold", size: 28))
+                        .textStyle(.headingLG)
                         .foregroundStyle(Color.Colors.Text.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                     VStack(spacing: Spacing.xs) {
                         CustomTextField(
-                            placeholder: "email@provider.com",
+                            placeholder: "name@example.com",
                             text: $email,
                             returnKeyType: .next,
                             autocapitalizationType: UITextAutocapitalizationType.none,
@@ -48,7 +46,7 @@ struct SignupView: View {
                             tag: 0
                         )
                         CustomTextField(
-                            placeholder: "Password",
+                            placeholder: "",
                             text: $password,
                             isSecureTextEntry: true,
                             returnKeyType: .done,
@@ -59,7 +57,7 @@ struct SignupView: View {
                         )
                         HStack {
                             Text("Passwords must contain at least 8 characters.")
-                                .font(.custom("Lato-Regular", size: 12))
+                                .textStyle(.caption)
                                 .foregroundStyle(Color.Colors.Text.tertiary)
                             Spacer()
                         }
@@ -85,7 +83,7 @@ struct SignupView: View {
                         )
                     } label: {
                         if !loading {
-                            Text("Sign Up")
+                            Text("Sign up")
                         } else {
                             ProgressView()
                                 .tint(.white)
@@ -102,7 +100,7 @@ struct SignupView: View {
 
                     HStack {
                         Text("By signing up, you are agreeing to our Terms of Service. View our Privacy Policy.")
-                            .font(.custom("Lato-Regular", size: 12))
+                            .textStyle(.caption)
                             .foregroundStyle(Color.Colors.Text.tertiary)
                     }
                     .padding(.horizontal, Spacing.md)
@@ -114,7 +112,7 @@ struct SignupView: View {
                         .frame(width: 100, height: 2)
                         .padding(.horizontal, Spacing.md)
                     Text("OR")
-                        .font(.custom("Lato-Regular", size: 12))
+                        .textStyle(.caption)
                         .foregroundStyle(Color.Colors.Text.quaternary)
                     Capsule()
                         .fill(Color.Colors.Fills.quaternary)
@@ -131,13 +129,13 @@ struct SignupView: View {
 
                 HStack(spacing: Spacing.xs) {
                     Text("Already have an email account? ")
-                        .font(.custom("Lato-Regular", size: 14))
+                        .textStyle(.bodySM)
                         .foregroundStyle(Color.Colors.Text.tertiary)
                     Button {
                         onNavigateToLogin()
                     } label: {
                         Text("Log in")
-                            .font(.custom("Lato-Regular", size: 14))
+                            .textStyle(.bodySM)
                             .underline()
                             .foregroundStyle(Color.Colors.Text.primary)
                     }

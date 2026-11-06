@@ -27,9 +27,10 @@ struct HomeView: View {
             VStack(spacing: Spacing.xl) {
                 HStack(spacing: Spacing.md) {
                     // TODO: Implement time-based greeting message // swiftlint:disable:this todo
-                    Text("Good morning, Daniel")
-                        .frame(width: 300, alignment: .leading)
-                        .font(Font.custom("Gazpacho-Black", size: 28))
+                    // The greeting and the first name sit on separate lines.
+                    Text("Good morning,\nDaniel")
+                        .textStyle(.headingLG)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .lineSpacing(6) // SwiftUI lineSpacing = Figma line height - Font size
                         .foregroundStyle(Color.Colors.Text.primary)
                     Spacer()
@@ -53,7 +54,7 @@ struct HomeView: View {
                 .padding(.horizontal, Spacing.xl)
 
                 VStack {
-                    SectionHeader(title: "Categories")
+                    SectionHeader(title: "Search by category")
 
                     if viewModel.isLoadingCategories {
                         ProgressView()
@@ -61,7 +62,7 @@ struct HomeView: View {
                             .frame(maxWidth: .infinity)
                     } else if viewModel.categories.isEmpty {
                         Text("No categories yet")
-                            .font(Font.custom("Lato-Regular", size: 14))
+                            .textStyle(.bodySM)
                             .foregroundStyle(Color.Colors.Text.tertiary)
                             .frame(height: 80)
                             .frame(maxWidth: .infinity)
@@ -86,7 +87,7 @@ struct HomeView: View {
 
                 VStack(spacing: Spacing.lg) {
                     SectionHeader(title: "Featured")
-                    BannerButton(bannerType: 1)
+                    PromotionalBanner(variant: .promo1)
                 }
                 .padding(.horizontal, Spacing.xl)
 
@@ -107,11 +108,11 @@ struct HomeView: View {
                 }
                 .padding(.horizontal, Spacing.xl)
 
-                BannerButton(bannerType: 2)
+                PromotionalBanner(variant: .promo2)
                     .padding(.horizontal, Spacing.xl)
 
                 VStack(spacing: Spacing.lg) {
-                    SectionHeader(title: "Stores")
+                    SectionHeader(title: "Producers")
 
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(alignment: .top, spacing: Spacing.md) {
@@ -126,7 +127,7 @@ struct HomeView: View {
                                         }
 
                                     Text(brand.name)
-                                        .font(Font.custom("Lato-Regular", size: 12))
+                                        .textStyle(.caption)
                                         .foregroundStyle(Color.Colors.Text.primary)
                                         .frame(width: 100)
                                         .multilineTextAlignment(.center)

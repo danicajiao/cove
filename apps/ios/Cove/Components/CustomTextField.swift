@@ -67,7 +67,7 @@ struct CustomTextField: View {
         VStack(spacing: Spacing.xs) {
             if label != nil {
                 Text(label ?? "")
-                    .font(.custom("Lato-Bold", size: 12))
+                    .textStyle(.captionBold)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, Spacing.md)
                     .foregroundStyle(Color.Colors.Text.tertiary)
@@ -200,7 +200,7 @@ private struct UITextFieldRepresentable: UIViewRepresentable {
         Text("email: \(email)")
         Text("password: \(password)")
         CustomTextField(
-            placeholder: "email@provider.com",
+            placeholder: "name@example.com",
             text: $email,
             returnKeyType: .next,
             label: "Email",
@@ -208,7 +208,7 @@ private struct UITextFieldRepresentable: UIViewRepresentable {
             tag: 0
         )
         CustomTextField(
-            placeholder: "Password",
+            placeholder: "",
             text: $password,
             isSecureTextEntry: true,
             returnKeyType: .done,

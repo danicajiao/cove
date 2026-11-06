@@ -22,7 +22,7 @@ struct LargeButton: View {
                 }
                 .overlay(alignment: .topLeading) {
                     Text(category)
-                        .font(Font.custom("Lato-Regular", size: 14))
+                        .textStyle(.bodySM)
                         .padding(Spacing.sm)
                 }
                 .frame(width: 140, height: 200)
@@ -38,7 +38,7 @@ struct LargeButton: View {
                 }
                 .overlay(alignment: .topLeading) {
                     Text(category)
-                        .font(Font.custom("Lato-Regular", size: 14))
+                        .textStyle(.bodySM)
                         .padding(Spacing.sm)
                 }
                 .frame(width: 140, height: 200)
@@ -55,7 +55,7 @@ struct LargeButton: View {
                 }
                 .overlay(alignment: .topLeading) {
                     Text(category)
-                        .font(Font.custom("Lato-Regular", size: 14))
+                        .textStyle(.bodySM)
                         .padding(Spacing.sm)
                 }
                 .frame(width: 140, height: 200)
@@ -73,7 +73,7 @@ struct LargeButton: View {
                 }
                 .overlay(alignment: .topLeading) {
                     Text(category)
-                        .font(Font.custom("Lato-Regular", size: 14))
+                        .textStyle(.bodySM)
                         .padding(Spacing.sm)
                 }
                 .background(Color(red: 255 / 255, green: 252 / 255, blue: 246 / 255))
@@ -91,7 +91,7 @@ struct LargeButton: View {
                 }
                 .overlay(alignment: .topLeading) {
                     Text(category)
-                        .font(Font.custom("Lato-Regular", size: 14))
+                        .textStyle(.bodySM)
                         .padding(Spacing.sm)
                 }
                 .background(Color(red: 255 / 255, green: 252 / 255, blue: 246 / 255))

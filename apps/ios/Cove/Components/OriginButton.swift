@@ -24,7 +24,7 @@ struct OriginButton: View {
                 }
                 .overlay(alignment: .topLeading) {
                     Text(origin)
-                        .font(Font.custom("Lato-Regular", size: 14))
+                        .textStyle(.bodySM)
                         .padding(Spacing.sm)
                 }
                 .frame(width: 140, height: 200)
@@ -40,7 +40,7 @@ struct OriginButton: View {
                 }
                 .overlay(alignment: .topLeading) {
                     Text(origin)
-                        .font(Font.custom("Lato-Regular", size: 14))
+                        .textStyle(.bodySM)
                         .padding(Spacing.sm)
                 }
                 .frame(width: 140, height: 200)
@@ -56,7 +56,7 @@ struct OriginButton: View {
                 }
                 .overlay(alignment: .topLeading) {
                     Text(origin)
-                        .font(Font.custom("Lato-Regular", size: 14))
+                        .textStyle(.bodySM)
                         .padding(Spacing.sm)
                 }
                 .frame(width: 140, height: 200)
@@ -72,7 +72,7 @@ struct OriginButton: View {
                 }
                 .overlay(alignment: .topLeading) {
                     Text(origin)
-                        .font(Font.custom("Lato-Regular", size: 14))
+                        .textStyle(.bodySM)
                         .padding(Spacing.sm)
                 }
                 .frame(width: 140, height: 200)
@@ -89,7 +89,7 @@ struct OriginButton: View {
                 }
                 .overlay(alignment: .topLeading) {
                     Text(origin)
-                        .font(Font.custom("Lato-Regular", size: 14))
+                        .textStyle(.bodySM)
                         .padding(Spacing.sm)
                 }
                 .frame(width: 140, height: 200)

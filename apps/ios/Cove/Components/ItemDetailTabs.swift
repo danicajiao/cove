@@ -23,12 +23,12 @@ struct ItemDetailTabs: View {
 
                 if viewModel.detailSelection == .description {
                     Text(discoveryDetails.description ?? "No description available.")
-                        .font(Font.custom("Lato-Regular", size: 16))
+                        .textStyle(.bodyMD)
                         .foregroundStyle(Color.Colors.Text.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 } else if viewModel.detailSelection == .about {
                     Text(discoveryDetails.about ?? "")
-                        .font(Font.custom("Lato-Regular", size: 16))
+                        .textStyle(.bodyMD)
                         .foregroundStyle(Color.Colors.Text.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -46,11 +46,11 @@ struct ItemDetailTabs: View {
         // Bold version is always rendered (opacity 0) to reserve its wider width,
         // preventing siblings from shifting when the font weight changes.
         Text(label)
-            .font(Font.custom("Lato-Bold", size: 14))
+            .textStyle(.bodySMBold)
             .opacity(0)
             .overlay(
                 Text(label)
-                    .font(Font.custom(isSelected ? "Lato-Bold" : "Lato-Regular", size: 14))
+                    .textStyle(isSelected ? .bodySMBold : .bodySM)
                     .foregroundStyle(isSelected ? Color.Colors.Fills.primary : Color.Colors.Fills.tertiary)
             )
             .padding(.horizontal, Spacing.xl)

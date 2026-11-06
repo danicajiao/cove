@@ -15,21 +15,18 @@ struct UsernameOnboardingView: View {
     var body: some View {
         GeometryReader { _ in
             VStack(spacing: Spacing.xl) {
-                Text("Cove.")
-                    .font(.custom("Gazpacho-Heavy", size: 40))
-                    .foregroundStyle(Color.Colors.Text.primary)
+                Wordmark()
 
                 SpectrumDivider()
 
                 VStack(alignment: .leading, spacing: Spacing.sm) {
                     Text("Choose a username")
-                        .font(.custom("Gazpacho-Black", size: 28))
-                        .tracking(-1.4) // Figma letter spacing -5% × 28pt
+                        .textStyle(.headingLG)
                         .foregroundStyle(Color.Colors.Text.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                     Text("This is how others will find you on Cove.")
-                        .font(.custom("Lato-Regular", size: 14))
+                        .textStyle(.bodySM)
                         .foregroundStyle(Color.Colors.Text.tertiary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -51,12 +48,12 @@ struct UsernameOnboardingView: View {
 
                     if let error = viewModel.validationError ?? viewModel.serverError {
                         Text(error)
-                            .font(.custom("Lato-Regular", size: 12))
+                            .textStyle(.caption)
                             .foregroundStyle(Color.Colors.Support.Error.fg)
                             .padding(.horizontal, Spacing.md)
                     } else {
                         Text("3–30 characters. Letters, numbers, and underscores.")
-                            .font(.custom("Lato-Regular", size: 12))
+                            .textStyle(.caption)
                             .foregroundStyle(Color.Colors.Text.tertiary)
                             .padding(.horizontal, Spacing.md)
                     }
