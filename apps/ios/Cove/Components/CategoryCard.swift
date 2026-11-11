@@ -76,13 +76,13 @@ struct CategoryCard: View {
         VStack(alignment: .leading, spacing: 2) {
             if let parent = parentLabel {
                 Text(parent)
-                    .font(Font.custom("Lato-Regular", size: 10))
+                    .textStyle(.captionSM)
                     .foregroundStyle(Color.Colors.Text.tertiary)
                     .lineLimit(1)
             }
 
             Text(category.name)
-                .font(Font.custom("Gazpacho-Black", size: 14))
+                .textStyle(.headingXS)
                 .foregroundStyle(Color.Colors.Text.primary)
                 .lineLimit(2)
                 .multilineTextAlignment(.leading)

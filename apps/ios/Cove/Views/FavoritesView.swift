@@ -33,7 +33,7 @@ struct FavoritesView: View {
                         .overlay {
                             Text("Items you save will appear here")
                                 .multilineTextAlignment(.center)
-                                .font(Font.custom("Lato-Regular", size: 16))
+                                .textStyle(.bodyMD)
                                 .foregroundStyle(Color.Colors.Text.primary)
                                 .padding(Spacing.xxxxl)
                         }

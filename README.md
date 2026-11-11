@@ -1,11 +1,11 @@
-# Cove - A Curated Marketplace
+# Cove - Local Community Discovery
 [![CI - iOS](https://github.com/danicajiao/cove/actions/workflows/ci-ios.yml/badge.svg)](https://github.com/danicajiao/cove/actions/workflows/ci-ios.yml)
 
 <img width="1630" alt="Screenshot 2025-04-23 at 12 36 21 AM" src="https://github.com/user-attachments/assets/a6194687-e7ce-4ca4-a534-b6852527d8ad" />
 
 ## About
 
-Cove is a curated marketplace of conscious businesses and quality producers — a passion project for exploring native iOS development, UX/UI design, mobile CI/CD, Firebase, and AI-assisted development workflows.
+Cove helps people discover conscious businesses and quality producers near them: who makes or sells what they're looking for, and where to find it, ranked by verified trust rather than ad spend. Cove doesn't sell anything; visits and purchases happen in person. It's a passion project for exploring native iOS development, UX/UI design, mobile CI/CD, Firebase, and AI-assisted development workflows.
 
 The project also serves as a testbed for agentic development: using AI agents to automate parts of the development process, such as implementing Figma designs directly into SwiftUI and orchestrating multi-step coding tasks from GitHub issues.
 

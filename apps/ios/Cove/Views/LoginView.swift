@@ -24,21 +24,19 @@ struct LoginView: View {
     var body: some View {
         GeometryReader { _ in
             VStack(spacing: Spacing.xl) {
-                Text("Cove.")
-                    .font(.custom("Gazpacho-Heavy", size: 40))
-                    .foregroundStyle(Color.Colors.Text.primary)
+                Wordmark()
 
                 SpectrumDivider()
 
                 Group {
                     Text("Log in to your account")
-                        .font(.custom("Lato-Bold", size: 28))
+                        .textStyle(.headingLG)
                         .foregroundStyle(Color.Colors.Text.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                     VStack(spacing: Spacing.xs) {
                         CustomTextField(
-                            placeholder: "email@provider.com",
+                            placeholder: "name@example.com",
                             text: $email,
                             returnKeyType: .next,
                             autocapitalizationType: UITextAutocapitalizationType.none,
@@ -48,7 +46,7 @@ struct LoginView: View {
                             tag: 0
                         )
                         CustomTextField(
-                            placeholder: "Password",
+                            placeholder: "",
                             text: $password,
                             isSecureTextEntry: true,
                             returnKeyType: .done,
@@ -62,7 +60,7 @@ struct LoginView: View {
                                 print("TODO: nav to forgot password view")
                             } label: {
                                 Text("Forgot password?")
-                                    .font(.custom("Lato-Regular", size: 12))
+                                    .textStyle(.caption)
                                     .underline()
                                     .foregroundStyle(Color.Colors.Text.tertiary)
                             }
@@ -71,7 +69,7 @@ struct LoginView: View {
                                 print("TODO: auth with Face ID")
                             } label: {
                                 Text("Face ID \(Image(systemName: "faceid"))")
-                                    .font(.custom("Lato-Regular", size: 14))
+                                    .textStyle(.caption)
                                     .foregroundStyle(Color.Colors.Text.tertiary)
                             }
                         }
@@ -96,7 +94,7 @@ struct LoginView: View {
                     )
                 } label: {
                     if !loading {
-                        Text("Log In")
+                        Text("Log in")
                     } else {
                         ProgressView()
                             .tint(.white)
@@ -113,7 +111,7 @@ struct LoginView: View {
                         .frame(width: 100, height: 2)
                         .padding(.horizontal, Spacing.md)
                     Text("OR")
-                        .font(.custom("Lato-Regular", size: 12))
+                        .textStyle(.caption)
                         .foregroundStyle(Color.Colors.Text.quaternary)
                     Capsule()
                         .fill(Color.Colors.Fills.quaternary)
@@ -130,13 +128,13 @@ struct LoginView: View {
 
                 HStack(spacing: Spacing.xs) {
                     Text("Don't have an account? ")
-                        .font(.custom("Lato-Regular", size: 14))
+                        .textStyle(.bodySM)
                         .foregroundStyle(Color.Colors.Text.tertiary)
                     Button {
                         onNavigateToSignup()
                     } label: {
                         Text("Sign up")
-                            .font(.custom("Lato-Regular", size: 14))
+                            .textStyle(.bodySM)
                             .underline()
                             .foregroundStyle(Color.Colors.Text.primary)
                     }

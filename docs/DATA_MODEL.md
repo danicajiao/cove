@@ -1,6 +1,6 @@
-# Marketplace Architecture
+# Data Model
 
-> **Status:** Canonical data-model + services document (October 2026). This revision describes the producer/place model from epic #393, including the split of `cove-item` into `cove-catalog` and `cove-directory` (#413); the gateway, CI and homelab changes land in #398, #415 and #416. Phase 3 is complete — `cove-catalog` and `cove-user` are deployed to `cove-staging` (prod promotion follows the integration-branch merge to `main`) and the iOS app calls them via the cove-api gateway. Firebase Firestore and Storage have been retired. For cluster and phase plan see [Backend Infrastructure](BACKEND_INFRASTRUCTURE.md); for Postgres mechanics see [Postgres Primer](POSTGRES_PRIMER.md); for the image pipeline see [Media Architecture](MEDIA_ARCHITECTURE.md).
+> **Status:** Canonical data-model + services document (November 2026). This revision describes the producer/place model from epic #393, including the split of `cove-item` into `cove-catalog` and `cove-directory` (#413); the gateway, CI and homelab changes land in #398, #415 and #416. Phase 3 is complete — `cove-catalog` and `cove-user` are deployed to `cove-staging` (prod promotion follows the integration-branch merge to `main`) and the iOS app calls them via the cove-api gateway. Firebase Firestore and Storage have been retired. For cluster and phase plan see [Backend Infrastructure](BACKEND_INFRASTRUCTURE.md); for Postgres mechanics see [Postgres Primer](POSTGRES_PRIMER.md); for the image pipeline see [Media Architecture](MEDIA_ARCHITECTURE.md); for item kinds, secondhand items and visit lists see [Item Availability](ITEM_AVAILABILITY.md).
 
 ## Contents
 
@@ -71,9 +71,9 @@ Cove separates **who makes** a thing from **where you find it** — *"Cove tells
 
 | Entity | Role | Carries | Local-availability gate? |
 |---|---|---|---|
-| **producer** | Who makes it: a company *or* an individual (farm, roaster, chocolatier, baker, artist, musician, brewery) | Provenance signals (B Corp, 1% for the Planet) + **tier** (Verified Business / Individual Lister) | No — can be national |
+| **producer** | Who makes it: a company *or* an individual (farm, roaster, chocolatier, baker, artist, musician, brewery), including a brand like Levi's | Provenance signals (B Corp, 1% for the Planet) + **tier** (Verified Business / Individual Lister) | No — can be national |
 | **place** | Where you go. `type` is one of café, restaurant, bar, bakery, dessert shop, shop, gallery, studio, market, venue, taproom | Local signals (Living Wage, Community Verified) + **location** + optional category tags (`place_categories`) | **Yes — must be local** |
-| **item** | What a producer makes, and what a user searches for | Its own signals (USDA Organic); made by **at most one** producer, **sold at** many places; optional `brand` | Via its places |
+| **item** | What a producer makes, and what a user searches for | Its own signals (USDA Organic); made by **one** producer, **sold at** many places; a **kind** that says how it's sold (planned) | Via its places |
 
 "Producer" and "place" are both the internal names and the consumer-facing words. A `type` carries the specifics: a market and a gallery are both places, of different types. On an item, the consumer labels are **"Made by"** (the producer) and **"Sold at"** (its places). On a place page, items split into **"Made here"** (from the producer that runs the place) and **"From local producers"**.
 
@@ -92,12 +92,32 @@ The rule is not "local only." It is **require a local point of availability, the
 
 A place may be run by the producer themselves (a potter's studio, New Belgium's taproom) or be an independent place that carries many producers' goods (a boutique, a gallery, a farmers market). A nullable `run_by_producer_id` on `places` records the former — useful for showing "the producer's own studio" and for attributing trust. A vertically integrated business like New Belgium is a **producer** (B Corp) plus a **place** (`type: taproom`) it operates; keeping them as separate rows is correct, because the producer can also be sold at other places and the taproom can carry guest producers. When an item's producer runs the place being viewed, the item reads "Made by them, sold here" instead of linking out.
 
-### Brands and secondhand items
+### Item kinds
 
-`catalog.items.producer_id` is **nullable**, and `catalog.items.brand` holds a plain brand name.
+> **Status:** Planned, not built. [Item Availability](ITEM_AVAILABILITY.md) has the full design, including what Item Details shows for each kind.
 
-- **A national brand is a producer only when it carries trust signals worth surfacing**, like Patagonia as a B Corp. Otherwise the brand is plain item detail: vintage Levi's at a family-owned consignment shop has `brand = 'Levi''s'`, no producer, and no producer page. The shop is what Cove promotes.
-- **Secondhand and vintage items can have no producer at all.** Resale is itself a values signal on the place.
+An item's **kind** says how it's sold, and so which places can have it:
+
+| Kind | Which places have it | Example |
+|---|---|---|
+| **Goods** (default) | Any place that carries it, new or secondhand | Onyx beans, an art print, a vintage lamp |
+| **House-made** | Only places its producer runs | A Call Your Mother bagel |
+| **One of a kind** | One place, until it sells | An original painting |
+
+- **House-made items follow the producer.** By default one is at every place its producer runs (`items.at_every_location`). That's worked out when it's read, so a new location has the menu the day it opens. Stored `availability` rows only record exceptions: turned off at one place, or a different price there. A location's own special is set to "only some" and lists each place that has it.
+- **One of a kind means only one was ever made.** A vintage copy of a design made many times is Goods. Being secondhand belongs to the copy, so it goes on each shop's `availability` row along with that shop's price.
+- **The `catalog.item_places` view** applies these rules. Every query that asks where an item is, including [the discovery query](#the-discovery-query), reads the view rather than `availability`.
+
+### Brands and unknown makers
+
+> **Status:** Planned, not built. Today `catalog.items.producer_id` is nullable, and `catalog.items.brand` holds a plain brand name for items without a producer.
+
+Every item has a producer:
+
+- **Brands are producers.** Levi's and DWR get producer pages like any other maker. The community can start one, and the business claims it later ([Listings and ownership](#listings-and-ownership)). A page doesn't mean a boost: a brand with no trust signals adds nothing to the ranking. Vintage Levi's at a family-owned consignment shop has Levi's as its producer, and the shop is still what Cove promotes. Resale is itself a values signal on the place.
+- **Unknown makers share one fallback producer:** Unknown maker (slug `unknown-maker`). It has no page and stays out of producer listings and trust scoring. Item Details shows "Maker unknown" as plain text, and "More at" the place instead of "More from" the producer.
+
+Once brands are backfilled as producers, `producer_id` becomes `NOT NULL` and `brand` is dropped. Whether the community can start a page for an individual maker is still open ([Open items](#open-items)).
 
 ### Place categories
 
@@ -130,7 +150,7 @@ A listing can start with Cove or with the community, and the business can claim 
 
 - **Adding a place:** anyone can submit one. It needs a real Denver-area address and a duplicate check, and Cove approves it before it goes live. Review confirms that the place exists and is local; the trust layer still decides how it surfaces. Confirmations from other users could replace this review as volume grows.
 - **Editing a listing:** people suggest edits, and nobody edits an unclaimed page directly.
-- **Adding a producer:** anyone can submit a company. An individual appears only as a name attached to a place until they opt in, because a producer can be one person working from home.
+- **Adding a producer:** anyone can submit a company, including a brand like Levi's, since every item needs a producer ([Brands and unknown makers](#brands-and-unknown-makers)). An individual appears only as a name attached to a place until they opt in, because a producer can be one person working from home.
 - **Claiming a listing:** Cove verifies the claim through a contact already tied to the business, such as its public phone number or website domain, never a contact the claimant supplies. A claim proves control of the listing. `tier` and the trust signals stay separate from it.
 - **Running a listing:** the claimant becomes the owner and can add admins and staff. These are normal Cove accounts, and one person can manage several listings.
 - **Leaving:** a business can give up its claim, which returns the listing to unclaimed. It cannot delete the listing or the community's content, except to remove a home address or to honor an individual's privacy request.
@@ -187,7 +207,7 @@ Platform-level admin (Cove internal staff who can manage any listing) is handled
 | `cove-api` | `services/cove-api/` | Single ingress (BFF gateway). Validates Firebase ID tokens, routes to backend services, forwards UID via `X-Cove-Uid`. |
 | `cove-catalog` | `services/cove-catalog/` | Categories, items, availability, trust signals, media metadata, and the discovery endpoint (`GET /discovery`). Owns the `catalog` schema; reads `directory` for discovery. |
 | `cove-directory` | `services/cove-directory/` | Producers, places and place categories: `GET /producers/{id}`, `GET /places/{id}`, and next places by category and places for you. Owns the `directory` schema; reads `catalog` for signals, items sold at a place, and category matching. Self-serve onboarding and listing management land here later. |
-| `cove-user` | `services/cove-user/` | User profiles, interest management, `GET /recommendations/categories` (level 1 home shelf ranking), `POST /users/me/activity` (attention activity). |
+| `cove-user` | `services/cove-user/` | User profiles, interest management, `GET /recommendations/categories` (level 1 home shelf ranking), `POST /users/me/activity` (attention activity). Visit lists are planned here. |
 | `cove-media` | `services/cove-media/` | Authenticated image uploads to Garage and signed-URL fetch via imgproxy. Stateless. |
 **Ownership rule:** each service writes only its own schema. Reads across schemas are allowed and granted explicitly: `cove-catalog` reads `directory` for discovery, `cove-directory` reads `catalog` for place and producer pages, and `cove-user` reads both. Directory data is seeded by migrations until community listings ship; see [Listings and ownership](#listings-and-ownership).
 
@@ -457,6 +477,8 @@ Steps 2–4 are additive — no existing tables change.
 
 Location is the proximity dimension of discovery and the integrity gate: every place has a verifiable local address within the Denver metro area and appears in radius search. There is no online-only place type. A producer that sells only online reaches Cove through the local places that carry its items. (The four placeholder seed places still use a temporary `online` type with no location; the Denver seed data in #406 replaces them and drops the value.) This prevents national chains from self-listing as local and diluting the trust layer.
 
+**Distance is measured from the area being browsed.** Onboarding asks for location services, and by default distance and ranking use where the person is. Once Cove covers more than one city, someone planning a trip can browse another one, and distances follow it. Being local shows through distance and ranking: items, places and producers never carry a "Local" badge.
+
 Both `directory.producers` and `directory.places` carry a `geography(Point,4326)` column with a GiST index (from `migrations/000002_directory.up.sql`). It is nullable on producers, which can be national. The PostGIS extension is enabled in `migrations/000001_setup.up.sql`.
 
 ```sql
@@ -648,10 +670,10 @@ CREATE INDEX ON directory.place_categories (category_id);
 ```sql
 CREATE TABLE catalog.items (
     id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-    producer_id uuid        REFERENCES directory.producers(id),  -- nullable: brand-only and secondhand items
+    producer_id uuid        REFERENCES directory.producers(id),  -- nullable today; planned NOT NULL
     category_id uuid        NOT NULL REFERENCES catalog.categories(id),
     name        text        NOT NULL,
-    brand       text,                                -- plain brand name when the brand isn't a producer
+    brand       text,                                -- plain brand name; dropped once brands are producers
     description text,
     price_cents integer,                             -- nullable: informational; no transactions in v1
     attributes  jsonb       NOT NULL DEFAULT '{}',   -- filter facets (dietary preference, season, ...)
@@ -705,6 +727,8 @@ CREATE INDEX ON catalog.media (item_id, sort_order);
 CREATE INDEX ON catalog.media (place_id);
 CREATE INDEX ON catalog.media (producer_id);
 ```
+
+Planned additions ([Item Availability](ITEM_AVAILABILITY.md#schema-changes)): `kind`, `at_every_location` and `sold_at` on `items`; `price_cents`, `condition`, `quantity`, `note`, `last_seen_at` and `seen_count` on `availability`; and the `catalog.item_places` view.
 
 ### `profile` schema
 
@@ -772,6 +796,8 @@ CREATE INDEX ON profile.activity (user_id, category_id) WHERE category_id IS NOT
 CREATE INDEX ON profile.activity (user_id, item_id)     WHERE item_id     IS NOT NULL;
 ```
 
+Planned ([Visit lists](ITEM_AVAILABILITY.md#visit-lists)): `profile.visit_lists` and `profile.visit_list_places`. People can make as many visit lists as they want, each with an optional city, and a saved place remembers the item it was saved from. Favorites stay for items, and follows for keeping up with a producer or place.
+
 ---
 
 ## The discovery query
@@ -804,6 +830,8 @@ ORDER BY i.id, (
 ```
 
 That blended score is Cove's secret sauce. Yelp ranks by ad spend, Google by review volume; Cove ranks by **trust + proximity + relevance** — the thing competitors cannot cheaply copy, because it requires rebuilding the incentive structure. (An item available at several nearby places collapses to one result via `DISTINCT ON (i.id)` keeping the best place; the response can still list all nearby places under "Sold at.")
+
+**Planned changes.** Once item kinds ship, the query joins `catalog.item_places` instead of `availability`, so every-location house-made items match at each place their producer runs. With `producer_id` required, the producer join becomes an inner join and `i.brand` goes.
 
 ---
 
@@ -857,7 +885,7 @@ See [Backend Infrastructure](BACKEND_INFRASTRUCTURE.md) for cluster topology and
 
 ## What is deliberately not modeled
 
-- **Orders, payments, inventory, fulfillment** — Cove connects, it does not transact (v1 scope)
+- **Orders, payments, inventory, fulfillment** — Cove connects, it does not transact (v1 scope). The planned `availability.quantity` is what a listing or a local reported, not tracked stock
 - **Item variants / SKUs** — over-built for a no-transaction discovery app; an item is "what a producer makes," not a purchasable SKU
 - **Sophisticated trust scoring** — start flat-additive; add diversity/diminishing-returns tuning later
 - **pgvector / semantic search** — Postgres full-text (`tsvector`/GIN) is sufficient for v1 keyword discovery; vector embeddings become relevant when AI-assisted discovery is scoped (leave room, don't build now)
@@ -885,6 +913,7 @@ Items still open:
 6. **`details` on products vs a separate table** — folded into a `details` JSONB column here; split back out only if payloads get large enough to hurt list queries.
 7. **`user_flags`** — the table and its one flag (`interests_onboarded`) are documented in the `profile` schema above; #368 tracks defining further flags and their owner.
 8. **Place sourcing** — whether people add a place by searching an existing maps source instead of typing it in, and which source's terms allow Cove to keep that data.
+9. **Community pages for individual makers** — brands get community-started producer pages. Whether the community can start one for an individual, who otherwise appears only as a name until they opt in, is undecided. The other open questions about item kinds and the place list are in [Item Availability](ITEM_AVAILABILITY.md#decisions-and-open-questions).
 
 ---
 
@@ -895,6 +924,7 @@ Items still open:
 - [Media Architecture](MEDIA_ARCHITECTURE.md) — image storage, transformation, serving, signed URLs
 - [iOS App Architecture](IOS_APP_ARCHITECTURE.md) — iOS app structure, ViewModels, repository layer
 - [Category Taxonomy](CATEGORY_TAXONOMY.md) — full v1 tree, design principles, add/remove runbook
+- [Item Availability](ITEM_AVAILABILITY.md) — item kinds, house-made items at chains, secondhand items, the place list on Item Details, visit lists
 - Product Brief v1.2 — the trust layer, the wedge, the signal taxonomy; amendments A1–A12 cover the producer/place model, Eat & Drink, community contributions, and community listings and claiming
 
 ---
@@ -915,3 +945,4 @@ Items still open:
 - **Version 6.1** (October 2026) — **Services named after their schemas (#413).** Split `cove-item` into `cove-catalog` (catalog schema, discovery) and `cove-directory` (directory schema, producer and place endpoints), each with its own migrations, role and migration history. Migrations run directory → catalog → user. `place_categories.category_id` became a plain ID checked by a trigger, so `directory` has no foreign keys into other schemas.
 - **Version 6.2** (October 2026) — **cove-user rename (#397).** `profile.activity.event_type` → `activity_type`; follows target `producer_id` / `place_id`; `profile.user_flags` folded into cove-user's first migration and documented in the `profile` schema.
 - **Version 6.3** (November 2026) — **Listings and ownership.** Added the planned model for community listings, claiming and owner administration (Product Brief A10 to A12). `profile.memberships` became `directory.memberships`, keyed on `user_id`, so `cove-directory` keeps to the ownership rule. Listing moderation now ships before community submissions, ahead of the v3 contributions work.
+- **Version 7.0** (November 2026) — **Data Model.** Renamed from Marketplace Architecture, since Cove doesn't sell anything. Added the planned model from [Item Availability](ITEM_AVAILABILITY.md): item kinds (goods, house-made, one of a kind) with the every-location setting and the `catalog.item_places` view; secondhand copies as Goods, with the condition on the availability row; brands as producers with community-started pages, a shared Unknown maker, a required `items.producer_id` and no `items.brand`; visit lists back in `profile` (removed in 3.0); and distance measured from the area being browsed, with no Local badge.

@@ -171,22 +171,31 @@ Font files live in `apps/ios/Cove/Resources/`. Always use `Font.custom()` — ne
 
 ### Type Scale
 
-| Figma style | Font | Size | Swift usage |
-|---|---|---|---|
-| Gazpacho/Display | Gazpacho-Black | 34pt | `Font.custom("Gazpacho-Black", size: 34)` |
-| Gazpacho/Heading XL | Gazpacho-Black | 28pt | `Font.custom("Gazpacho-Black", size: 28)` |
-| Gazpacho/Heading LG | Gazpacho-Black | 22pt | `Font.custom("Gazpacho-Black", size: 22)` |
-| Gazpacho/Heading MD | Gazpacho-Black | 18pt | `Font.custom("Gazpacho-Black", size: 18)` |
-| Gazpacho/Heading SM | Gazpacho-Black | 15pt | `Font.custom("Gazpacho-Black", size: 15)` |
-| Lato/Body LG | Lato-Bold | 16pt | `Font.custom("Lato-Bold", size: 16)` |
-| Lato/Body MD | Lato-Regular | 14pt | `Font.custom("Lato-Regular", size: 14)` |
-| Lato/Body SM | Lato-Regular | 12pt | `Font.custom("Lato-Regular", size: 12)` |
-| Lato/Caption | Lato-Regular | 10pt | `Font.custom("Lato-Regular", size: 10)` |
+| Figma style | Font | Size | Line height | Letter spacing | Swift |
+|---|---|---|---|---|---|
+| Gazpacho/Display | Gazpacho-Black | 40pt | 44 | -5% | `.textStyle(.display)` |
+| Gazpacho/Heading XL | Gazpacho-Black | 32pt | 38 | -5% | `.textStyle(.headingXL)` |
+| Gazpacho/Heading LG | Gazpacho-Black | 28pt | 34 | -5% | `.textStyle(.headingLG)` |
+| Gazpacho/Heading MD | Gazpacho-Black | 24pt | 30 | -5% | `.textStyle(.headingMD)` |
+| Gazpacho/Heading SM | Gazpacho-Black | 20pt | 26 | -5% | `.textStyle(.headingSM)` |
+| Gazpacho/Heading XS | Gazpacho-Black | 12pt | 16 | -5% | `.textStyle(.headingXS)` |
+| Lato/Body LG | Lato-Bold | 18pt | 28 | 0 | `.textStyle(.bodyLG)` |
+| Lato/Body MD | Lato-Regular | 16pt | 24 | 0 | `.textStyle(.bodyMD)` |
+| Lato/Body SM | Lato-Regular | 14pt | 20 | 0 | `.textStyle(.bodySM)` |
+| Lato/Body SM Bold | Lato-Bold | 14pt | 20 | 0 | `.textStyle(.bodySMBold)` |
+| Lato/Caption | Lato-Regular | 12pt | 16 | 0 | `.textStyle(.caption)` |
+| Lato/Caption Bold | Lato-Bold | 12pt | 16 | 0 | `.textStyle(.captionBold)` |
+| Lato/Caption SM | Lato-Regular | 10pt | 12 | 0 | `.textStyle(.captionSM)` |
+
+`TextStyle` (`Constants/TextStyle.swift`) mirrors these styles. `.textStyle(_:)` sets the font and letter spacing; Figma's percentage letter spacing is relative to the font size, so the SwiftUI tracking is `size × letterSpacing`. When a Figma style changes, update its case there.
+
+Line heights are recorded in `TextStyle` but not applied yet: text uses each font's built-in line height. SwiftUI's `.lineSpacing(_:)` adds space on top of the font's own line height, so it isn't simply Figma line height minus font size.
 
 ### Rules
 
+- **Use `.textStyle(_:)`** for any text that matches a style above, instead of `Font.custom` with a size
 - **Headings / display text:** Gazpacho-Black
-- **Body / UI text:** Lato-Regular (default) or Lato-Bold (emphasis)
+- **Body / UI text:** Lato-Regular (default); Body SM Bold for button labels, tabs, links and row titles; Caption Bold for field labels
 - **Poppins is removed** — do not use `Poppins-Regular` or `Poppins-SemiBold` anywhere
 
 ---
@@ -264,18 +273,20 @@ All components are defined in the **Components page** of the Figma file. Views s
 
 | Figma component | Swift file(s) | Notes |
 |---|---|---|
-| Buttons / Primary | `apps/ios/Cove/Styles/PrimaryButton.swift` | `PrimitiveButtonStyle`, uses `fills/primary` + `fills/inverse` |
-| Buttons / Secondary | `apps/ios/Cove/Styles/SecondaryButton.swift` | Outlined style, uses `strokes/primary` |
-| Buttons / Banner | `apps/ios/Cove/Components/BannerButton.swift` | Used inside promotional banners |
+| Buttons / Primary | `apps/ios/Cove/Styles/PrimaryButton.swift` | `PrimitiveButtonStyle`, uses `fills/primary` + `fills/inverse`. Dims to 40% when disabled (Large Button `State=Disabled`) |
+| Buttons / Secondary | `apps/ios/Cove/Styles/SecondaryButton.swift` | Outlined style, uses `strokes/primary`. Dims to 40% when disabled |
 | Buttons / Social Login | `apps/ios/Cove/Components/` | Google, Facebook, Apple variants |
-| Text Field | `apps/ios/Cove/Components/` | Email, password, search, text area variants |
-| Section Header | `apps/ios/Cove/Components/` | Title + optional "See all →" in `brand/accent` |
+| Text Field | `apps/ios/Cove/Components/CustomTextField.swift` | `State` Empty (placeholder) or Filled (`Value` in `text/primary`); Label, Placeholder, Leading Icon (off by default), Secure (eye toggle), Helper. Helper text lives in the view |
+| Section Header | `apps/ios/Cove/Components/SectionHeader.swift` | Title (Body LG) + optional "See all →" link (Body MD) in `brand/accent` |
+| Wordmark | `apps/ios/Cove/Components/Wordmark.swift` | The "Cove." logo in Gazpacho Heavy: `.large` (60/66) on Welcome and `.regular` (40/44) above the auth and onboarding forms, both at -5%. Not a text style |
 | Divider | `apps/ios/Cove/Components/` | Plain line and "OR" variants |
-| Card / Item | `apps/ios/Cove/Components/ItemCard.swift` | Item image, name, roaster, price |
-| Card / Category | `apps/ios/Cove/Components/CoffeeCategoryButton.swift` | Uses `category/*` fill colors |
+| Item | `apps/ios/Cove/Components/ItemCard.swift` | Name (Heading XS), producer (Caption), price (Body SM Bold). The `On Sale` variant is design-only for now |
+| Category Card | `apps/ios/Cove/Components/CategoryCard.swift` | Home shelf card, 130×60: parent (Caption SM), name (Heading XS). One variant per category image |
+| Interest Category Card | `apps/ios/Cove/Components/InterestCategoryCard.swift` | Onboarding card: name (Heading MD), selected badge |
+| Chip | `apps/ios/Cove/Components/Chip.swift` | Onboarding interest pill (Body SM) |
 | Bag Item | `apps/ios/Cove/Components/` | Quantity stepper in `brand/accent`, price in `text/primary` |
 | Store Card | `apps/ios/Cove/Components/` | Circular logo + store name |
-| Promotional Banner | `apps/ios/Cove/Components/` | Two variants: full-bleed image and compact |
+| Promotional Banner | `apps/ios/Cove/Components/PromotionalBanner.swift` | `.promo1` (image with card) and `.promo2` (compact) |
 | Hero Art | `apps/ios/Cove/Resources/` | Illustrative identity tiles — fixed colors by design |
 | Tiles | `apps/ios/Cove/Resources/` | Decorative loading indicator tiles — fixed colors by design |
 | Icons | `apps/ios/Cove/Resources/` | Social auth icons — third-party brand colors, intentionally fixed |
@@ -287,7 +298,7 @@ All components are defined in the **Components page** of the Figma file. Views s
 ### Always
 
 - Use `Color.Colors.*` for all colors
-- Use `Font.custom("Gazpacho-Black" / "Lato-Bold" / "Lato-Regular", size:)` for all text
+- Use `.textStyle(_:)` for text; fall back to `Font.custom` only for text outside the Figma styles
 - Use `.customShadow()` for card/sheet elevation
 - Use spacing values from the 4pt grid
 - Use corner radius values from the token scale

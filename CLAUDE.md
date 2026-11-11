@@ -27,7 +27,7 @@ Backend services live under `services/` using the `cove-<name>` convention (e.g.
 - **Required Xcode version: 26.4+** — `objectVersion = 100` requires Xcode 26.4+. CI selects Xcode 26.4.1 via `DEVELOPER_DIR=/Applications/Xcode_26.4.1.app/Contents/Developer`.
 - All iOS commands (`swiftformat`, `swiftlint`, `bundle exec fastlane ...`) must be run from `apps/ios/`.
 
-See `docs/README.md` for the full docs index. The most used: `IOS_APP_ARCHITECTURE.md`, `BACKEND_INFRASTRUCTURE.md`, `DATABASE_MIGRATIONS.md`, `MARKETPLACE_ARCHITECTURE.md`, `DESIGN_SYSTEM.md`, `QUICK_START.md`, `CI_CD_WORKFLOWS.md`.
+See `docs/README.md` for the full docs index. The most used: `IOS_APP_ARCHITECTURE.md`, `BACKEND_INFRASTRUCTURE.md`, `DATABASE_MIGRATIONS.md`, `DATA_MODEL.md`, `DESIGN_SYSTEM.md`, `QUICK_START.md`, `CI_CD_WORKFLOWS.md`.
 
 ---
 

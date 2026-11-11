@@ -148,14 +148,21 @@ private struct ItemDetailContent: View {
                     VStack(spacing: Spacing.lg) {
                         VStack(spacing: 0) {
                             Text(titleStr)
-                                .font(Font.custom("Gazpacho-Black", size: 20))
+                                .textStyle(.headingSM)
                                 .foregroundStyle(Color.Colors.Text.primary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
 
                             Text(subtitleStr)
-                                .font(Font.custom("Lato-Regular", size: 20))
+                                .textStyle(.bodyMD)
                                 .foregroundStyle(Color.Colors.Text.tertiary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
+
+                            // Whole dollars, like ItemCard.
+                            Text("$\(Int(price))")
+                                .textStyle(.bodyLG)
+                                .foregroundStyle(Color.Colors.Brand.accent)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.top, Spacing.sm)
                         }
 
                         NavigationLink(destination: Text("Item Reviews!")) {
@@ -164,10 +171,11 @@ private struct ItemDetailContent: View {
                                     HStack(spacing: Spacing.md) {
                                         Rating(rating: 4)
                                         Text("4.3")
-                                            .font(Font.custom("Lato-Regular", size: 14))
+                                            .textStyle(.caption)
+                                            .foregroundStyle(Color.Colors.Text.tertiary)
                                     }
                                     Text("22 Reviews \(Image(systemName: "chevron.right"))")
-                                        .font(Font.custom("Lato-Regular", size: 14))
+                                        .textStyle(.caption)
                                         .foregroundStyle(Color.Colors.Text.tertiary)
                                 }
 
@@ -215,7 +223,7 @@ private struct ItemDetailContent: View {
                         .foregroundStyle(Color.Colors.Fills.quinary)
 
                     VStack(spacing: Spacing.lg) {
-                        SectionHeader(title: "Similar to this")
+                        SectionHeader(title: "Similar to this", navigationText: nil)
 
                         ScrollView(.horizontal) {
                             HStack(spacing: Spacing.md) {
@@ -256,7 +264,7 @@ private struct PlaceRow: View {
                 .font(Font.custom("Lato-Bold", size: 16))
                 .foregroundStyle(Color.Colors.Text.primary)
             Text(place.typeLabel)
-                .font(Font.custom("Lato-Regular", size: 14))
+                .textStyle(.bodySM)
                 .foregroundStyle(Color.Colors.Text.tertiary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

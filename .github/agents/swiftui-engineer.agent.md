@@ -66,7 +66,7 @@ search/fileSearch: apps/ios/Cove/Views/**/*.swift          → find similar scre
 search/fileSearch: apps/ios/Cove/View Models/*.swift       → find existing ViewModels that may cover data needs
 search/fileSearch: apps/ios/Cove/Components/**/*.swift     → find reusable components
 search/textSearch: "Color.Colors"                 → confirm available color token names in use
-search/textSearch: "Font.custom"                  → confirm available font names and sizes
+search/textSearch: "textStyle("                  → confirm the text styles in use (Constants/TextStyle.swift)
 ```
 
 ### 4. Implement the View

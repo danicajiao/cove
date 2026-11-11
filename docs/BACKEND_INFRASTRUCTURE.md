@@ -328,7 +328,7 @@ Each phase is independently shippable. The iOS app is updated incrementally — 
 
 ### Phase 3 — Data services ✅ complete
 
-See [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md) for the canonical schema (producer / place / item / signals) and full data model.
+See [Data Model](DATA_MODEL.md) for the canonical schema (producer / place / item / signals) and the rest of the model.
 
 - Provision a single CNPG `Cluster` (`cove-db`, with PostGIS + ltree) hosting the `cove` database with three schemas: `directory`, `catalog`, and `profile`. The `directory` schema (producers + places) is pre-positioned for a future `cove-directory` service — no service owns it in Phase 3. PostGIS enables radius-based discovery queries.
 - `profile.user_flags` migration added to `cove-db`
@@ -374,5 +374,5 @@ K3s uses the same Kubernetes API as GKE — manifests written today run on GKE u
 ## References
 
 - [Postgres Primer](POSTGRES_PRIMER.md) — indexes, JSONB, full-text search, ltree, PostGIS
-- [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md) — the canonical data model (entities, trust layer, schemas, discovery query)
+- [Data Model](DATA_MODEL.md) — the canonical data model (entities, trust layer, schemas, discovery query)
 - [iOS App Architecture](IOS_APP_ARCHITECTURE.md) — current iOS app structure and Firebase usage
