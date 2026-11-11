@@ -9,6 +9,7 @@ import SwiftUI
 
 struct MainView: View {
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject private var favoritesStore: FavoritesStore
     @StateObject private var tabState = TabState()
 
     var body: some View {
@@ -39,11 +40,25 @@ struct MainView: View {
         }
         .environmentObject(tabState)
         .background(Color.Colors.Backgrounds.primary)
+        .sheet(item: $appState.accountPrompt, onDismiss: appState.cancelAccountPrompt) { prompt in
+            AccountSheetView(prompt: prompt)
+                .environmentObject(appState)
+                .environmentObject(favoritesStore)
+        }
+        .onChange(of: favoritesStore.accountRequired) { _, required in
+            // The gateway refused a favorite with `account_required`. Ask for
+            // an account; the item isn't saved automatically in this case.
+            guard required else { return }
+            favoritesStore.accountRequired = false
+            appState.requireAccount(.favorite)
+        }
     }
 }
 
 struct MainView_Previews: PreviewProvider {
     static var previews: some View {
         MainView()
+            .environmentObject(AppState())
+            .environmentObject(FavoritesStore())
     }
 }
