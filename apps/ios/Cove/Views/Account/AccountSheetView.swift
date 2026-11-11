@@ -119,11 +119,10 @@ private struct AccountPromptContent: View {
 
             VStack(spacing: Spacing.sm) {
                 Text(prompt.title)
-                    .font(.custom("Gazpacho-Black", size: 28))
-                    .tracking(-1.4) // Figma letter spacing -5% × 28pt
+                    .textStyle(.headingLG)
                     .foregroundStyle(Color.Colors.Text.primary)
                 Text(prompt.message)
-                    .font(.custom("Lato-Regular", size: 14))
+                    .textStyle(.bodySM)
                     .foregroundStyle(Color.Colors.Text.tertiary)
             }
             .multilineTextAlignment(.center)
@@ -149,11 +148,11 @@ private struct AccountPromptContent: View {
                         .foregroundStyle(Color.Colors.Text.primary)
                 }
             }
-            .font(.custom("Lato-Regular", size: 14))
+            .textStyle(.bodySM)
 
             Button(action: onNotNow) {
                 Text("Not now")
-                    .font(.custom("Lato-Bold", size: 14))
+                    .textStyle(.bodySMBold)
                     .foregroundStyle(Color.Colors.Text.tertiary)
             }
         }

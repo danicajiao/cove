@@ -12,7 +12,7 @@ struct OrDivider: View {
         HStack(spacing: Spacing.md) {
             rule
             Text("OR")
-                .font(.custom("Lato-Regular", size: 12))
+                .textStyle(.caption)
                 .foregroundStyle(Color.Colors.Text.quaternary)
             rule
         }

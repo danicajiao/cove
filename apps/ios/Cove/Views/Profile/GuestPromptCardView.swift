@@ -19,12 +19,11 @@ struct GuestPromptCardView: View {
                 .background(Circle().fill(Color.Colors.Fills.quinary))
 
             Text("You're browsing as a guest")
-                .font(.custom("Gazpacho-Black", size: 24))
-                .tracking(-1.2) // Figma letter spacing -5% × 24pt
+                .textStyle(.headingMD)
                 .foregroundStyle(Color.Colors.Text.primary)
 
             Text("Create a free account to save favorites, follow places and keep your picks.")
-                .font(.custom("Lato-Regular", size: 14))
+                .textStyle(.bodySM)
                 .foregroundStyle(Color.Colors.Text.tertiary)
 
             VStack(spacing: Spacing.sm) {
