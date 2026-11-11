@@ -70,6 +70,8 @@ Backend services live in the `danicajiao/cove` monorepo under `services/cove-<na
 
 Each service has a matching CNPG role bootstrapped in `apps/cove/base/cove-db/cluster.yaml` (`cove_catalog`, `cove_directory`, `cove_user`). Services still connect as the `app` user. Both overlays must pin an `images:` tag for every service, or cove CI's bump job fails.
 
+`cove-user` also runs as a daily `CronJob` (`apps/cove/base/cove-user/cronjob-cleanup-guests.yaml`, 03:30 America/Denver) that runs `cove-user cleanup-guests` with the same image to delete guest profiles idle for 30 days. It was added in [danicajiao/homelab#77](https://github.com/danicajiao/homelab/pull/77), and the prod overlay keeps it suspended until the guest browsing epic ([danicajiao/cove#430](https://github.com/danicajiao/cove/issues/430)) is promoted.
+
 ## Runbooks
 
 Operational docs live in [`homelab/docs/`](https://github.com/danicajiao/homelab/tree/main/docs):

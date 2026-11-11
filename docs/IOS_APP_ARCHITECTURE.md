@@ -33,14 +33,16 @@ The app talks to two separate backends:
 ```
 apps/ios/Cove/
 ├── Supporting Files/     # App entry point (CoveApp.swift), Info.plist
-├── Models/               # Data models and global state (AppState, FavoritesStore, TabState, DiscoveryItem, etc.)
-│                         #   Note: Path, AuthState, AuthMethod enums are defined in AppState.swift
+├── Models/               # Data models and global state (AppState, FavoritesStore, TabState, AccountPrompt, DiscoveryItem, etc.)
+│                         #   Note: Path, AuthState, AuthMethod enums are defined in AppState.swift;
+│                         #   Google and Facebook sign-in are in AppState+SocialSignIn.swift
 ├── View Models/          # Business logic (HomeViewModel, FavoritesViewModel, etc.)
 ├── Views/                # SwiftUI views organized by feature
+│   ├── Account/          # AccountSheetView (the guest sign-up sheet)
 │   ├── Onboarding/       # UsernameOnboardingView, InterestOnboardingView
-│   ├── Profile/          # ProfileHeaderView, StatsRowView, ProfileRowView
-│   └── ...               # HomeView, FavoritesView, ItemDetailView, auth views
-├── Components/           # Reusable UI components (ItemCard, CategoryCard, LikeButton, etc.)
+│   ├── Profile/          # ProfileHeaderView, StatsRowView, ProfileRowView, GuestPromptCardView
+│   └── ...               # HomeView, FavoritesView, ItemDetailView, ProfileLoadErrorView, auth views
+├── Components/           # Reusable UI components (ItemCard, CategoryCard, LikeButton, OrDivider, etc.)
 ├── Networking/           # CoveAPIClient, APIEnvironment, repositories, generated OpenAPI spec
 ├── Styles/               # Custom button styles and shadow modifiers
 ├── Constants/            # Design token constants (Spacing.swift, Radius.swift) and LevelOneCategories
@@ -53,7 +55,7 @@ apps/ios/Cove/
 
 ### Auth-Driven Routing
 
-`CoveApp` is the root of the app. It switches on `AppState.authState` (four cases) to decide which UI to show:
+`CoveApp` is the root of the app. It switches on `AppState.authState` (six cases) to decide which UI to show:
 
 ```mermaid
 flowchart TD
@@ -63,30 +65,72 @@ flowchart TD
     Auth -->|"no network"| Splash["SplashView"]
     CoveApp -->|".needsUsernameOnboarding"| UN["UsernameOnboardingView"]
     CoveApp -->|".needsInterestOnboarding"| IO["InterestOnboardingView"]
-    CoveApp -->|".loggedIn"| Main["MainView (tab bar)"]
+    CoveApp -->|".loggedIn / .guest"| Main["MainView (tab bar)"]
+    CoveApp -->|".profileLoadFailed"| Err["ProfileLoadErrorView"]
+    Welcome -.->|"Get started (guest)"| IO
     UN -.->|"username set"| IO
     IO -.->|"interests_onboarded"| Main
 ```
 
-`AppState` holds `@Published var authState: AuthState` (`.loggedOut`, `.needsUsernameOnboarding`, `.needsInterestOnboarding`, `.loggedIn`). Auth navigation is owned locally by `CoveApp` via `@State private var authScreen: Path?`: `nil` shows `WelcomeView`, `.login` and `.signup` show those screens. It is reset to `nil` via `.onChange(of: appState.authState)` on logout.
+`AppState` holds `@Published var authState: AuthState`:
+
+| Case | Shown | Meaning |
+|---|---|---|
+| `.loggedOut` | `WelcomeView`, `LoginView` or `SignupView` (`SplashView` with no network) | No Firebase user |
+| `.needsUsernameOnboarding` | `UsernameOnboardingView` | Signed-up user with no profile or no username |
+| `.needsInterestOnboarding` | `InterestOnboardingView` | Interests not picked yet (guests and signed-up users) |
+| `.loggedIn` | `MainView` | Signed-up user, fully onboarded |
+| `.guest` | `MainView` | Anonymous Firebase user with a guest profile and interests picked |
+| `.profileLoadFailed` | `ProfileLoadErrorView` | Signed in, but the profile couldn't be loaded. Its retry button calls `AppState.retryProfileLoad()` |
+
+`MainView` also stays on screen during `.needsUsernameOnboarding` and `.needsInterestOnboarding` while the sign-up sheet is open (`showsMainView` in `CoveApp.swift`). A guest who signs up from the sheet finishes onboarding inside it and ends up back where they were.
+
+Auth navigation is owned locally by `CoveApp` via `@State private var authScreen: Path?`: `nil` shows `WelcomeView`, `.login` and `.signup` show those screens. It is reset to `nil` via `.onChange(of: appState.authState)` on logout. `WelcomeView` has two buttons: **Get started** starts a guest session (`AppState.startGuestSession`) and **Log in** opens `LoginView`. `SignupView` is reached from `LoginView`.
 
 ### Post-sign-in onboarding
 
-After Firebase sign-in, `AppState` gates entry into the app on two `cove-user`-backed checks before reaching `.loggedIn`:
+A Firebase auth state listener in `AppState.init` calls `handlePostSignIn` whenever a user signs in, and sets `.loggedOut` when the user signs out. `handlePostSignIn` loads the `cove-user` profile (`GET /users/me`) and routes:
 
-1. **Username** — if the signed-in user has no username, `authState` becomes `.needsUsernameOnboarding` and `UsernameOnboardingView` collects one (persisted via `cove-user`, `POST /users/me`).
+- **Guest** (anonymous Firebase user): no profile (404) → create a guest profile with `POST /users/me` and no body; then interests if not picked, then `.guest`. Guests never see username onboarding.
+- **Signed-up user**: no profile or no username → `.needsUsernameOnboarding`; then interests if not picked, then `.loggedIn`.
+- **Any other error** loading the profile → `.profileLoadFailed`.
+
+For a signed-up user, entry into the app is gated on two `cove-user`-backed checks before reaching `.loggedIn`:
+
+1. **Username** — if the signed-in user has no username, `authState` becomes `.needsUsernameOnboarding` and `UsernameOnboardingView` collects one. A new user's profile is created with `POST /users/me`. A guest who just linked a login already has a profile, so the username is set with `PATCH /users/me` (`AppState.hasProfile` picks between them).
 2. **Interests** — `AppState` then loads the profile and reads the `interests_onboarded` flag. If `false`, `authState` becomes `.needsInterestOnboarding` and `InterestOnboardingView` fetches the category tree (`GET /categories`) and shows the level 1 categories as full-width cards with their wide images (`wide_image_key`), in the fixed order and pill colors from `Constants/LevelOneCategories.swift`. Tapping a card selects it and expands its level 2 categories as pills; tapping it again deselects it and clears its pills. Every selected level 1 and level 2 ID is saved via `PUT /users/me/interests` (which sets `interests_onboarded`). If already onboarded, it goes straight to `.loggedIn`.
 
-Once both checks pass, `authState` flips to `.loggedIn` and `MainView` is shown.
+Once both checks pass, `authState` flips to `.loggedIn` and `MainView` is shown. When interest onboarding finishes, `finishInterestOnboarding()` sets `.guest` for an anonymous user and `.loggedIn` otherwise.
 
 ### Supported Auth Methods
 
 | Method | Provider |
 |--------|----------|
+| Guest | Firebase Auth anonymous sign-in (`signInAnonymously`) |
 | Email/Password | Firebase Auth |
 | Google | GoogleSignIn SDK → Firebase Auth |
 | Facebook | FBSDKLoginKit → Firebase Auth |
-| Apple | Planned, not yet implemented |
+| Apple | Planned, not yet implemented. The Apple button (`SmallSocialButton`) only logs the tap |
+
+Google and Facebook sign-in live in `Models/AppState+SocialSignIn.swift`.
+
+### Guest browsing
+
+Guests are anonymous Firebase users with a `cove-user` profile that has no username. They can browse, pick interests and record activity. Favorites and follows need an account: the gateway marks guest requests with `X-Cove-Guest: true`, `cove-user` answers those routes with 403 `account_required`, and `CoveAPIClient` turns that into `CoveAPIError.accountRequired`. See [Guest identity](BACKEND_INFRASTRUCTURE.md#guest-identity) in Backend Infrastructure.
+
+**Linking a login keeps the guest's UID.** When the current user is anonymous, sign-up and log in link the new credential to the guest account instead of signing in:
+
+- `signInOrLink(with:method:onFailure:)` (Google, Facebook) links the credential. If the login already belongs to another account (`credentialAlreadyInUse` or `emailAlreadyInUse`), it signs in to that account instead and the guest's data is dropped. Merging is out of scope.
+- `emailSignUp` links an email credential for a guest, with the same fallback to `emailLogIn`.
+- After a successful link, the ID token is refreshed so the gateway sees the new sign-in provider, then `handlePostSignIn` routes the user to username onboarding.
+
+**Sign-up sheet.** When a guest tries an account-only action, the view calls `AppState.requireAccount(_:then:)` with an `AccountPrompt` (`.favorite`, `.follow`, `.createAccount` or `.logIn`). `MainView` presents `AccountSheetView` for `appState.accountPrompt`. The sheet starts on a short prompt, or straight on sign-up or log in when opened from the Profile tab. Sign-up, log in, username and interest onboarding all run inside the sheet. When the state reaches `.loggedIn`, the sheet closes and the pending action runs. "Not now", swiping down or signing out cancels it. The sheet can't be swiped away during onboarding.
+
+Today only favoriting uses the sheet. `LikeButton` calls `requireAccount(.favorite)` for a guest and retries with `FavoritesStore.addFavorite`, which only adds, since the account the guest ends up in may already have the item. Follow has no UI yet. If the gateway refuses a favorite with `account_required` anyway, `FavoritesStore.accountRequired` is set and `MainView` opens the sheet without retrying.
+
+**Profile tab.** For a guest, `ProfileView` shows `GuestPromptCardView` (Create account, Log in) in place of the profile header and stats, and hides the Profile and Security and Logins rows. Logging out as a guest asks for confirmation first, since the interest picks are lost.
+
+**Cleanup.** `cove-user` deletes guest profiles idle for more than 30 days (see [Guest identity](BACKEND_INFRASTRUCTURE.md#guest-identity)).
 
 ### Navigation Enums
 
@@ -140,14 +184,18 @@ Serves `ProfileView`. Reads display name, initials and photo URL from `Auth.auth
 ### AppState
 Injected at the root via `.environmentObject`. Owns:
 - `authState` — drives the root UI split between auth flow and main app
-- All sign-in/sign-out methods for every auth provider
+- All sign-in/sign-out methods for every auth provider, including `startGuestSession`, `signInOrLink` and guest linking in `emailSignUp`
+- `accountPrompt` and `requireAccount(_:then:)` — the guest sign-up sheet and the action to retry after sign-up
+- `isGuest` — true while the Firebase user is anonymous
 
 ### FavoritesStore
 Injected at the root (`CoveApp`) via `.environmentObject` and available throughout the entire app. Owns:
 - `favoriteIds: Set<String>` — the set of favorited item IDs for the current user
 - `isTogglingFavorite: Bool` — prevents concurrent toggle operations
-- Listens to `Auth.auth().addStateDidChangeListener` to load favorites on sign-in and clear them on sign-out
+- Listens to `Auth.auth().addStateDidChangeListener` to load favorites on sign-in and clear them on sign-out. Guests (anonymous users) never load favorites
 - `toggle(_:categoryId:)` — optimistically updates `favoriteIds` locally, then syncs to `cove-user` via `CoveAPIFavoritesRepository` (`POST`/`DELETE /users/me/favorites/{itemId}`)
+- `addFavorite(_:categoryId:)` — adds an item only if it isn't already a favorite. Used to retry a guest's favorite after sign-up
+- `accountRequired: Bool` — set when the gateway refuses a favorite with `account_required`
 - Used by `LikeButton` to read and mutate favorite state across all views
 
 ---
@@ -211,6 +259,7 @@ The generated files live in DerivedData and are never committed. They recompile 
 | Server URL | `APIEnvironment.current.baseURL` — staging in Debug, prod in Release |
 | Auth | `FirebaseAuthMiddleware` injects `Authorization: Bearer <token>` on every request |
 | Response unwrapping | Each method switches over the generated response enum and returns a plain Swift type |
+| Errors | `CoveAPIError` (`Networking/CoveAPIError.swift`): `.unexpectedStatus(Int)`, `.invalidResponseBody(String)`, and `.accountRequired` for a guest's 403 on favorites and follows |
 | Shared instance | `CoveAPIClient.shared` for standard use; injectable `serverURL` + `session` for tests |
 
 **Calling an endpoint:**
@@ -261,7 +310,7 @@ When a new route is added to cove-api:
 
 ### ImageRepository — protocol and active implementation
 
-Image loading is abstracted behind the `ImageRepository` protocol (`Networking/Repositories/ImageRepository.swift`). Views access it through the SwiftUI environment. The environment key defaults to `CoveAPIImageRepository()`, and `CoveApp` also injects it explicitly on `MainView()` when auth state is `.loggedIn`.
+Image loading is abstracted behind the `ImageRepository` protocol (`Networking/Repositories/ImageRepository.swift`). Views access it through the SwiftUI environment. The environment key defaults to `CoveAPIImageRepository()`, and `CoveApp` also injects it explicitly on `MainView()` whenever the main app is shown.
 
 ```swift
 // Protocol — key-based: takes the Garage object key directly
@@ -317,10 +366,10 @@ Category-specific types (coffee, music, apparel) and `ProductTypes.swift` were r
 ### Sign Out
 
 ```
-1. User taps "Log Out" in ProfileView → confirmation dialog
-2. appState.logOut() called
-3. Provider-specific cleanup (GIDSignIn.signOut() / LoginManager().logOut())
-4. Firebase Auth signOut()
+1. User taps "Log Out" in ProfileView → confirmation alert ("Log out of guest mode?" for a guest)
+2. appState.logOut() called (works for every provider, including guests)
+3. Firebase Auth signOut()
+4. Provider-specific cleanup when that provider was linked (GIDSignIn.signOut() / LoginManager().logOut())
 5. authState = .loggedOut → CoveApp resets authScreen = nil → WelcomeView shown
 ```
 
@@ -335,7 +384,8 @@ Category-specific types (coffee, music, apparel) and `ProductTypes.swift` were r
 | Reviews | `NavigationLink` exists in `ItemDetailView` but no destination |
 | Profile editing | `ProfileRowView` items are not wired up |
 | Notifications | Bell icon in `HomeView` has no action |
-| Apple Sign-In | `AuthMethod.apple` referenced but sign-in flow not implemented |
+| Apple Sign-In | `AuthMethod.apple` referenced and the Apple button only logs the tap; sign-in flow not implemented |
+| Follow | `cove-user` follow routes and `AccountPrompt.follow` exist, but there is no follow UI yet |
 
 ---
 

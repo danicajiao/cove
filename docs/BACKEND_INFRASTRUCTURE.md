@@ -1,6 +1,6 @@
 # Backend Infrastructure
 
-> **Status:** Phases 0–3 complete. The cluster is fully bootstrapped and running. `cove-api`, `cove-image`, `cove-item` and `cove-user` run in `cove-staging` and `cove-prod` behind the Cloudflare Tunnel. Epic #393 renames `cove-image` to `cove-media` (#414) and splits `cove-item` into `cove-catalog` and `cove-directory` (#413) in this repo; the new services replace the old ones on the cluster with #415 and #416. Firebase Storage and Firestore have been retired; all structured data is served from Postgres via the cove-api gateway.
+> **Status:** Phases 0–3 complete. The cluster is fully bootstrapped and running. `cove-api`, `cove-media`, `cove-catalog`, `cove-directory` and `cove-user` run in `cove-staging` and `cove-prod` behind the Cloudflare Tunnel. Epic #393 renamed `cove-image` to `cove-media` (#414) and split `cove-item` into `cove-catalog` and `cove-directory` (#413), and both environments were cut over in `danicajiao/homelab#73`. Guest browsing (epic #430) adds guest profiles to `cove-user` and the `X-Cove-Guest` header to the gateway; see [Guest identity](#guest-identity). Firebase Storage and Firestore have been retired; all structured data is served from Postgres via the cove-api gateway.
 
 ## Contents
 
@@ -8,6 +8,7 @@
 - [Platform layer (installed, Phase 0)](#platform-layer-installed-phase-0)
 - [Repo structure](#repo-structure)
 - [Service naming](#service-naming)
+- [Token validation strategy](#token-validation-strategy)
 - [Container images](#container-images)
 - [Migration phases](#migration-phases)
 - [Manifest conventions](#manifest-conventions)
@@ -127,9 +128,9 @@ Services drop the `-svc` suffix. The pod, K8s Service, and image name are all th
 | `cove-media` | Image upload (`POST /images`), signed-URL serving (`GET /images/{filename}/url`), normalization to WebP, content-addressed storage in Garage | Phase 2 (deployed) |
 | `cove-catalog` | Categories, items, signals, `GET /discovery` endpoint. Owns the `catalog` schema | Phase 3 (split out in #413) |
 | `cove-directory` | Producers and places, `GET /producers/{id}`, `GET /places/{id}`. Owns the `directory` schema | Split out of `cove-item` in #413 |
-| `cove-user` | User profiles, interests, `GET /recommendations/categories`, `POST /users/me/activity` | Phase 3 (complete) |
+| `cove-user` | User profiles (including guest profiles), interests, `GET /recommendations/categories`, `POST /users/me/activity`. The same binary runs `cove-user cleanup-guests` | Phase 3 (complete) |
 
-In Kubernetes, each service runs as a `Deployment` in `cove-staging` or `cove-prod`, with a matching `Service` of the same name.
+In Kubernetes, each service runs as a `Deployment` in `cove-staging` or `cove-prod`, with a matching `Service` of the same name. `cove-user` also has a daily `CronJob` that runs `cleanup-guests` (see [Guest identity](#guest-identity)).
 
 ---
 
@@ -221,7 +222,7 @@ These go in **Variables** (not Secrets) in GitHub → Settings → Secrets and v
 
 **Decision: trust the gateway, propagate UID via header.**
 
-`cove-api` is the only service that validates Firebase ID tokens. After successful validation it forwards the caller's UID to downstream services as an `X-Cove-Uid` HTTP header. Downstream services (`cove-media`, `cove-catalog`, `cove-directory`, `cove-user`) read the header and trust it — they do not re-validate the Bearer token.
+`cove-api` is the only service that validates Firebase ID tokens. After successful validation it forwards the caller's UID to downstream services as an `X-Cove-Uid` HTTP header, and whether the caller is a guest as `X-Cove-Guest`. Downstream services (`cove-media`, `cove-catalog`, `cove-directory`, `cove-user`) read the headers and trust them — they do not re-validate the Bearer token.
 
 ```
 iOS App
@@ -229,29 +230,34 @@ iOS App
   ▼
 cove-api
   │  validates token via Firebase Admin SDK
-  │  X-Cove-Uid: <uid>          ← injected, Bearer token stripped
+  │  X-Cove-Uid: <uid>          ← injected
+  │  X-Cove-Guest: true|false   ← injected, from the token's sign-in provider
   ▼
 cove-media / cove-catalog / cove-directory / cove-user
-     reads X-Cove-Uid from header, no Firebase SDK required
+     reads X-Cove-Uid (and X-Cove-Guest) from headers, no Firebase SDK required
 ```
 
 ### Why this is safe
 
-Downstream services are never exposed to public traffic. They are reachable only via in-cluster Kubernetes Service DNS (`cove-media.cove-staging.svc.cluster.local`). An attacker on the public internet cannot send a forged `X-Cove-Uid` header — they can only reach `cove-api` via Cloudflare Tunnel, and `cove-api` overwrites the header on every request regardless of what the client sent.
+Downstream services are never exposed to public traffic. They are reachable only via in-cluster Kubernetes Service DNS (`cove-media.cove-staging.svc.cluster.local`). An attacker on the public internet cannot send a forged `X-Cove-Uid` or `X-Cove-Guest` header — they can only reach `cove-api` via Cloudflare Tunnel, and `cove-api` overwrites both headers on every request regardless of what the client sent (and removes them on unauthenticated requests).
 
 NetworkPolicy manifests (added in `danicajiao/homelab#25`) enforce this at the cluster level: downstream services only accept traffic from `cove-api`, not from arbitrary pods. (Note: K3s ships with flannel, which does not enforce NetworkPolicy — these manifests are declarative intent that becomes active if the cluster migrates to a policy-enforcing CNI such as Cilium or Calico.)
 
 ### Implementation pattern
 
-`cove-api` — `uidProxy` wraps `httputil.NewSingleHostReverseProxy` and injects the UID from context (set by auth middleware) before forwarding. Any client-supplied `X-Cove-Uid` is overwritten by the `Set` call:
+`cove-api` — `uidProxy` wraps `httputil.NewSingleHostReverseProxy` and calls `covauth.SetIdentityHeaders` (`internal/auth/middleware.go`) before forwarding. It sets both identity headers from the context the auth middleware filled in, so client-supplied values are always replaced:
 
 ```go
-return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    if uid, ok := covauth.UIDFromContext(r.Context()); ok {
-        r.Header.Set("X-Cove-Uid", uid)
+func SetIdentityHeaders(r *http.Request) {
+    uid, ok := UIDFromContext(r.Context())
+    if !ok {
+        r.Header.Del(HeaderUID)
+        r.Header.Del(HeaderGuest)
+        return
     }
-    proxy.ServeHTTP(w, r)
-})
+    r.Header.Set(HeaderUID, uid)
+    r.Header.Set(HeaderGuest, strconv.FormatBool(IsGuestFromContext(r.Context())))
+}
 ```
 
 Downstream service middleware (`UIDMiddleware` in each service — replaces Firebase Admin SDK token validation):
@@ -269,6 +275,20 @@ func UIDMiddleware(next http.Handler) http.Handler {
     })
 }
 ```
+
+### Guest identity
+
+Guests are Firebase anonymous users. The auth middleware in `cove-api` marks a caller as a guest when the token's sign-in provider (`firebase.sign_in_provider`) is `anonymous`, and `X-Cove-Guest` is always `true` or `false` on an authenticated request. A missing header counts as `false`.
+
+`cove-user` enforces what guests can do:
+
+- **Guest profiles.** `POST /users/me` without a username (or with no body) creates a guest profile: `is_guest = true` and a null `username`. Anyone else must send a username. `PATCH /users/me` sets the username once a guest links a real login, which keeps the same Firebase UID.
+- **Account-required routes.** `AccountRequiredMiddleware` answers favorites and follows (`/users/me/favorites*`, `/users/me/follows*`) with 403 `{"error":"account_required"}` for a guest. Interests, activity and recommendations work for guests.
+- **Linked guests.** When a stored guest's request arrives with `X-Cove-Guest: false`, the guest has linked a login and `cove-user` clears `is_guest`.
+- **Last seen.** `TouchLastSeen` middleware updates `profile.users.last_seen_at` on authenticated requests, at most once a day per user.
+- **Cleanup.** `cove-user cleanup-guests` (`internal/cleanup/guests.go`) deletes guests with no username whose `last_seen_at` is more than `GuestIdleDays` (30) days old, then exits. Their interests, flags and activity go with them through `ON DELETE CASCADE`. A daily `CronJob` in the homelab repo runs it at 03:30 America/Denver (`apps/cove/base/cove-user/cronjob-cleanup-guests.yaml`, added in `danicajiao/homelab#77`). The prod overlay keeps it suspended until the guest browsing epic is promoted to `cove-prod`.
+
+Firebase App Check and rate limits for anonymous sign-ins are out of scope for now.
 
 ### When to revisit
 
