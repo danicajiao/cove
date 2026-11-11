@@ -89,7 +89,9 @@ iOSInjectionProject/
 ### Vim ###
 # Swap
 [._]*.s[a-v][a-z]
-!*.svg  # comment out if you don't need vector files
+# The swap pattern above also matches _*.svg; keep vector files tracked.
+# (A negation can't carry an inline comment, or it never matches.)
+!*.svg
 [._]*.sw[a-p]
 [._]s[a-rt-v][a-z]
 [._]ss[a-gi-z]

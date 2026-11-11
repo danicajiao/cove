@@ -1,0 +1,1354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Interactive companion to ITEM_AVAILABILITY.md. Open in a browser; GitHub shows HTML as source. -->
+<title>Cove Availability Model</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,900&family=IBM+Plex+Mono:wght@400;500&family=Lato:wght@400;700;900&display=swap">
+<style>
+/* Layout: one reading column; the explorer breaks wide into graph + phone, stacking on narrow screens.
+   Palette follows Cove's app tokens: brown ink, amber accent, sage for community signals. */
+:root {
+  --bg: #F6F1EA;
+  --surface: #FFFFFF;
+  --sunk: #EEE5DA;
+  --ink: #52331F;
+  --ink-2: #2B2627;
+  --muted: #7A685A;
+  --line: #E2D6C8;
+  --edge: #D3C3B1;
+  --accent: #E29547;
+  --accent-ink: #9E5716;
+  --ok: #4A6B35;
+  --ok-bg: #EEF5E8;
+  --goods: #2E6B93;
+  --goods-bg: #E2EEF6;
+  --house: #9E5716;
+  --house-bg: #FAEAD8;
+  --orig: #6A4EBE;
+  --orig-bg: #ECE6FA;
+  --btn-bg: #52331F;
+  --btn-fg: #FFFFFF;
+
+  --display: "Fraunces", "Georgia", "Times New Roman", serif;
+  --body: "Lato", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17120F; --surface: #221B16; --sunk: #2B231D; --ink: #F1E3D3; --ink-2: #E4D8CE;
+    --muted: #A8968A; --line: #3A2F28; --edge: #4A3D33; --accent: #E9A15A; --accent-ink: #F2B47A;
+    --ok: #9DC481; --ok-bg: #223019; --goods: #8FC3E4; --goods-bg: #1B2B36; --house: #F2B47A;
+    --house-bg: #3A2715; --orig: #BBA8F3; --orig-bg: #2A2342; --btn-bg: #F1E3D3; --btn-fg: #2B2627;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #17120F; --surface: #221B16; --sunk: #2B231D; --ink: #F1E3D3; --ink-2: #E4D8CE;
+  --muted: #A8968A; --line: #3A2F28; --edge: #4A3D33; --accent: #E9A15A; --accent-ink: #F2B47A;
+  --ok: #9DC481; --ok-bg: #223019; --goods: #8FC3E4; --goods-bg: #1B2B36; --house: #F2B47A;
+  --house-bg: #3A2715; --orig: #BBA8F3; --orig-bg: #2A2342; --btn-bg: #F1E3D3; --btn-fg: #2B2627;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink-2);
+  font: 16px/1.55 var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+.wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding-block: 40px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid;
+  gap: 64px;
+}
+h1, h2, h3 { font-family: var(--display); color: var(--ink); text-wrap: balance; margin: 0; letter-spacing: -0.02em; }
+h1 { font-weight: 900; font-size: clamp(32px, 5vw, 52px); line-height: 1.05; max-width: 18ch; }
+h2 { font-weight: 900; font-size: clamp(24px, 3vw, 30px); line-height: 1.15; }
+h3 { font-weight: 700; font-size: 19px; line-height: 1.25; }
+p { margin: 0; }
+.prose { max-width: 66ch; display: grid; gap: 12px; }
+.eyebrow { font: 700 12px/1 var(--body); letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-ink); }
+.lede { font-size: 19px; line-height: 1.5; color: var(--ink-2); max-width: 60ch; }
+.muted { color: var(--muted); }
+code, .mono { font-family: var(--mono); font-size: 0.86em; }
+code { background: var(--sunk); padding: 1px 5px; border-radius: 4px; color: var(--ink); }
+section { display: grid; gap: 24px; }
+.section-head { display: grid; gap: 10px; }
+
+/* hero */
+.hero { display: grid; gap: 18px; }
+.callout {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 16px 18px;
+  max-width: 70ch;
+  display: grid;
+  gap: 6px;
+}
+.callout strong { color: var(--ink); }
+
+/* model cards */
+.model {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.ent {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+.ent .tag { font: 500 12px/1 var(--mono); color: var(--muted); }
+.ent p { font-size: 15px; }
+.ent.link { background: var(--sunk); border-style: dashed; }
+@media (max-width: 860px) { .model { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 480px) { .model { grid-template-columns: minmax(0, 1fr); } }
+
+/* kind chips */
+.kind { display: inline-flex; align-items: center; gap: 6px; font: 700 12px/1 var(--body); padding: 5px 9px; border-radius: 999px; white-space: nowrap; }
+.kind::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.k-goods { color: var(--goods); background: var(--goods-bg); }
+.k-house { color: var(--house); background: var(--house-bg); }
+.k-original { color: var(--orig); background: var(--orig-bg); }
+
+/* explorer */
+.controls { display: grid; gap: 14px; }
+.ctl-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ctl-label { font: 700 12px/1 var(--body); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); min-width: 92px; }
+.pill {
+  font: 700 14px/1 var(--body);
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 9px 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.pill .dot { width: 8px; height: 8px; border-radius: 50%; }
+.pill[aria-pressed="true"] { background: var(--btn-bg); color: var(--btn-fg); border-color: var(--btn-bg); }
+.pill:focus-visible, select:focus-visible, .switch input:focus-visible + span, .node:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+select {
+  font: 700 14px/1 var(--body);
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 9px 10px;
+  max-width: 100%;
+}
+.switch { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink-2); cursor: pointer; padding: 6px 2px; }
+.switch input { position: absolute; opacity: 0; pointer-events: none; }
+.switch span.track { width: 34px; height: 20px; border-radius: 999px; background: var(--line); position: relative; flex: none; transition: background .15s; }
+.switch span.track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--surface); transition: transform .15s; }
+.switch input:checked + span.track { background: var(--accent); }
+.switch input:checked + span.track::after { transform: translateX(14px); }
+
+.explorer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 960px) { .explorer { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px; min-width: 0; }
+.graph-scroll { overflow-x: auto; }
+.graph-scroll svg { display: block; min-width: 640px; width: 100%; height: auto; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--muted); margin-top: 10px; }
+.legend i { display: inline-block; width: 22px; height: 0; border-top: 2px solid var(--accent); vertical-align: middle; margin-right: 6px; }
+.legend i.dash { border-top-style: dashed; }
+.legend i.make { border-top-color: var(--ink); }
+
+/* svg */
+.col-label { font: 700 11px var(--body); letter-spacing: 0.1em; text-transform: uppercase; fill: var(--muted); }
+.node { cursor: pointer; }
+.node rect.box { fill: var(--surface); stroke: var(--line); stroke-width: 1; transition: stroke .15s, opacity .15s; }
+.node .n1 { font: 700 13px var(--body); fill: var(--ink); }
+.node .n2 { font: 400 11px var(--body); fill: var(--muted); }
+.node.on rect.box { stroke: var(--accent); stroke-width: 2; }
+.node.ctx rect.box { fill: var(--house-bg); }
+.node.dim { opacity: 0.38; }
+.node.brand rect.box { stroke-dasharray: 4 3; }
+.edge { fill: none; stroke: var(--edge); stroke-width: 1.2; transition: stroke .15s, opacity .15s; }
+.edge.dim { opacity: 0.35; }
+.edge.make.on { stroke: var(--ink); stroke-width: 2; }
+.edge.carry.on { stroke: var(--accent); stroke-width: 2; }
+.edge.auto { stroke-dasharray: 5 4; }
+
+/* phone mock */
+.phone-col { display: grid; gap: 12px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); }
+@media (max-width: 960px) { .phone-col { position: static; } }
+.phone {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 34px;
+  padding: 10px;
+  box-shadow: 0 1px 0 var(--line), 0 18px 40px -24px rgba(43, 38, 39, 0.35);
+  max-width: 340px;
+  width: 100%;
+  justify-self: center;
+}
+.screen { border-radius: 26px; overflow: hidden; background: var(--bg); display: grid; }
+.hero-img { height: 92px; display: grid; place-items: center; font: 900 13px var(--display); letter-spacing: 0.02em; }
+.hero-img.k-goods, .hero-img.k-house, .hero-img.k-original { border-radius: 0; }
+.scr { padding: 14px 16px 0; display: grid; gap: 14px; }
+.m-name { font: 900 22px/1.1 var(--display); color: var(--ink); letter-spacing: -0.03em; }
+.m-prod { font-size: 14px; color: var(--accent-ink); font-weight: 700; }
+.m-prod.plain { color: var(--ink-2); font-weight: 400; }
+.pc .cond { font-size: 12px; color: var(--accent-ink); }
+.m-cat { font-size: 12px; color: var(--muted); }
+.m-sig { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.m-sig span { font: 700 11px/1 var(--body); padding: 4px 7px; border-radius: 6px; background: var(--sunk); color: var(--ink); }
+.m-sig span.local { background: var(--ok-bg); color: var(--ok); }
+.m-price { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.m-price b { font: 900 18px var(--body); color: var(--accent-ink); }
+.m-price b.sold { color: var(--muted); }
+.m-price span { font-size: 12px; color: var(--muted); }
+.m-sec { display: grid; gap: 8px; }
+.m-sec h4 { margin: 0; font: 700 15px var(--body); color: var(--ink); display: flex; justify-content: space-between; }
+.m-sec h4 small { font-weight: 400; font-size: 12px; color: var(--accent-ink); }
+.pc { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: grid; gap: 3px; }
+.pc .t { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.pc .nm { font: 700 14px var(--body); color: var(--ink); }
+.pc .own { font: 700 10px/1 var(--body); letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.pc .meta { font-size: 12px; color: var(--muted); }
+.pc .av { font-size: 12px; color: var(--ok); }
+.pc .av.stale { color: var(--muted); }
+.far { font-size: 12px; color: var(--muted); padding: 2px 2px 0; }
+.far-h { display: flex; align-items: center; gap: 8px; margin-top: 4px; font: 700 10px/1 var(--body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.far-h::after { content: ""; flex: 1; border-top: 1px dashed var(--edge); }
+.pc.farc { border-style: dashed; background: none; }
+.pc .meta b { color: var(--accent-ink); }
+.empty { border: 1px dashed var(--edge); border-radius: 12px; padding: 12px; font-size: 13px; color: var(--muted); display: grid; gap: 6px; }
+.empty b { color: var(--accent-ink); font-size: 13px; }
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.tiles div { height: 46px; border-radius: 8px; background: var(--sunk); }
+.verif { border-top: 1px solid var(--line); padding-top: 12px; display: grid; gap: 4px; font-size: 13px; }
+.verif .h { font-size: 12px; color: var(--muted); }
+.verif .p { color: var(--ink-2); }
+.verif b { color: var(--accent-ink); font-size: 13px; }
+.m-btn { margin: 14px 12px 12px; background: var(--btn-bg); color: var(--btn-fg); border-radius: 999px; text-align: center; padding: 12px; font: 700 14px var(--body); }
+
+.why { display: grid; gap: 8px; }
+.why h3 { font-size: 16px; }
+.why ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; color: var(--ink-2); }
+
+/* tables */
+.tscroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 860px; font-size: 14px; }
+th, td { text-align: left; vertical-align: top; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+th { font: 700 12px/1.2 var(--body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); background: var(--sunk); }
+tr:last-child td { border-bottom: 0; }
+td:first-child { width: 150px; }
+td em { font-style: normal; color: var(--muted); }
+
+/* decision */
+.decide { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.q { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 10px; align-content: start; }
+.q .num { font: 500 12px var(--mono); color: var(--muted); }
+.q p { font-size: 15px; }
+.q .ans { display: grid; gap: 6px; font-size: 14px; }
+@media (max-width: 760px) { .decide { grid-template-columns: minmax(0, 1fr); } }
+
+/* schema */
+.schema { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 760px) { .schema { grid-template-columns: minmax(0, 1fr); } }
+.schema .col { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.schema .col.new { border-color: var(--accent); }
+.schema dl { margin: 0; display: grid; gap: 12px; }
+.schema dt { font: 500 13px/1.4 var(--mono); color: var(--ink); overflow-wrap: anywhere; }
+.schema dd { margin: 2px 0 0; font-size: 14px; color: var(--ink-2); }
+.status { font: 700 11px/1 var(--body); letter-spacing: 0.1em; text-transform: uppercase; }
+.status.built { color: var(--ok); }
+.status.add { color: var(--accent-ink); }
+
+.open { margin: 0; padding-left: 20px; display: grid; gap: 12px; max-width: 72ch; }
+.open li::marker { color: var(--accent-ink); font-weight: 700; }
+.open strong { color: var(--ink); }
+.foot { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 16px; }
+
+a { color: var(--accent-ink); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* chains: menu grid (items x delis) */
+.chain-left { display: grid; gap: 20px; min-width: 0; }
+.mscroll { overflow-x: auto; }
+table.mgrid { min-width: 540px; font-size: 13px; }
+table.mgrid th, table.mgrid td { padding: 5px 3px; border-bottom: 1px solid var(--line); vertical-align: middle; text-align: center; }
+table.mgrid th { background: none; letter-spacing: 0; text-transform: none; font: 700 13px/1.2 var(--body); color: var(--ink); }
+table.mgrid th[scope="row"] { text-align: left; padding-left: 0; }
+table.mgrid tr:last-child th, table.mgrid tr:last-child td { border-bottom: 0; }
+.hbtn { font: 700 13px/1.2 var(--body); color: var(--ink); background: none; border: 0; padding: 6px; border-radius: 8px; cursor: pointer; text-align: inherit; display: grid; gap: 3px; width: 100%; }
+.hbtn small { font-weight: 400; font-size: 11px; color: var(--muted); }
+.hbtn .new { font: 700 10px/1 var(--body); text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent-ink); }
+.hbtn[aria-pressed="true"] { background: var(--sunk); box-shadow: inset 0 0 0 2px var(--accent); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 2px; margin: 2px 0 2px 4px; }
+.seg button { font: 700 11px/1 var(--body); color: var(--muted); background: none; border: 0; border-radius: 999px; padding: 5px 8px; cursor: pointer; white-space: nowrap; }
+.seg button[aria-pressed="true"] { background: var(--btn-bg); color: var(--btn-fg); }
+.cell { position: relative; width: 100%; min-width: 50px; min-height: 44px; border-radius: 10px; font: 700 15px/1.1 var(--body); cursor: pointer; display: grid; place-items: center; align-content: center; gap: 2px; padding: 4px; }
+.cell small { font: 700 11px/1 var(--body); color: var(--accent-ink); }
+.cell.auto { background: var(--house-bg); color: var(--house); border: 1.5px dashed var(--house); }
+.cell.listed { background: var(--house-bg); color: var(--house); border: 1.5px solid var(--house); }
+.cell.off { background: none; color: var(--muted); border: 1.5px dashed var(--edge); font-size: 12px; }
+.cell.none { background: none; color: var(--edge); border: 1.5px dashed var(--line); }
+.cell.row::after, .lg-dot { content: ""; position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+.hbtn:focus-visible, .seg button:focus-visible, .cell:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mlegend { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 13px; color: var(--muted); margin-top: 12px; }
+.mlegend span { display: inline-flex; align-items: center; gap: 6px; }
+.lg-box { width: 20px; height: 14px; border-radius: 4px; flex: none; }
+.lg-box.auto { background: var(--house-bg); border: 1.5px dashed var(--house); }
+.lg-box.listed { background: var(--house-bg); border: 1.5px solid var(--house); }
+.lg-box.off { border: 1.5px dashed var(--edge); }
+.lg-dot { position: static; display: inline-block; }
+.hint { font-size: 13px; margin-top: 10px; }
+.stored { display: grid; gap: 14px; }
+.stored h3 { font-size: 16px; }
+.stored .tbl { font: 500 12px/1.4 var(--mono); color: var(--muted); margin-bottom: 6px; }
+.stored ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.stored li { font: 400 12.5px/1.4 var(--mono); color: var(--ink); background: var(--sunk); border-radius: 6px; padding: 6px 8px; overflow-wrap: anywhere; }
+.stored li.none { background: none; color: var(--muted); font: 400 13px/1.4 var(--body); padding: 0; }
+.stored .cmp { font-size: 14px; color: var(--ink-2); }
+.stored .cmp b { color: var(--ink); }
+.loc-sum { font-size: 13px; font-weight: 700; color: var(--ink-2); }
+.see-all { font: 700 12px var(--body); color: var(--accent-ink); }
+.menu-row { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; color: var(--ink); }
+.menu-row:last-child { border-bottom: 0; }
+.menu-row b { color: var(--accent-ink); white-space: nowrap; }
+.tagx { font: 700 10px/1 var(--body); text-transform: uppercase; letter-spacing: 0.05em; color: var(--house); background: var(--house-bg); padding: 3px 6px; border-radius: 999px; margin-left: 6px; white-space: nowrap; }
+.hero-img.k-place { background: var(--sunk); color: var(--ink); }
+
+/* visit lists */
+.lists { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: start; }
+@media (max-width: 860px) { .lists { grid-template-columns: minmax(0, 1fr); } }
+.lists-text { display: grid; gap: 14px; max-width: 64ch; }
+.lists-text h3 { font-size: 17px; }
+ul.plain { margin: 0; padding-left: 18px; display: grid; gap: 8px; }
+dl.mini { margin: 0; display: grid; gap: 12px; }
+dl.mini dt { font: 500 13px/1.4 var(--mono); color: var(--ink); overflow-wrap: anywhere; }
+dl.mini dd { margin: 2px 0 0; font-size: 14px; }
+.sheet { padding: 10px 16px 4px; display: grid; gap: 10px; }
+.sheet .grab { width: 36px; height: 4px; border-radius: 999px; background: var(--edge); justify-self: center; }
+.lrow { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.lrow > div { display: grid; gap: 2px; }
+.lrow .nm { font: 700 14px var(--body); color: var(--ink); }
+.lrow.sug { border: 2px solid var(--accent); }
+.lrow .tick { color: var(--accent-ink); font-weight: 900; }
+.lrow.new { border-style: dashed; background: none; }
+.lrow.new .nm { color: var(--accent-ink); }
+
+/* decisions */
+.status-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; max-width: 78ch; }
+.status-list > li { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: grid; gap: 8px; }
+.status-list .hd { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.status-list strong { color: var(--ink); font-size: 16px; }
+.status-list p { font-size: 15px; }
+.status-list ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 15px; }
+.st { font: 700 11px/1 var(--body); letter-spacing: 0.08em; text-transform: uppercase; padding: 5px 8px; border-radius: 999px; white-space: nowrap; }
+.st.decided { color: var(--ok); background: var(--ok-bg); }
+.st.pinned { color: var(--accent-ink); background: var(--house-bg); }
+.st.proposal { color: var(--goods); background: var(--goods-bg); }
+.st.open { color: var(--muted); background: var(--sunk); }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <p class="eyebrow">Cove · how items, producers and places fit</p>
+    <h1>Who makes it, where it's sold, and how</h1>
+    <p class="lede">Every item has a producer who makes it and a list of places that carry it. The one thing we still need is how the item is sold. That decides what Item Details shows.</p>
+    <div class="callout">
+      <p><strong>House-made isn't one of a kind.</strong> Thump's cold brew is <b>house-made</b>: Thump makes it and serves it only at places Thump runs. If Thump opens a second café, the cold brew is there too. A painting is <b>one of a kind</b>: there's one of it, so it's at one place until it sells.</p>
+    </div>
+  </header>
+
+  <section id="model" aria-labelledby="model-h">
+    <div class="section-head">
+      <p class="eyebrow">The model</p>
+      <h2 id="model-h">Three records and one link</h2>
+    </div>
+    <div class="model">
+      <div class="ent">
+        <span class="tag">directory.producers</span>
+        <h3>Producer</h3>
+        <p>Makes things: Thump, Onyx, a soda maker, an artist. Trust signals like B Corp live here and show on everything they make. The community can start a producer's page, and the producer claims it later.</p>
+      </div>
+      <div class="ent">
+        <span class="tag">directory.places</span>
+        <h3>Place</h3>
+        <p>Somewhere you can go. A producer can run it (Thump runs 1, Call Your Mother 5, Onyx 8), or no producer does (Gallery 12).</p>
+      </div>
+      <div class="ent">
+        <span class="tag">catalog.items</span>
+        <h3>Item</h3>
+        <p>One thing a producer makes. Every item has one, even if it's the shared Unknown maker. It has one kind: <span class="kind k-goods">Goods</span> <span class="kind k-house">House-made</span> <span class="kind k-original">One of a kind</span></p>
+      </div>
+      <div class="ent link">
+        <span class="tag">catalog.availability</span>
+        <h3>Availability</h3>
+        <p>Links an item to a place that carries it, with that place's price, whether it's new or secondhand, and when locals last saw it there.</p>
+      </div>
+    </div>
+    <div class="prose">
+      <p>Thump the café and Thump the producer are the same business but two records. That's what lets Thump open a second café, lets Onyx run eight, and fits places that make nothing (a shop, a gallery) and producers with no shop (an artist, a soda maker).</p>
+    </div>
+  </section>
+
+  <section id="explore" aria-labelledby="explore-h">
+    <div class="section-head">
+      <p class="eyebrow">Try it</p>
+      <h2 id="explore-h">Pick an item and see what Item Details shows</h2>
+      <p class="muted" style="max-width:66ch">Example data: a Denver café, an Arizona roaster, a gallery and two vintage sellers. Click an item in the graph or below. Click a place that carries it to open the item from that place.</p>
+    </div>
+
+    <div class="controls">
+      <div class="ctl-row" role="group" aria-label="Item">
+        <span class="ctl-label">Item</span>
+        <div class="ctl-row" id="itemPills"></div>
+      </div>
+      <div class="ctl-row">
+        <span class="ctl-label">Opened from</span>
+        <select id="ctxSelect" aria-label="Opened from"></select>
+        <span class="ctl-label" style="min-width:auto;margin-left:8px">Browsing</span>
+        <select id="cityToggle" aria-label="Area you're browsing">
+          <option value="denver">Denver, CO</option>
+          <option value="phoenix">Phoenix, AZ</option>
+        </select>
+      </div>
+      <div class="ctl-row">
+        <span class="ctl-label">What if</span>
+        <label class="switch"><input type="checkbox" id="sSecond"><span class="track"></span>Thump opens a second café</label>
+        <label class="switch"><input type="checkbox" id="sRoast"><span class="track"></span>Thump starts roasting beans</label>
+        <label class="switch"><input type="checkbox" id="sSold"><span class="track"></span>The painting sells</label>
+      </div>
+    </div>
+
+    <div class="explorer">
+      <div class="panel">
+        <div class="graph-scroll"><svg id="graph" role="img" aria-label="Producers, items and places, with lines for who makes what and which places carry it"></svg></div>
+        <div class="legend">
+          <span><i class="make"></i>makes</span>
+          <span><i></i>carries (listed)</span>
+          <span><i class="dash"></i>carries (follows the producer: house-made, every location)</span>
+        </div>
+      </div>
+      <div class="phone-col">
+        <div class="phone" aria-live="polite"><div class="screen" id="mock"></div></div>
+        <div class="panel why">
+          <h3>Why it looks like this</h3>
+          <ul id="why"></ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="chains" aria-labelledby="chains-h">
+    <div class="section-head">
+      <p class="eyebrow">Chains and menus</p>
+      <h2 id="chains-h">Same menu at every location, or not</h2>
+      <p class="muted" style="max-width:66ch">Call Your Mother runs 5 delis in Denver with one menu. Other restaurants change the menu by location. Both keep one item per dish. A setting on each house-made item decides which locations have it: <b>Every location</b> (the default) or <b>Only some</b>.</p>
+    </div>
+
+    <div class="controls">
+      <div class="ctl-row">
+        <span class="ctl-label">What if</span>
+        <label class="switch"><input type="checkbox" id="cSpecial"><span class="track"></span>One deli adds its own special</label>
+        <label class="switch"><input type="checkbox" id="cDrop"><span class="track"></span>The smallest deli drops the hot sandwich</label>
+        <label class="switch"><input type="checkbox" id="cPricey"><span class="track"></span>One deli charges more for lox</label>
+        <label class="switch"><input type="checkbox" id="cSixth"><span class="track"></span>A 6th deli opens</label>
+        <button type="button" class="pill" id="cReset">Reset</button>
+      </div>
+    </div>
+
+    <div class="explorer">
+      <div class="chain-left">
+        <div class="panel">
+          <div class="mscroll"><table class="mgrid" id="menuGrid" aria-label="Call Your Mother menu by deli"></table></div>
+          <div class="mlegend">
+            <span><i class="lg-box auto"></i>Follows the setting</span>
+            <span><i class="lg-box listed"></i>Listed at this deli</span>
+            <span><i class="lg-box off"></i>Turned off here</span>
+            <span><i class="lg-dot"></i>A stored row</span>
+          </div>
+          <p class="hint muted">Click a cell to change it. Turning off a ✓ is what a local's "Not at this location" report does. Click an item or a deli to preview its page.</p>
+        </div>
+        <div class="panel stored" id="stored" aria-live="polite"></div>
+      </div>
+      <div class="phone-col">
+        <div class="phone" aria-live="polite"><div class="screen" id="chainMock"></div></div>
+        <div class="panel why">
+          <h3>Why it looks like this</h3>
+          <ul id="chainWhy"></ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <p><strong>When locals add a chain's item.</strong> Someone adds the everything bagel after one visit. Because Call Your Mother runs more than one deli, it starts as <b>Every location</b>, since most chains keep one menu. A local who finds it missing taps "Not at this location", which turns it off at that deli. Once Call Your Mother claims its listing, it can set each item exactly.</p>
+    </div>
+  </section>
+
+  <section id="kinds" aria-labelledby="kinds-h">
+    <div class="section-head">
+      <p class="eyebrow">The three kinds</p>
+      <h2 id="kinds-h">How each kind changes Item Details</h2>
+    </div>
+    <div class="tscroll">
+      <table>
+        <thead>
+          <tr><th>Kind</th><th>Examples</th><th>Where it can be</th><th>Nearby section</th><th>Price line</th><th>Main button</th><th>Community check</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="kind k-goods">Goods</span><br><em>default</em></td>
+            <td>Onyx espresso blend, hemp soda, almond croissant, an art print, a vintage Toto lamp or 90s Levi's</td>
+            <td>Any place: the producer's own places and any place that carries it, new or secondhand</td>
+            <td>"Find it nearby", or "Also nearby" from a place. Places more than 25 mi away still show, under a divider with their distance. Empty state asks people to add a place.</td>
+            <td>"List price", or "$24 at Thump" when opened from a place</td>
+            <td>Find it nearby</td>
+            <td>Bought this lately? Help others by confirming the details.</td>
+          </tr>
+          <tr>
+            <td><span class="kind k-house">House-made</span></td>
+            <td>Thump's cold brew, an Onyx latte, a Call Your Mother bagel</td>
+            <td>Only places its producer runs. Every location by default, new ones included, or only some locations.</td>
+            <td>"Where to get it" lists the producer's places, or sums them up ("All 5 Call Your Mother locations") with the nearest first. Hidden when there's only one and you're on it. No "add a place" prompt.</td>
+            <td>"$5 at Thump"</td>
+            <td>Add Thump to visit list (one place), or Find it nearby (several)</td>
+            <td>Had this lately? Let others know it's still on the menu.</td>
+          </tr>
+          <tr>
+            <td><span class="kind k-original">One of a kind</span></td>
+            <td>A painting, a one-off handmade chair</td>
+            <td>One place at a time, until it sells</td>
+            <td>None. "Where it is" shows the one place and when it was last seen.</td>
+            <td>"$1,200 at Gallery 12", or "Sold"</td>
+            <td>Add Gallery 12 to visit list. Once sold: Follow the artist.</td>
+            <td>Seen it lately? Let others know it's still there.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="choose" aria-labelledby="choose-h">
+    <div class="section-head">
+      <p class="eyebrow">Adding an item</p>
+      <h2 id="choose-h">Two questions pick the kind</h2>
+      <p class="muted" style="max-width:66ch">Whoever adds the item answers these. The answer defaults to Goods, and a producer who claims the listing can change it.</p>
+    </div>
+    <div class="decide">
+      <div class="q">
+        <span class="num">Question 1</span>
+        <p><b>Was only one ever made?</b></p>
+        <div class="ans">
+          <span>Yes → <span class="kind k-original">One of a kind</span></span>
+          <span>No → go to question 2</span>
+        </div>
+        <p class="muted" style="font-size:14px">Ask about the design, not the copy. A shop might have the only vintage Toto lamp around, but the lamp was made many times.</p>
+      </div>
+      <div class="q">
+        <span class="num">Question 2</span>
+        <p><b>Can you buy it anywhere other than the maker's own places?</b></p>
+        <div class="ans">
+          <span>Yes, or not sure → <span class="kind k-goods">Goods</span></span>
+          <span>No → <span class="kind k-house">House-made</span></span>
+        </div>
+        <p class="muted" style="font-size:14px">House-made then gets one setting: every location (the default) or only some. See <a href="#chains">chains and menus</a>.</p>
+      </div>
+      <div class="q">
+        <span class="num">Edge cases</span>
+        <p>A bakery that sells croissants in its shop and to Onyx: <span class="kind k-goods">Goods</span>, since it travels.</p>
+        <p>An original painting and prints of it are two items: <span class="kind k-original">One of a kind</span> and <span class="kind k-goods">Goods</span>.</p>
+        <p>A vintage Toto lamp or 90s Levi's 501s: <span class="kind k-goods">Goods</span>. Being secondhand is about the copy, so it goes on each shop's row.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="schema" aria-labelledby="schema-h">
+    <div class="section-head">
+      <p class="eyebrow">Backend</p>
+      <h2 id="schema-h">Most of this is already built</h2>
+    </div>
+    <div class="schema">
+      <div class="col">
+        <span class="status built">Already in the database</span>
+        <dl>
+          <div><dt>directory.places.run_by_producer_id</dt><dd>Which producer runs a place. Thump → 1 place, Onyx → 8, Gallery 12 → none.</dd></div>
+          <div><dt>catalog.items.producer_id</dt><dd>Who makes the item. Nullable today, for brand-only and secondhand items.</dd></div>
+          <div><dt>catalog.availability (item_id, place_id, listing_source)</dt><dd>Which places carry an item. <code>listing_source</code> already tells "their own place" (producer_listed) from a stockist (place_listed).</dd></div>
+          <div><dt>catalog.entity_signals</dt><dd>Trust signals like B Corp, attached to a producer, place or item.</dd></div>
+        </dl>
+      </div>
+      <div class="col new">
+        <span class="status add">To add</span>
+        <dl>
+          <div><dt>catalog.items.kind<br>goods | house_made | original</dt><dd>Defaults to goods. Drives the nearby section, price line, button and community prompt.</dd></div>
+          <div><dt>catalog.items.producer_id becomes required</dt><dd>Every item has a producer. Brands get producer pages the community can start, and the <code>brand</code> column folds into them. Items with an unknown maker point at one shared Unknown maker row, which has no page and stays out of producer listings and trust scoring.</dd></div>
+          <div><dt>catalog.items.at_every_location</dt><dd>For house-made items; defaults to true. True means the item counts as available at every place its producer runs, worked out when read, so a new location needs no copying. False means it's only where an availability row lists it.</dd></div>
+          <div><dt>catalog.availability.price_cents</dt><dd>Per-place price ("$24 at Thump"). <code>items.price_cents</code> stays as the list price.</dd></div>
+          <div><dt>catalog.availability.last_seen_at, seen_count</dt><dd>Backs "Seen here by 6 locals · 2 days ago" and the freshness sort.</dd></div>
+          <div><dt>catalog.availability.condition, quantity, note<br>new | secondhand</dt><dd>What a shop's copies are like: "Secondhand · 2 available · sold as a pair". One row per item per shop, even with several sizes ("W30–W34"). It records what locals see, not inventory. Secondhand sightings go stale after about 2 weeks, new ones after about 4.</dd></div>
+          <div><dt>catalog.items.sold_at</dt><dd>For one of a kind. Set when it sells; the item stays viewable.</dd></div>
+          <div><dt>Rule: rows are exceptions for every-location items</dt><dd>An every-location item has no row per place. A stored row only records an exception: <code>is_active = false</code> turns it off at one place, and <code>price_cents</code> sets that place's price.</dd></div>
+          <div><dt>Rule: one place for one of a kind</dt><dd>An original has at most one active availability row.</dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <section id="lists" aria-labelledby="lists-h">
+    <div class="section-head">
+      <p class="eyebrow">Saving places</p>
+      <h2 id="lists-h">Visit lists</h2>
+      <p class="muted" style="max-width:66ch">The main button on Item Details saves a place to a visit list. People can make as many lists as they want, like one for a trip to San Francisco.</p>
+    </div>
+    <div class="lists">
+      <div class="lists-text">
+        <h3>How it works</h3>
+        <ul class="plain">
+          <li>Everyone starts with one list, <b>Want to visit</b>.</li>
+          <li>With one list, the button saves straight to it. With more, it opens a picker. A list can have a city, and the list for the place's city goes first, so a San Francisco bakery suggests the San Francisco trip.</li>
+          <li>Saving from Item Details remembers the item, so the list says why: "Sunset Bakery · for the Country Sourdough".</li>
+          <li>Visit lists hold places you want to go. Favorites stay for items, and following a producer or place keeps you up to date with it.</li>
+        </ul>
+        <h3>In cove-user</h3>
+        <dl class="mini">
+          <div><dt>profile.visit_lists (id, user_id, name, city, created_at)</dt><dd>One row per list. <code>city</code> is optional and drives the suggestion.</dd></div>
+          <div><dt>profile.visit_list_places (list_id, place_id, item_id, added_at)</dt><dd>One row per saved place. <code>item_id</code> is the item it was saved from, if any.</dd></div>
+        </dl>
+      </div>
+      <div class="phone" aria-label="Example: picking a visit list">
+        <div class="screen">
+          <div class="sheet">
+            <div class="grab"></div>
+            <div><div class="m-name" style="font-size:19px">Save Sunset Bakery</div><div class="m-cat">From Country Sourdough · San Francisco</div></div>
+            <div class="lrow sug"><div><span class="nm">San Francisco trip</span><span class="m-cat">4 places · Suggested: this place is in San Francisco</span></div><span class="tick">✓</span></div>
+            <div class="lrow"><div><span class="nm">Want to visit</span><span class="m-cat">12 places</span></div></div>
+            <div class="lrow"><div><span class="nm">Coffee to try</span><span class="m-cat">7 places · Denver</span></div></div>
+            <div class="lrow new"><span class="nm">+ New list</span></div>
+          </div>
+          <div class="m-btn">Save to San Francisco trip</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="open" aria-labelledby="open-h">
+    <div class="section-head">
+      <p class="eyebrow">Where things stand</p>
+      <h2 id="open-h">Decisions and open questions</h2>
+    </div>
+    <ol class="status-list">
+      <li>
+        <div class="hd"><span class="st decided">Decided</span><strong>Every location by default</strong></div>
+        <p>Every Thump café serves every house item unless it's turned off at one. Chains like Call Your Mother work the same way, and "Only some" covers a location's own specials.</p>
+      </li>
+      <li>
+        <div class="hd"><span class="st decided">Decided</span><strong>Far places still show</strong></div>
+        <p>Item Details lists every place that has it. Places more than 25 mi away sit under a divider with their distance, and long lists end in "See all". Still open: the exact cutoff, and whether people can set it themselves.</p>
+      </li>
+      <li>
+        <div class="hd"><span class="st decided">Decided</span><strong>Visit lists live in cove-user, as many as you want</strong></div>
+        <p>See <a href="#lists">visit lists</a> above.</p>
+      </li>
+      <li>
+        <div class="hd"><span class="st decided">Decided</span><strong>Vintage isn't one of a kind</strong></div>
+        <p>"One of a kind" means only one was ever made. Secondhand copies of a design made many times, like a 1996 Toto lamp or 90s Levi's 501s, are Goods: one item, and each shop's copies are a row marked secondhand. Adding the lamp at a second shop should find the existing item rather than create a new one. Still open: the exact stale window, and when an era deserves its own item ("Levi's 501, 1990s" vs today's 501).</p>
+      </li>
+      <li>
+        <div class="hd"><span class="st decided">Decided</span><strong>Location-based, with no Local tag</strong></div>
+        <p>Onboarding asks for location services, and Cove uses that location for distances and ranking. Distances are measured from the area being browsed, which is where you are by default, so someone in Denver can plan a New York trip and save places to a visit list for it. Items, places and producers don't show a Local tag. Switch "Browsing" in the explorer to see distances change. Browsing another city needs Cove to cover it; v1 is Denver only.</p>
+      </li>
+      <li>
+        <div class="hd"><span class="st decided">Decided</span><strong>Every item has a producer</strong></div>
+        <ul>
+          <li><b>Brands are producers.</b> The community can start a producer's page, like DWR's for the Toto lamp, and the business claims it later. Try the lamp in the explorer.</li>
+          <li><b>Unknown makers</b> share one fallback producer, Unknown maker, which has no page. Item Details shows "Maker unknown" as plain text. Try the hand-carved chair.</li>
+          <li><b>With no producer page</b>, "More at" the place replaces "More from".</li>
+        </ul>
+        <p>Still open: whether community pages cover individual makers, who today appear only as a name until they opt in.</p>
+      </li>
+      <li>
+        <div class="hd"><span class="st open">Open</span><strong>Browsing another area</strong></div>
+        <p>How someone picks the area they're browsing, and whether opening a visit list for another city switches to it.</p>
+      </li>
+      <li>
+        <div class="hd"><span class="st open">Open</span><strong>Seasonal and limited-time items</strong></div>
+        <p>A special that runs for a month could be "Only some" with an end date, or switched off when it ends. Not modeled yet.</p>
+      </li>
+    </ol>
+    <p class="foot">Example data: Thump, Onyx and Call Your Mother are named as examples; their locations, menus, prices and other details here are simplified or made up. Gallery 12, Saguaro Bakery, Mile High Hemp Soda, Lena Ortiz, Sunset Bakery, Loft 54 Vintage and Second Story Modern are made-up stand-ins, and so are the visit lists. Prices, distances and counts are illustrative. Written up in ITEM_AVAILABILITY.md.</p>
+  </section>
+</div>
+
+<script>
+(function () {
+  const PRODUCERS = {
+    thump:  { name: "Thump Coffee", short: "Thump", base: "Denver, CO", signals: [] },
+    onyx:   { name: "Onyx Coffee Roasters", short: "Onyx", base: "Arizona", region: "Arizona", extra: 6, signals: ["B Corp"] },
+    bakery: { name: "Saguaro Bakery", short: "Saguaro Bakery", base: "Tucson, AZ", signals: [] },
+    soda:   { name: "Mile High Hemp Soda", short: "Mile High Hemp Soda", base: "Denver, CO", signals: [] },
+    artist: { name: "Lena Ortiz", short: "Lena Ortiz", base: "Artist · Denver", signals: [] },
+    // A brand's page the community started; DWR can claim it later.
+    dwr:    { name: "DWR", short: "DWR", base: "Community page · unclaimed", signals: [], community: true },
+    // One shared fallback for items whose maker isn't known. It has no page.
+    unknown: { name: "Unknown maker", short: "Unknown maker", base: "Shared fallback · no page", signals: [], placeholder: true }
+  };
+  const CITY = { denver: "Denver", phoenix: "Phoenix" };
+  const PLACES = {
+    thumpCap:   { name: "Thump Coffee", sub: "Capitol Hill", short: "Thump", run: "thump", type: "Café", scen: null },
+    thumpHigh:  { name: "Thump Coffee", sub: "Highlands", short: "Thump Highlands", run: "thump", type: "Café", scen: "second" },
+    onyxPhx:    { name: "Onyx Coffee", sub: "Phoenix, AZ", short: "Onyx Phoenix", run: "onyx", type: "Café", scen: null },
+    onyxTempe:  { name: "Onyx Coffee", sub: "Tempe, AZ", short: "Onyx Tempe", run: "onyx", type: "Café", scen: null },
+    bakeryShop: { name: "Saguaro Bakery", sub: "Tucson, AZ", short: "Saguaro Bakery", run: "bakery", type: "Bakery", scen: null },
+    gallery:    { name: "Gallery 12", sub: "Denver", short: "Gallery 12", run: null, type: "Gallery", scen: null },
+    loft:       { name: "Loft 54 Vintage", sub: "Denver", short: "Loft 54", run: null, type: "Vintage shop", scen: null },
+    ssm:        { name: "Second Story Modern", sub: "Scottsdale, AZ", short: "Second Story", run: null, type: "Vintage shop", scen: null }
+  };
+  const PLACE_MI = {
+    denver:  { thumpCap: 0.4, thumpHigh: 2.1, onyxPhx: 600, onyxTempe: 605, bakeryShop: 650, gallery: 1.3, loft: 2.4, ssm: 590 },
+    phoenix: { thumpCap: 600, thumpHigh: 602, onyxPhx: 1.2, onyxTempe: 9, bakeryShop: 110, gallery: 600, loft: 600, ssm: 12 }
+  };
+  const ITEMS = [
+    { id: "coldbrew", name: "Cold Brew", producer: "thump", kind: "house", cat: "Coffee · Cold brew", price: 5,
+      seen: { thumpCap: [9, "1 day ago"], thumpHigh: [2, "today"] } },
+    { id: "roast", name: "Thump House Roast", producer: "thump", kind: "goods", cat: "Coffee · Whole bean", list: 18, scen: "roast",
+      avail: [["thumpCap", 18, [3, "2 days ago"]], ["thumpHigh", 18, [1, "today"]]] },
+    { id: "latte", name: "Honey Oat Latte", producer: "onyx", kind: "house", cat: "Coffee · Espresso drink", price: 6,
+      seen: { onyxPhx: [12, "today"], onyxTempe: [5, "3 days ago"] } },
+    { id: "beans", name: "Espresso Blend, 12 oz", producer: "onyx", kind: "goods", cat: "Coffee · Whole bean", list: 22,
+      avail: [["thumpCap", 24, [6, "2 days ago"]], ["onyxPhx", 22, [8, "today"]], ["onyxTempe", 22, [3, "4 days ago"]]] },
+    { id: "croissant", name: "Almond Croissant", producer: "bakery", kind: "goods", cat: "Bakery · Pastry", list: 5,
+      avail: [["bakeryShop", 4.5, [7, "today"]], ["onyxPhx", 5, [4, "1 day ago"]], ["onyxTempe", 5, [1, "5 weeks ago"]]] },
+    { id: "soda", name: "Lavender Hemp Soda", producer: "soda", kind: "goods", cat: "Drinks · Soda", list: 4,
+      avail: [["thumpCap", 5, [4, "5 days ago"]]] },
+    { id: "print", name: "River at Dusk, print", producer: "artist", kind: "goods", cat: "Art · Print", list: 40,
+      avail: [["gallery", 40, [2, "1 week ago"]], ["thumpCap", 45, [1, "3 weeks ago"]]] },
+    // Secondhand copies of a design made many times: Goods, with the condition on each place's row.
+    { id: "lamp", name: "Toto Cube Lamp, 1996", producer: "dwr", kind: "goods", cat: "Home · Lighting", list: null,
+      avail: [["loft", 450, [3, "3 days ago"], { cond: "secondhand", qty: 2, note: "sold as a pair" }],
+              ["ssm", 520, [1, "3 weeks ago"], { cond: "secondhand", qty: 1 }]] },
+    { id: "chair", name: "Hand-carved side chair", producer: "unknown", kind: "original", cat: "Home · Furniture", price: 380,
+      avail: [["loft", 380, [2, "5 days ago"]]] },
+    { id: "painting", name: "River at Dusk", producer: "artist", kind: "original", cat: "Art · Painting", price: 1200, soldBy: "sold",
+      avail: [["gallery", 1200, [3, "3 days ago"]]] }
+  ];
+  const KIND = {
+    goods: { label: "Goods", cls: "k-goods", color: "var(--goods)" },
+    house: { label: "House-made", cls: "k-house", color: "var(--house)" },
+    original: { label: "One of a kind", cls: "k-original", color: "var(--orig)" }
+  };
+  const RADIUS = 25;
+  // A sighting goes stale after this many days; secondhand stock moves faster.
+  const STALE_DAYS = { new: 28, secondhand: 14 };
+  const agoDays = (s) => {
+    if (s === "today") return 0;
+    const m = /(\d+) (day|week)/.exec(s);
+    return m ? Number(m[1]) * (m[2] === "week" ? 7 : 1) : 0;
+  };
+
+  const state = { item: "coldbrew", ctx: "", city: "denver", second: false, roast: false, sold: false };
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const money = (n) => (n % 1 ? "$" + n.toFixed(2) : "$" + n.toLocaleString("en-US"));
+  const miles = (m) => (m < 10 ? m.toFixed(1) : Math.round(m).toLocaleString("en-US")) + " mi";
+
+  const placeOn = (id) => !PLACES[id].scen || state[PLACES[id].scen];
+  const itemOn = (it) => !it.scen || state[it.scen];
+  const isSold = (it) => !!it.soldBy && state[it.soldBy];
+  const visibleItems = () => ITEMS.filter(itemOn);
+  const visiblePlaces = () => Object.keys(PLACES).filter(placeOn);
+  const runsCount = (pid) => visiblePlaces().filter((id) => PLACES[id].run === pid).length + (PRODUCERS[pid].extra || 0);
+
+  // Availability rows for an item: { place, price, seen:[n, ago], auto }
+  function rowsFor(it) {
+    if (it.kind === "house") {
+      return visiblePlaces()
+        .filter((id) => PLACES[id].run === it.producer)
+        .map((id) => ({ place: id, price: it.price, seen: (it.seen && it.seen[id]) || [1, "today"], auto: true }));
+    }
+    return (it.avail || [])
+      .filter(([id]) => placeOn(id))
+      .map(([id, price, seen, ex]) => ({ place: id, price, seen, auto: false, cond: (ex && ex.cond) || "new", qty: ex && ex.qty, note: ex && ex.note }));
+  }
+
+  /* ---------- controls ---------- */
+  function renderPills() {
+    const items = visibleItems();
+    if (!items.find((i) => i.id === state.item)) state.item = items[0].id;
+    $("itemPills").innerHTML = items.map((it) =>
+      `<button type="button" class="pill" id="pill-${it.id}" aria-pressed="${it.id === state.item}" data-item="${it.id}">` +
+      `<span class="dot" style="background:${KIND[it.kind].color}"></span>${esc(it.name)}</button>`
+    ).join("");
+  }
+  function renderCtx() {
+    const it = ITEMS.find((i) => i.id === state.item);
+    const rows = rowsFor(it);
+    if (state.ctx && !rows.find((r) => r.place === state.ctx)) state.ctx = "";
+    const opts = [`<option value="">Home or search</option>`].concat(
+      rows.map((r) => `<option value="${r.place}">${esc(PLACES[r.place].name + " · " + PLACES[r.place].sub)}</option>`)
+    );
+    $("ctxSelect").innerHTML = opts.join("");
+    $("ctxSelect").value = state.ctx;
+  }
+
+  /* ---------- graph ---------- */
+  function renderGraph() {
+    const svg = $("graph");
+    const W = 760, NW = 184, NH = 44, STEP = 56, TOP = 34;
+    const X = { p: 8, i: 288, l: 568 };
+    const prods = Object.keys(PRODUCERS);
+    const items = visibleItems();
+    const places = visiblePlaces();
+    const maxN = Math.max(prods.length, items.length, places.length);
+    const H = TOP + maxN * STEP;
+    const yFor = (idx, n) => TOP + ((maxN - n) * STEP) / 2 + idx * STEP;
+    const pos = {};
+    prods.forEach((id, i) => (pos["p:" + id] = yFor(i, prods.length)));
+    items.forEach((it, i) => (pos["i:" + it.id] = yFor(i, items.length)));
+    places.forEach((id, i) => (pos["l:" + id] = yFor(i, places.length)));
+
+    const sel = items.find((i) => i.id === state.item);
+    const selRows = rowsFor(sel);
+    const selPlaces = new Set(selRows.map((r) => r.place));
+
+    const curve = (x1, y1, x2, y2) => `M${x1},${y1} C${x1 + 52},${y1} ${x2 - 52},${y2} ${x2},${y2}`;
+    let edges = "";
+    items.forEach((it) => {
+      const on = it.id === sel.id;
+      const yi = pos["i:" + it.id] + NH / 2;
+      const yp = pos["p:" + it.producer] + NH / 2;
+      edges += `<path class="edge make ${on ? "on" : "dim"}" d="${curve(X.p + NW, yp, X.i, yi)}"/>`;
+      rowsFor(it).forEach((r) => {
+        const yl = pos["l:" + r.place] + NH / 2;
+        edges += `<path class="edge carry ${r.auto ? "auto" : ""} ${on ? "on" : "dim"}" d="${curve(X.i + NW, yi, X.l, yl)}"/>`;
+      });
+    });
+
+    const node = (key, x, y, t1, t2, cls, extra) =>
+      `<g class="node ${cls}" data-key="${key}" tabindex="0" role="button" aria-label="${esc(t1 + ", " + t2)}" transform="translate(${x},${y})">` +
+      `<rect class="box" width="${NW}" height="${NH}" rx="10"/>${extra || ""}` +
+      `<text class="n1" x="${extra ? 26 : 12}" y="18">${esc(t1)}</text>` +
+      `<text class="n2" x="${extra ? 26 : 12}" y="33">${esc(t2)}</text></g>`;
+
+    let nodes = "";
+    prods.forEach((id) => {
+      const p = PRODUCERS[id];
+      const n = runsCount(id);
+      const special = p.community || p.placeholder;
+      const sub = special ? p.base : (n ? `Runs ${n} place${n > 1 ? "s" : ""}` : "Runs no places") + " · " + p.base.replace("Artist · ", "");
+      nodes += node("p:" + id, X.p, pos["p:" + id], p.name, sub, (id === sel.producer ? "on" : "dim") + (special ? " brand" : ""));
+    });
+    items.forEach((it) => {
+      const dot = `<circle cx="14" cy="22" r="5" fill="${KIND[it.kind].color}"/>`;
+      const sub = KIND[it.kind].label + (isSold(it) ? " · sold" : "");
+      nodes += node("i:" + it.id, X.i, pos["i:" + it.id], it.name, sub, it.id === sel.id ? "on" : "dim", dot);
+    });
+    places.forEach((id) => {
+      const pl = PLACES[id];
+      const sub = (pl.run ? "Run by " + PRODUCERS[pl.run].short : "Independent") + " · " + pl.sub;
+      const cls = selPlaces.has(id) ? (state.ctx === id ? "on ctx" : "on") : "dim";
+      nodes += node("l:" + id, X.l, pos["l:" + id], pl.name, sub, cls);
+    });
+    if (PRODUCERS.onyx.extra) {
+      const yT = pos["l:onyxTempe"];
+      nodes += `<text class="n2" x="${X.l + 12}" y="${yT + NH + 9}" style="font:400 10px var(--body);fill:var(--muted)">+ ${PRODUCERS.onyx.extra} more Onyx cafés</text>`;
+    }
+
+    const labels =
+      `<text class="col-label" x="${X.p}" y="16">Producers · make</text>` +
+      `<text class="col-label" x="${X.i}" y="16">Items</text>` +
+      `<text class="col-label" x="${X.l}" y="16">Places · sell</text>`;
+    svg.setAttribute("viewBox", `0 0 ${W} ${H + 12}`);
+    svg.innerHTML = labels + edges + nodes;
+  }
+
+  /* ---------- Item Details mock ---------- */
+  function placeCard(it, r, isFar) {
+    const pl = PLACES[r.place];
+    const own = pl.run === it.producer;
+    const mi = PLACE_MI[state.city][r.place];
+    const [n, ago] = r.seen;
+    const used = r.cond === "secondhand";
+    const stale = it.kind === "goods" && agoDays(ago) > STALE_DAYS[used ? "secondhand" : "new"];
+    let av;
+    if (it.kind === "house") av = `On the menu · confirmed ${ago}`;
+    else if (it.kind === "original") av = isSold(it) ? "Sold" : `Seen here ${ago}`;
+    else if (stale) av = used ? `May have sold · last seen ${ago}` : `Last seen here ${ago}`;
+    else av = `Seen here by ${n} local${n > 1 ? "s" : ""} · ${ago}`;
+    const cond = used ? `<span class="cond">Secondhand${r.qty ? ` · ${r.qty} available` : ""}${r.note ? " · " + esc(r.note) : ""}</span>` : "";
+    return `<div class="pc${isFar ? " farc" : ""}"><div class="t"><span class="nm">${esc(pl.name)} <span class="m-cat">${esc(pl.sub)}</span></span>` +
+      `<span class="own">${own ? "Their own place" : "Carries it"}</span></div>` +
+      `<span class="meta">${pl.type} · ${isFar ? `<b>${miles(mi)} away</b>` : miles(mi)} · ${money(r.price)}${r.qty > 1 ? " each" : ""}</span>` + cond +
+      `<span class="av ${stale || isSold(it) ? "stale" : ""}">${av}</span></div>`;
+  }
+
+  // Far places still show as cards, nearest first, under a divider.
+  // The list shows every near place and up to 2 far ones; "See all" covers the rest,
+  // including a chain's locations that aren't drawn in the graph.
+  const FAR_SHOWN = 2;
+  function placeList(it, near, far, label) {
+    const farSorted = far.slice().sort((a, b) => PLACES_MI(a.place) - PLACES_MI(b.place));
+    const extra = it.kind === "house" ? PRODUCERS[it.producer].extra || 0 : 0;
+    const total = near.length + far.length + extra;
+    const shown = near.length + Math.min(far.length, FAR_SHOWN);
+    return near.map((r) => placeCard(it, r)).join("") +
+      (far.length ? `<p class="far-h">More than ${RADIUS} mi away</p>` + farSorted.slice(0, FAR_SHOWN).map((r) => placeCard(it, r, true)).join("") : "") +
+      (total > shown ? `<span class="see-all">See all ${total} ${esc(label)} →</span>` : "");
+  }
+  const PLACES_MI = (id) => PLACE_MI[state.city][id];
+
+  function renderMock() {
+    const it = ITEMS.find((i) => i.id === state.item);
+    const prod = PRODUCERS[it.producer];
+    const rows = rowsFor(it);
+    const ctxRow = rows.find((r) => r.place === state.ctx);
+    const ctxPlace = ctxRow ? PLACES[ctxRow.place] : null;
+    const sold = isSold(it);
+    const used = rows.length > 0 && rows.every((r) => r.cond === "secondhand");
+    const why = [];
+    const K = KIND[it.kind];
+    why.push(`<b>${K.label}.</b> ` + ({
+      goods: "Any place can carry it, so Item Details lists every place that does.",
+      house: `Only places ${prod.short} runs carry it. They're added automatically, so there's never an "add a place" prompt.`,
+      original: "There's one of it, so it's at one place at a time and there's no nearby list."
+    })[it.kind]);
+    if (used) why.push("Vintage, but not one of a kind: the same design was made many times. Each shop's copies are a row marked secondhand, with its own price and how many it has.");
+
+    // Signals like B Corp come from the producer. There's no Local tag: distances are
+    // measured from the area being browsed, so planning a trip works anywhere.
+    const sigs = prod.signals.slice();
+    if (prod.signals.length) why.push(`${prod.signals.join(", ")} comes from the producer, so it shows on everything ${prod.short} makes.`);
+    if (prod.community) why.push(`${prod.short}'s page was started by the community and hasn't been claimed. ${prod.short} can claim it later.`);
+    if (prod.placeholder) why.push(`The maker isn't known, so the item uses the shared Unknown maker: "Maker unknown" as plain text, with no page to link to.`);
+    why.push(`Distances are from the area you're browsing (${CITY[state.city]}). Switch it to plan a trip somewhere else.`);
+
+    // Price line
+    let price, priceNote;
+    if (sold) { price = "Sold"; priceNote = `was ${money(it.price)} at ${PLACES[rows[0].place].short}`; why.push("Sold: the item stays viewable but nothing is for sale."); }
+    else if (ctxRow) {
+      price = money(ctxRow.price);
+      priceNote = `at ${ctxPlace.short}` + (ctxRow.cond === "secondhand" ? (ctxRow.qty > 1 ? " · each, secondhand" : " · secondhand") : "");
+      why.push(`Opened from ${ctxPlace.short}, so the price is that place's price.`);
+    }
+    else if (it.kind === "goods" && it.list == null) {
+      price = (rows.length > 1 ? "From " : "") + money(Math.min(...rows.map((r) => r.price)));
+      priceNote = used ? "Secondhand · no list price" : "No list price";
+      why.push("There's no list price, so the price line starts from the cheapest place.");
+    }
+    else if (it.kind === "goods") { price = money(it.list); priceNote = "List price"; }
+    else if (it.kind === "house") {
+      price = money(it.price);
+      priceNote = runsCount(it.producer) === 1 ? `at ${PLACES[rows[0].place].short}` : `at ${prod.short} (${runsCount(it.producer)} locations)`;
+    } else { price = money(rows[0].price); priceNote = `at ${PLACES[rows[0].place].short}`; }
+
+    // Nearby section
+    let nearby = "";
+    const others = rows.filter((r) => r.place !== state.ctx);
+    const near = others.filter((r) => PLACES_MI(r.place) <= RADIUS).sort((a, b) => PLACES_MI(a.place) - PLACES_MI(b.place));
+    const far = others.filter((r) => PLACES_MI(r.place) > RADIUS);
+    if (it.kind === "goods") {
+      const title = ctxRow ? "Also nearby" : "Find it nearby";
+      let body = placeList(it, near, far, "places");
+      if (!near.length && !far.length) {
+        body = `<div class="empty"><span>No other places yet. Know where else to get it?</span><b>Add a place</b></div>`;
+        why.push("No other places carry it yet, so the section asks people to add one.");
+      } else if (!near.length) {
+        body = `<div class="empty"><span>Nothing within ${RADIUS} mi yet.</span><b>Add a place</b></div>` + placeList(it, near, far, "places");
+        why.push(`Nothing carries it within ${RADIUS} mi of you. Farther places still show, under a divider with their distance.`);
+      } else if (far.length) why.push(`Places more than ${RADIUS} mi away still show, under a divider with their distance.`);
+      if (rows.some((r) => r.cond === "secondhand" && agoDays(r.seen[1]) > STALE_DAYS.secondhand && r.place !== state.ctx)) {
+        why.push(`Secondhand stock moves fast, so a sighting older than ${STALE_DAYS.secondhand / 7} weeks is marked "May have sold". New stock waits ${STALE_DAYS.new / 7} weeks.`);
+      }
+      nearby = `<div class="m-sec"><h4>${title}<small>Map →</small></h4>${body}</div>`;
+    } else if (it.kind === "house") {
+      if (!others.length && !prod.extra) {
+        why.push(ctxRow ? `${prod.short} runs only this place, so there's no "where to get it" section.` : "");
+        if (!ctxRow) nearby = `<div class="m-sec"><h4>Where to get it</h4>${rows.map((r) => placeCard(it, r)).join("")}</div>`;
+      } else {
+        const title = ctxRow ? `Other ${prod.short} locations` : "Where to get it";
+        nearby = `<div class="m-sec"><h4>${title}</h4>${placeList(it, near, far, prod.short + " locations")}</div>`;
+        if (far.length) why.push(`Locations more than ${RADIUS} mi away still show, under a divider with their distance.`);
+        if (state.second && it.producer === "thump") why.push("The Highlands café was added and the cold brew followed it automatically.");
+      }
+    } else {
+      if (!ctxRow) nearby = `<div class="m-sec"><h4>Where it is</h4>${rows.map((r) => placeCard(it, r)).join("")}</div>`;
+    }
+
+    // More section
+    let more;
+    if (prod.placeholder) {
+      more = `More at ${PLACES[rows[0].place].short}`;
+      why.push(`No maker page, so "${more}" replaces "More from".`);
+    } else {
+      more = it.kind === "goods" && it.producer !== "artist" ? "Similar to this" : `More from ${prod.short}`;
+      if (it.kind !== "goods") why.push(`"${more}" replaces "Similar to this": the producer's other things are the better next step.`);
+    }
+
+    // Community prompt (shown at the Community added level)
+    const prompt = sold ? "" : {
+      goods: used ? "Seen one lately? Let others know where it is." : "Bought this lately? Help others by confirming the details.",
+      house: "Had this lately? Let others know it's still on the menu.",
+      original: "Seen it lately? Let others know it's still there."
+    }[it.kind];
+
+    // Button
+    let btn;
+    if (sold) btn = `Follow ${prod.short}`;
+    else if (ctxRow) btn = `Add ${ctxPlace.short} to visit list`;
+    else if (it.kind === "original") btn = `Add ${PLACES[rows[0].place].short} to visit list`;
+    else if (it.kind === "house" && rows.length === 1) btn = `Add ${PLACES[rows[0].place].short} to visit list`;
+    else btn = near.length ? "Find it nearby" : "See where it's sold";
+    if (ctxRow) why.push(`Opened from a place, so the button saves that place.`);
+    else if (it.kind === "house" && rows.length === 1) why.push(`Only one place has it, so the button saves that place instead of searching.`);
+
+    const sigHtml = sigs.map((s) => `<span>${esc(s)}</span>`).join("");
+    $("mock").innerHTML =
+      `<div class="hero-img ${K.cls}">${esc(K.label + (used ? " · secondhand" : ""))}</div>` +
+      `<div class="scr">` +
+        `<div><div class="m-name">${esc(it.name)}</div>` +
+        (prod.placeholder ? `<div class="m-prod plain">Maker unknown</div>` : `<div class="m-prod">${esc(prod.name)} ›</div>`) +
+        `<div class="m-cat">${esc(it.cat)}</div>` +
+        (sigHtml ? `<div class="m-sig">${sigHtml}</div>` : "") + `</div>` +
+        `<div class="m-price"><b class="${sold ? "sold" : ""}">${price}</b><span>${esc(priceNote)}</span></div>` +
+        nearby +
+        `<div class="m-sec"><h4>${esc(more)}</h4><div class="tiles"><div></div><div></div><div></div></div></div>` +
+        (prompt ? `<div class="verif"><span class="h">Verification · if still Community added</span><span class="p">${prompt}</span><b>Confirm details</b></div>` : "") +
+      `</div>` +
+      `<div class="m-btn">${esc(btn)}</div>`;
+    $("why").innerHTML = why.filter(Boolean).map((w) => `<li>${w}</li>`).join("");
+  }
+
+  function render() {
+    renderPills();
+    renderCtx();
+    renderGraph();
+    renderMock();
+  }
+
+  /* ---------- events ---------- */
+  $("itemPills").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-item]");
+    if (!b) return;
+    state.item = b.dataset.item; state.ctx = ""; render();
+  });
+  $("ctxSelect").addEventListener("change", (e) => { state.ctx = e.target.value; render(); });
+  $("cityToggle").addEventListener("change", (e) => { state.city = e.target.value; render(); });
+  [["sSecond", "second"], ["sRoast", "roast"], ["sSold", "sold"]].forEach(([id, key]) => {
+    $(id).addEventListener("change", (e) => {
+      state[key] = e.target.checked;
+      if (key === "roast" && state.roast) { state.item = "roast"; state.ctx = ""; }
+      if (key === "second" && state.second) { state.item = "coldbrew"; state.ctx = ""; }
+      if (key === "sold") { state.item = "painting"; state.ctx = ""; }
+      render();
+    });
+  });
+  function activate(key) {
+    const [kind, id] = key.split(":");
+    if (kind === "i") { state.item = id; state.ctx = ""; }
+    else if (kind === "p") { const first = visibleItems().find((i) => i.producer === id); if (first) { state.item = first.id; state.ctx = ""; } }
+    else if (kind === "l") {
+      const it = ITEMS.find((i) => i.id === state.item);
+      if (rowsFor(it).find((r) => r.place === id)) state.ctx = state.ctx === id ? "" : id;
+      else { const other = visibleItems().find((i) => rowsFor(i).find((r) => r.place === id)); if (other) { state.item = other.id; state.ctx = id; } }
+    }
+    render();
+  }
+  $("graph").addEventListener("click", (e) => { const g = e.target.closest(".node"); if (g) activate(g.dataset.key); });
+  $("graph").addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const g = e.target.closest(".node"); if (!g) return;
+    e.preventDefault(); activate(g.dataset.key);
+    const again = document.querySelector(`.node[data-key="${g.dataset.key}"]`); if (again) again.focus();
+  });
+
+  render();
+})();
+</script>
+
+<script>
+/* Chains and menus: one producer (Call Your Mother), its delis, and each item's
+   every-location / only-some setting. Only exceptions are stored as rows. */
+(function () {
+  const PROD = "Call Your Mother";
+  const DELIS = [
+    { id: "tennyson", name: "Tennyson", mi: 1.4 },
+    { id: "rino", name: "RiNo", mi: 1.9 },
+    { id: "cherry", name: "Cherry Creek", mi: 2.6 },
+    { id: "washpark", name: "Wash Park", mi: 3.1 },
+    { id: "parkhill", name: "Park Hill", mi: 4.2 },
+    { id: "sloans", name: "Sloan's Lake", mi: 2.3, scen: "sixth" }
+  ];
+  const MENU = [
+    { id: "bagel", name: "Everything Bagel", cat: "Bakery · Bagel", price: 3.5 },
+    { id: "lox", name: "Lox Sandwich", cat: "Deli · Sandwich", price: 15 },
+    { id: "bfast", name: "Breakfast Sandwich", cat: "Deli · Hot sandwich", price: 11 },
+    { id: "cookie", name: "Black & White Cookie", cat: "Bakery · Cookie", price: 4 },
+    { id: "special", name: "Green Chile Bagel", cat: "Bakery · Bagel", price: 4.5, scen: "special" }
+  ];
+  const SWITCHES = [["cSpecial", "special"], ["cDrop", "drop"], ["cPricey", "pricey"], ["cSixth", "sixth"]];
+
+  const fresh = () => ({
+    mode: { bagel: "every", lox: "every", bfast: "every", cookie: "every", special: "some" },
+    off: new Set(),                          // every-location items turned off at a deli
+    listed: new Set(["special|tennyson"]),   // only-some items listed at a deli
+    price: new Map(),                        // a deli's own price
+    special: false, drop: false, pricey: false, sixth: false,
+    sel: { type: "item", id: "bagel" }
+  });
+  let st = fresh();
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const money = (n) => (n % 1 ? "$" + n.toFixed(2) : "$" + n);
+  const miles = (m) => m.toFixed(1) + " mi";
+  const list = (arr) => arr.length < 2 ? arr.join("") : arr.slice(0, -1).join(", ") + " and " + arr[arr.length - 1];
+
+  const delis = () => DELIS.filter((d) => !d.scen || st[d.scen]);
+  const items = () => MENU.filter((m) => !m.scen || st[m.scen]);
+  const key = (it, d) => it.id + "|" + d.id;
+  const every = (it) => st.mode[it.id] === "every";
+  const isOn = (it, d) => (every(it) ? !st.off.has(key(it, d)) : st.listed.has(key(it, d)));
+  const priceAt = (it, d) => (st.price.has(key(it, d)) ? st.price.get(key(it, d)) : it.price);
+  const hasOwnPrice = (it, d) => st.price.has(key(it, d)) && isOn(it, d);
+  const isStored = (it, d) => (every(it) ? st.off.has(key(it, d)) || hasOwnPrice(it, d) : st.listed.has(key(it, d)));
+
+  /* ---------- grid ---------- */
+  function renderGrid() {
+    const ds = delis(), ms = items();
+    const sel = st.sel;
+    let head = `<thead><tr><th scope="col"><span class="sr">Menu item</span></th>` + ds.map((d) =>
+      `<th scope="col"><button type="button" class="hbtn" data-sel="place:${d.id}" aria-pressed="${sel.type === "place" && sel.id === d.id}">` +
+      `${esc(d.name)}<small>${miles(d.mi)}</small>${d.scen ? `<span class="new">New</span>` : ""}</button></th>`
+    ).join("") + `</tr></thead>`;
+    let body = `<tbody>` + ms.map((it) => {
+      const ev = every(it);
+      const row = `<th scope="row"><button type="button" class="hbtn" data-sel="item:${it.id}" aria-pressed="${sel.type === "item" && sel.id === it.id}">${esc(it.name)}</button>` +
+        `<div class="seg" role="group" aria-label="Where ${esc(it.name)} is sold">` +
+        `<button type="button" data-mode="${it.id}:every" aria-pressed="${ev}">Every location</button>` +
+        `<button type="button" data-mode="${it.id}:some" aria-pressed="${!ev}">Only some</button></div></th>`;
+      const cells = ds.map((d) => {
+        const on = isOn(it, d);
+        const cls = on ? (ev ? "auto" : "listed") : (ev ? "off" : "none");
+        const content = on ? "✓" + (hasOwnPrice(it, d) ? `<small>${money(priceAt(it, d))}</small>` : "") : (ev ? "Off" : "—");
+        const state = on ? (ev ? "on, follows the setting" : "listed here") : (ev ? "turned off here" : "not here");
+        const action = on ? (ev ? "turn it off here" : "remove it here") : (ev ? "turn it back on" : "add it here");
+        return `<td><button type="button" class="cell ${cls}${isStored(it, d) ? " row" : ""}" data-cell="${key(it, d)}" ` +
+          `aria-label="${esc(it.name + " at " + d.name + ": " + state + ". Click to " + action + ".")}">${content}</button></td>`;
+      }).join("");
+      return `<tr>${row}${cells}</tr>`;
+    }).join("") + `</tbody>`;
+    $("menuGrid").innerHTML = head + body;
+  }
+
+  /* ---------- what's stored ---------- */
+  function renderStored() {
+    const ds = delis(), ms = items();
+    const rows = [];
+    ms.forEach((it) => ds.forEach((d) => {
+      const k = key(it, d);
+      if (every(it)) {
+        if (st.off.has(k)) rows.push(`${it.name} · ${d.name} · is_active = false`);
+        else if (st.price.has(k)) rows.push(`${it.name} · ${d.name} · price ${money(st.price.get(k))}`);
+      } else if (st.listed.has(k)) {
+        rows.push(`${it.name} · ${d.name}` + (st.price.has(k) ? ` · price ${money(st.price.get(k))}` : ""));
+      }
+    }));
+    let copies = 0;
+    ms.forEach((it) => ds.forEach((d) => { if (isOn(it, d)) copies++; }));
+    const perNew = ms.filter(every).length;
+    $("stored").innerHTML =
+      `<h3>What's stored</h3>` +
+      `<div><p class="tbl">catalog.items · the setting</p><ul>` +
+        ms.map((it) => `<li>${esc(it.name)} · at_every_location = ${every(it)}</li>`).join("") + `</ul></div>` +
+      `<div><p class="tbl">catalog.availability · ${rows.length} row${rows.length === 1 ? "" : "s"}</p><ul>` +
+        (rows.length ? rows.map((r) => `<li>${esc(r)}</li>`).join("") : `<li class="none">No rows. Every-location items need none.</li>`) + `</ul></div>` +
+      `<p class="cmp">Copying the menu into each deli instead would store <b>${copies}</b> rows, plus <b>${perNew}</b> more for every new deli.</p>`;
+  }
+
+  /* ---------- preview ---------- */
+  function card(it, d) {
+    return `<div class="pc"><div class="t"><span class="nm">${esc(PROD)} <span class="m-cat">${esc(d.name)}</span></span>` +
+      `<span class="own">Their own place</span></div>` +
+      `<span class="meta">Deli · ${miles(d.mi)} · ${money(priceAt(it, d))}</span><span class="av">On the menu</span></div>`;
+  }
+  const saveBtn = (d) => `Add the ${d.name} deli to visit list`;
+
+  function renderItem(it) {
+    const ds = delis();
+    const ev = every(it);
+    const onD = ds.filter((d) => isOn(it, d)).sort((a, b) => a.mi - b.mi);
+    const offD = ev ? ds.filter((d) => !isOn(it, d)) : [];
+    const own = onD.filter((d) => hasOwnPrice(it, d));
+    const why = [];
+
+    why.push(ev
+      ? `<b>Every location.</b> It shows at each deli ${PROD} runs, worked out from the place list, so there's no row per deli.`
+      : `<b>Only some.</b> It's only at delis where a stored row lists it.`);
+
+    let price, note;
+    if (onD.length === 1) { price = money(priceAt(it, onD[0])); note = `at ${onD[0].name}`; }
+    else if (own.length) { price = money(it.price); note = "at most locations · varies"; }
+    else { price = money(it.price); note = onD.length ? `at ${onD.length} locations` : "Not on any menu right now"; }
+
+    let sum, body;
+    if (!onD.length) {
+      body = `<div class="empty"><span>Not on the menu at any ${esc(PROD)} right now.</span></div>`;
+    } else {
+      if (ev && onD.length === ds.length) sum = `All ${ds.length} ${PROD} locations`;
+      else if (onD.length === 1) sum = `Only at ${PROD}, ${onD[0].name}`;
+      else sum = `${onD.length} of ${ds.length} ${PROD} locations`;
+      body = `<span class="loc-sum">${esc(sum)}</span>` + onD.slice(0, 2).map((d) => card(it, d)).join("") +
+        (onD.length > 2 ? `<span class="see-all">See all ${onD.length} →</span>` : "") +
+        (offD.length ? `<p class="far">Not at ${esc(list(offD.map((d) => d.name)))}</p>` : "");
+    }
+
+    if (offD.length) why.push(`Turned off at ${esc(list(offD.map((d) => d.name)))}: one stored row${offD.length > 1 ? " each" : ""} with <code>is_active = false</code>. The list says where it isn't.`);
+    if (own.length) why.push(`${esc(list(own.map((d) => d.name)))} sets its own price with a stored row, so the price line says it varies.`);
+    if (st.sixth) {
+      const s = ds.find((d) => d.scen === "sixth");
+      why.push(isOn(it, s)
+        ? (ev ? `${s.name} just opened and it's already on the menu there. Nothing was copied.` : `${s.name} is listed by hand.`)
+        : (ev ? `${s.name} just opened, but this item is turned off there.` : `${s.name} just opened. Only-some items don't follow new locations, so it isn't there until someone adds it.`));
+    }
+    if (onD.length > 2) why.push(`More than 2 delis have it, so the nearest 2 show and the rest sit behind "See all".`);
+    if (onD.length === 1) why.push(`Only one deli has it, so the button saves that deli.`);
+
+    const btn = onD.length === 1 ? saveBtn(onD[0]) : onD.length ? "Find it nearby" : `Follow ${PROD}`;
+    $("chainMock").innerHTML =
+      `<div class="hero-img k-house">House-made</div><div class="scr">` +
+        `<div><div class="m-name">${esc(it.name)}</div><div class="m-prod">${esc(PROD)} ›</div><div class="m-cat">${esc(it.cat)}</div>` +
+        `</div>` +
+        `<div class="m-price"><b>${price}</b><span>${esc(note)}</span></div>` +
+        `<div class="m-sec"><h4>Where to get it<small>Map →</small></h4>${body}</div>` +
+        `<div class="m-sec"><h4>More from ${esc(PROD)}</h4><div class="tiles"><div></div><div></div><div></div></div></div>` +
+      `</div><div class="m-btn">${esc(btn)}</div>`;
+    $("chainWhy").innerHTML = why.map((w) => `<li>${w}</li>`).join("");
+  }
+
+  function renderPlace(d) {
+    const ds = delis(), ms = items();
+    const menu = ms.filter((it) => isOn(it, d));
+    const missing = ms.filter((it) => every(it) && !isOn(it, d));
+    const where = (it) => ds.filter((q) => isOn(it, q)).length;
+    const followers = menu.filter(every);
+    const listedHere = menu.filter((it) => !every(it));
+    const own = menu.filter((it) => hasOwnPrice(it, d));
+    const why = [];
+
+    why.push(`${followers.length} item${followers.length === 1 ? " follows" : "s follow"} the every-location setting, so ${followers.length === 1 ? "it shows" : "they show"} here without a row for this deli.`);
+    if (d.scen) why.push(`${d.name} was just added. Nothing was copied: the menu is there because ${PROD} runs it.`);
+    if (listedHere.length) why.push(`${esc(list(listedHere.map((it) => it.name)))} ${listedHere.length === 1 ? "is" : "are"} set to only some and listed here with a stored row.`);
+    if (missing.length) why.push(`${esc(list(missing.map((it) => it.name)))} ${missing.length === 1 ? "is" : "are"} turned off here, so ${missing.length === 1 ? "it's" : "they're"} left off this menu.`);
+    if (own.length) why.push(`${esc(list(own.map((it) => it.name)))} uses this deli's own price.`);
+
+    const rows = menu.map((it) => {
+      const tag = every(it) ? "" : where(it) === 1 ? `<span class="tagx">Only here</span>` : `<span class="tagx">Some locations</span>`;
+      return `<div class="menu-row"><span>${esc(it.name)}${tag}</span><b>${money(priceAt(it, d))}</b></div>`;
+    }).join("");
+    $("chainMock").innerHTML =
+      `<div class="hero-img k-place">Deli</div><div class="scr">` +
+        `<div><div class="m-name">${esc(PROD)}</div><div class="m-cat">${esc(d.name)} · Deli · ${miles(d.mi)}</div>` +
+        `<div class="m-prod">Run by ${esc(PROD)} ›</div></div>` +
+        `<div class="m-sec"><h4>Menu<small>${menu.length} item${menu.length === 1 ? "" : "s"}</small></h4>` +
+          (rows ? `<div>${rows}</div>` : `<div class="empty"><span>Nothing on the menu yet.</span></div>`) + `</div>` +
+      `</div><div class="m-btn">${esc(saveBtn(d))}</div>`;
+    $("chainWhy").innerHTML = why.map((w) => `<li>${w}</li>`).join("");
+  }
+
+  function render() {
+    // Fall back to the bagel if the selection was hidden by a switch.
+    const vis = st.sel.type === "item" ? items().find((m) => m.id === st.sel.id) : delis().find((d) => d.id === st.sel.id);
+    if (!vis) st.sel = { type: "item", id: "bagel" };
+    renderGrid();
+    renderStored();
+    if (st.sel.type === "item") renderItem(items().find((m) => m.id === st.sel.id));
+    else renderPlace(delis().find((d) => d.id === st.sel.id));
+  }
+
+  /* ---------- events ---------- */
+  function refocus(attr, val) {
+    const el = document.querySelector(`[${attr}="${val}"]`);
+    if (el) el.focus();
+  }
+  $("menuGrid").addEventListener("click", (e) => {
+    const c = e.target.closest("[data-cell]");
+    if (c) {
+      const k = c.dataset.cell;
+      const [itemId, deliId] = k.split("|");
+      if (st.mode[itemId] === "every") st.off.has(k) ? st.off.delete(k) : st.off.add(k);
+      else st.listed.has(k) ? st.listed.delete(k) : st.listed.add(k);
+      if (!(st.sel.type === "place" && st.sel.id === deliId)) st.sel = { type: "item", id: itemId };
+      render(); refocus("data-cell", k); return;
+    }
+    const m = e.target.closest("[data-mode]");
+    if (m) {
+      const [itemId, mode] = m.dataset.mode.split(":");
+      const it = MENU.find((x) => x.id === itemId);
+      if (mode !== st.mode[itemId]) {
+        if (mode === "some") {
+          // Keep it where it is today: each deli that has it becomes a listed row.
+          const onNow = delis().filter((d) => isOn(it, d));
+          DELIS.forEach((d) => st.listed.delete(key(it, d)));
+          onNow.forEach((d) => st.listed.add(key(it, d)));
+        }
+        DELIS.forEach((d) => st.off.delete(key(it, d)));
+        st.mode[itemId] = mode;
+      }
+      st.sel = { type: "item", id: itemId };
+      render(); refocus("data-mode", m.dataset.mode); return;
+    }
+    const s = e.target.closest("[data-sel]");
+    if (s) {
+      const [type, id] = s.dataset.sel.split(":");
+      st.sel = { type, id };
+      render(); refocus("data-sel", s.dataset.sel);
+    }
+  });
+  SWITCHES.forEach(([id, k]) => {
+    $(id).addEventListener("change", (e) => {
+      const v = e.target.checked;
+      st[k] = v;
+      if (k === "special") st.sel = { type: "item", id: v ? "special" : "bagel" };
+      if (k === "drop") {
+        if (v) { st.mode.bfast = "every"; st.off.add("bfast|rino"); } else st.off.delete("bfast|rino");
+        st.sel = { type: "item", id: "bfast" };
+      }
+      if (k === "pricey") {
+        if (v) st.price.set("lox|cherry", 16); else st.price.delete("lox|cherry");
+        st.sel = { type: "item", id: "lox" };
+      }
+      if (k === "sixth") st.sel = v ? { type: "place", id: "sloans" } : { type: "item", id: "bagel" };
+      render();
+    });
+  });
+  $("cReset").addEventListener("click", () => {
+    st = fresh();
+    SWITCHES.forEach(([id]) => { $(id).checked = false; });
+    render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

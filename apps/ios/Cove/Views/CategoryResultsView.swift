@@ -61,10 +61,10 @@ struct CategoryResultsView: View {
                 .font(.system(size: 36))
                 .foregroundStyle(Color.Colors.Text.tertiary)
             Text("Nothing here yet")
-                .font(Font.custom("Lato-Bold", size: 18))
+                .textStyle(.bodyLG)
                 .foregroundStyle(Color.Colors.Text.primary)
             Text("No items found in \(title).")
-                .font(Font.custom("Lato-Regular", size: 14))
+                .textStyle(.bodySM)
                 .foregroundStyle(Color.Colors.Text.tertiary)
                 .multilineTextAlignment(.center)
         }
@@ -75,13 +75,13 @@ struct CategoryResultsView: View {
     private func errorState(_ message: String) -> some View {
         VStack(spacing: Spacing.md) {
             Text(message)
-                .font(Font.custom("Lato-Regular", size: 14))
+                .textStyle(.bodySM)
                 .foregroundStyle(Color.Colors.Text.tertiary)
                 .multilineTextAlignment(.center)
             Button("Try again") {
                 Task { await viewModel.fetch(forceRefresh: true) }
             }
-            .font(.custom("Lato-Bold", size: 14))
+            .textStyle(.bodySMBold)
             .foregroundStyle(Color.Colors.Brand.accent)
         }
         .padding(Spacing.xl)

@@ -25,21 +25,18 @@ struct InterestOnboardingView: View {
 
     private var headerSection: some View {
         VStack(spacing: Spacing.xl) {
-            Text("Cove.")
-                .font(.custom("Gazpacho-Heavy", size: 40))
-                .foregroundStyle(Color.Colors.Text.primary)
+            Wordmark()
 
             SpectrumDivider()
 
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 Text("What are you into?")
-                    .font(.custom("Gazpacho-Black", size: 28))
-                    .tracking(-1.4) // Figma letter spacing -5% × 28pt
+                    .textStyle(.headingLG)
                     .foregroundStyle(Color.Colors.Text.primary)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 Text("Pick categories that match your style. We'll use them to personalize your home feed.")
-                    .font(.custom("Lato-Regular", size: 14))
+                    .textStyle(.bodySM)
                     .foregroundStyle(Color.Colors.Text.tertiary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -58,12 +55,12 @@ struct InterestOnboardingView: View {
         } else if viewModel.groups.isEmpty {
             Spacer()
             Text("Couldn't load categories.")
-                .font(.custom("Lato-Regular", size: 14))
+                .textStyle(.bodySM)
                 .foregroundStyle(Color.Colors.Text.tertiary)
             Button("Try again") {
                 Task { await viewModel.fetchCategories() }
             }
-            .font(.custom("Lato-Bold", size: 14))
+            .textStyle(.bodySMBold)
             .foregroundStyle(Color.Colors.Brand.accent)
             Spacer()
         } else {
@@ -119,7 +116,7 @@ struct InterestOnboardingView: View {
         VStack(spacing: Spacing.md) {
             if let error = viewModel.serverError {
                 Text(error)
-                    .font(.custom("Lato-Regular", size: 12))
+                    .textStyle(.caption)
                     .foregroundStyle(Color.Colors.Support.Error.fg)
                     .frame(maxWidth: .infinity, alignment: .center)
             }
@@ -140,12 +137,12 @@ struct InterestOnboardingView: View {
                 Task { await viewModel.skip() }
             } label: {
                 Text("Skip for now")
-                    .font(.custom("Lato-Regular", size: 14))
+                    .textStyle(.bodySM)
                     .foregroundStyle(Color.Colors.Text.tertiary)
             }
 
             Text("Don't worry, you can change this later.")
-                .font(.custom("Lato-Regular", size: 12))
+                .textStyle(.caption)
                 .foregroundStyle(Color.Colors.Text.quaternary)
                 .multilineTextAlignment(.center)
         }
@@ -210,7 +207,7 @@ private struct PillGrid: View {
     var body: some View {
         LazyVGrid(columns: columns, spacing: Spacing.sm) {
             ForEach(Array(options.enumerated()), id: \.element.id) { index, option in
-                CategoryPill(
+                Chip(
                     name: option.name,
                     isSelected: selectedIDs.contains(option.id),
                     selectedFill: selectedFill
@@ -225,36 +222,6 @@ private struct PillGrid: View {
             }
         }
         .onAppear { hasAppeared = true }
-    }
-}
-
-// MARK: - CategoryPill
-
-private struct CategoryPill: View {
-    let name: String
-    let isSelected: Bool
-    let selectedFill: Color
-
-    var body: some View {
-        // Text.primary on every fill: white fails WCAG contrast on all six brand colors.
-        Text(name)
-            .font(.custom("Lato-Regular", size: 14))
-            .foregroundStyle(Color.Colors.Text.primary)
-            .lineLimit(1)
-            .minimumScaleFactor(0.85)
-            .padding(.horizontal, Spacing.sm)
-            .padding(.vertical, Spacing.sm)
-            .frame(maxWidth: .infinity)
-            .background(isSelected ? selectedFill : Color.Colors.Fills.quinary)
-            .clipShape(Capsule())
-            .overlay {
-                if !isSelected {
-                    Capsule().stroke(Color.Colors.Strokes.primary.opacity(0.3), lineWidth: 1)
-                }
-            }
-            .contentShape(Capsule())
-            .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
-            .animation(.easeInOut(duration: 0.15), value: isSelected)
     }
 }
 

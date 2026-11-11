@@ -30,7 +30,7 @@ Every item in Cove has at least one image, and most have a small gallery. Those 
 - Cache aggressively at the edge so the cluster doesn't re-do work
 - Stay safe from URL abuse without breaking how `<img>` and `AsyncImage` work
 
-This doc describes the system that delivers all of that. For the broader data model — including the polymorphic `media` table and item/producer/place schema — see [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md); for Postgres mechanics see [Postgres Primer](POSTGRES_PRIMER.md).
+This doc describes the system that delivers all of that. For the broader data model — including the polymorphic `media` table and item/producer/place schema — see [Data Model](DATA_MODEL.md); for Postgres mechanics see [Postgres Primer](POSTGRES_PRIMER.md).
 
 ---
 
@@ -73,7 +73,7 @@ flowchart LR
 
 ## Data model
 
-Images are stored in the polymorphic `catalog.media` table — one row per image, attached to an item, producer (logo), or place (photo) via an exclusive arc. An item's `primary` image is used in every list view; `gallery` images show up on the detail screen carousel. The **canonical table definition lives in [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md)**; this doc covers the storage, transformation, and serving pipeline that sits on top of it.
+Images are stored in the polymorphic `catalog.media` table — one row per image, attached to an item, producer (logo), or place (photo) via an exclusive arc. An item's `primary` image is used in every list view; `gallery` images show up on the detail screen carousel. The **canonical table definition lives in [Data Model](DATA_MODEL.md)**; this doc covers the storage, transformation, and serving pipeline that sits on top of it.
 
 The fields this pipeline relies on: `media_key` (the content-addressed Garage object key), `role` (`primary` / `gallery` / `logo`), `sort_order` (carousel order), `alt_text`, and source `width`/`height` (layout hints for the client).
 
@@ -383,7 +383,7 @@ This is the most nuanced part of the architecture. Image URLs need to coexist wi
 
 1. **Cloudflare wants to cache by URL.** Per-user URLs destroy hit rate.
 2. **`<img src>` and `AsyncImage` don't add auth headers.** Custom URLSession wiring at every image-loading site is unworkable.
-3. **The catalog is a marketplace.** Item images are inherently meant to be seen by potential buyers.
+3. **The catalog is public.** Item images are meant to be seen by anyone discovering what's nearby.
 
 ### The four options
 
@@ -410,7 +410,7 @@ The implementation is straightforward: `cove-catalog` checks the item state when
 
 Image **URLs** are public; the **API that produces them** is not. To discover an item image's URL, a client must first call `/items/search` or `/items/{id}` with a valid Firebase ID Token. The Bearer-token check at `cove-api` happens *before* the URL is returned.
 
-Once a URL is in hand, anyone can fetch the bytes — but the URL is unguessable (HMAC-SHA256 signature), and you can't enumerate them without going through the authenticated API. This is the same pattern Etsy, Shopify places, Amazon product images, and every major marketplace uses. Authenticated image serving is reserved for things like medical records, financial documents, and other categories where bytes leaking would be a real harm — not for item catalog images.
+Once a URL is in hand, anyone can fetch the bytes — but the URL is unguessable (HMAC-SHA256 signature), and you can't enumerate them without going through the authenticated API. This is the same pattern Etsy, Shopify storefronts, Amazon product images, and every major marketplace uses. Authenticated image serving is reserved for things like medical records, financial documents, and other categories where bytes leaking would be a real harm — not for item catalog images.
 
 ---
 
@@ -525,7 +525,7 @@ Each of these can slot in without disturbing the v1 architecture — add a new e
 
 ## References
 
-- [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md) — the canonical data model (service layout, schema, polymorphic media table)
+- [Data Model](DATA_MODEL.md) — the canonical data model (service layout, schema, polymorphic media table)
 - [Postgres Primer](POSTGRES_PRIMER.md) — Postgres mechanics
 - [Backend Infrastructure](BACKEND_INFRASTRUCTURE.md) — cluster topology, deployment, Garage
 - [imgproxy documentation](https://docs.imgproxy.net/) — full options reference, signing details, deployment guides

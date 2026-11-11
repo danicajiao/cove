@@ -70,7 +70,7 @@ Glob: apps/ios/Cove/Views/**/*.swift          → find similar screens for struc
 Glob: apps/ios/Cove/View Models/*.swift       → find existing ViewModels that may cover data needs
 Glob: apps/ios/Cove/Components/**/*.swift     → find reusable components (buttons, cards, headers, etc.)
 Grep: "Color.Colors"                 → confirm available color token names in use
-Grep: "Font.custom"                  → confirm available font names and sizes
+Grep: "textStyle("                  → confirm the text styles in use (Constants/TextStyle.swift)
 ```
 
 Identify:
@@ -220,7 +220,7 @@ This agent runs in an isolated git worktree — the branch was already renamed i
 | Find existing views | `Glob` → `apps/ios/Cove/Views/**/*.swift` |
 | Find existing ViewModels | `Glob` → `apps/ios/Cove/View Models/*.swift` |
 | Find reusable components | `Glob` → `apps/ios/Cove/Components/**/*.swift` |
-| Search for token usage | `Grep` for `Color.Colors` or `Font.custom` |
+| Search for token usage | `Grep` for `Color.Colors` or `textStyle(` |
 | Write new files | `Write` |
 | Edit existing files | `Edit` |
 | Build the project | `mcp__xcode__BuildProject` |

@@ -33,7 +33,8 @@ Welcome to the documentation for the Cove iOS app.
 
 ### Backend Architecture
 - **[Backend Infrastructure](BACKEND_INFRASTRUCTURE.md)** - K3s cluster, the `cove-api` gateway, Cloudflare Tunnel, and migration phases (Phases 0–3 complete)
-- **[Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md)** - The canonical data model: producer/place/item entities, the trust signal system, composite scoring, geospatial discovery, schemas, and the discovery query
+- **[Data Model](DATA_MODEL.md)** - The canonical data model: producer/place/item entities, the trust signal system, composite scoring, geospatial discovery, schemas, and the discovery query
+- **[Item Availability](ITEM_AVAILABILITY.md)** - Planned, not built: item kinds (goods, house-made, one of a kind), chain menus, secondhand items, brands and unknown makers, the place list on Item Details, and visit lists. [Interactive version](ITEM_AVAILABILITY.html) (open in a browser)
 - **[Homelab Layout for Cove](HOMELAB_COVE_LAYOUT.md)** - Where Cove's backend services and platform operators live in the [`homelab`](https://github.com/danicajiao/homelab) repo
 
 ### Backend Reference
@@ -72,10 +73,13 @@ Welcome to the documentation for the Cove iOS app.
 → Read [Backend Infrastructure](BACKEND_INFRASTRUCTURE.md)
 
 ### I want to understand the data layer
-→ Read [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md)
+→ Read [Data Model](DATA_MODEL.md)
 
 ### I'm working on schema or backend service work
-→ Read [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md) for the data model, then [Postgres Primer](POSTGRES_PRIMER.md) for Postgres mechanics
+→ Read [Data Model](DATA_MODEL.md) for the entities and schemas, then [Postgres Primer](POSTGRES_PRIMER.md) for Postgres mechanics
+
+### I'm working on Item Details, item kinds, or where an item is sold
+→ Read [Data Model](DATA_MODEL.md) for the entities, then [Item Availability](ITEM_AVAILABILITY.md)
 
 ### I'm working on image uploads, serving, or anything imgproxy-related
 → Read [Media Architecture](MEDIA_ARCHITECTURE.md)
@@ -88,4 +92,4 @@ Welcome to the documentation for the Cove iOS app.
 
 ---
 
-**Last Updated**: June 2026
+**Last Updated**: November 2026
