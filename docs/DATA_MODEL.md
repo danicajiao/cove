@@ -1,4 +1,4 @@
-# Marketplace Architecture
+# Data Model
 
 > **Status:** Canonical data-model + services document (October 2026). This revision describes the producer/place model from epic #393, including the split of `cove-item` into `cove-catalog` and `cove-directory` (#413); the gateway, CI and homelab changes land in #398, #415 and #416. Phase 3 is complete — `cove-catalog` and `cove-user` are deployed to `cove-staging` (prod promotion follows the integration-branch merge to `main`) and the iOS app calls them via the cove-api gateway. Firebase Firestore and Storage have been retired. For cluster and phase plan see [Backend Infrastructure](BACKEND_INFRASTRUCTURE.md); for Postgres mechanics see [Postgres Primer](POSTGRES_PRIMER.md); for the image pipeline see [Media Architecture](MEDIA_ARCHITECTURE.md).
 

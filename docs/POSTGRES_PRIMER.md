@@ -22,13 +22,13 @@ Assumed starting point: comfortable with Firestore, new to relational databases.
 
 ## The database layout
 
-Cove runs one CNPG `Cluster` (`cove-db`) hosting a single database (`cove`). Inside that database, each service owns its own schema (`directory`, `catalog`, `user`). This primer covers the Postgres *mechanics* those schemas rely on; the **canonical schema, entities, and service ownership live in [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md)** — refer there for the actual table definitions. The examples below are illustrative.
+Cove runs one CNPG `Cluster` (`cove-db`) hosting a single database (`cove`). Inside that database, each service owns its own schema (`directory`, `catalog`, `user`). This primer covers the Postgres *mechanics* those schemas rely on; the **canonical schema, entities, and service ownership live in [Data Model](DATA_MODEL.md)** — refer there for the actual table definitions. The examples below are illustrative.
 
 Each service connects with a Postgres role whose `search_path` is set to its own schema, so application queries stay unqualified — `SELECT * FROM items` inside `cove-catalog` works without ever typing `catalog.items`. Cross-schema references (e.g., `user.favorites` → `catalog.items`, `catalog.items.producer_id` → `directory.producers`) use real foreign keys, since all schemas live in the same database.
 
 ### Why one cluster, not one per service
 
-The microservices-textbook answer is "one database per service." That trade-off is correct at FAANG scale where per-service teams, failure-isolation budgets, and compliance boundaries all matter. None of those conditions apply at Cove's v1 scale (one developer, one node, one product surface). What does apply is the cost of giving up referential integrity, JOINs, and atomic writes — every user-centric feature becomes a distributed systems problem when its references cross cluster boundaries. One cluster with schemas keeps logical service ownership while preserving Postgres's relational guarantees. See [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md) for the full rationale.
+The microservices-textbook answer is "one database per service." That trade-off is correct at FAANG scale where per-service teams, failure-isolation budgets, and compliance boundaries all matter. None of those conditions apply at Cove's v1 scale (one developer, one node, one product surface). What does apply is the cost of giving up referential integrity, JOINs, and atomic writes — every user-centric feature becomes a distributed systems problem when its references cross cluster boundaries. One cluster with schemas keeps logical service ownership while preserving Postgres's relational guarantees. See [Data Model](DATA_MODEL.md) for the full rationale.
 
 Compare to Firestore:
 
@@ -59,7 +59,7 @@ SHOW search_path;
 -- "$user", public
 ```
 
-**How Cove uses this:** CNPG provisions the `cove` database, then bootstrap migrations create the per-service schemas plus a role per service, each with its `search_path` scoped to its own schema (so application queries stay unqualified — `SELECT * FROM items` resolves inside `cove-catalog`). Extensions like `ltree` and `postgis` live in `public` so they're reachable from any schema. The full bootstrap (schemas, roles, cross-schema grants) is in [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md); the mechanic to understand here is `search_path`:
+**How Cove uses this:** CNPG provisions the `cove` database, then bootstrap migrations create the per-service schemas plus a role per service, each with its `search_path` scoped to its own schema (so application queries stay unqualified — `SELECT * FROM items` resolves inside `cove-catalog`). Extensions like `ltree` and `postgis` live in `public` so they're reachable from any schema. The full bootstrap (schemas, roles, cross-schema grants) is in [Data Model](DATA_MODEL.md); the mechanic to understand here is `search_path`:
 
 ```sql
 -- A role whose unqualified queries resolve against its own schema first
@@ -519,7 +519,7 @@ ORDER BY distance_m;
 
 ### Infra note
 
-PostGIS is **not** bundled in vanilla Postgres images the way `ltree` is — it must be installed and the extension enabled. On the homelab CNPG cluster this means using a PostGIS-enabled image and declaring the extension before any geospatial schema work. See [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md) for how the discovery query blends `ST_DWithin` proximity with full-text relevance and trust scoring.
+PostGIS is **not** bundled in vanilla Postgres images the way `ltree` is — it must be installed and the extension enabled. On the homelab CNPG cluster this means using a PostGIS-enabled image and declaring the extension before any geospatial schema work. See [Data Model](DATA_MODEL.md) for how the discovery query blends `ST_DWithin` proximity with full-text relevance and trust scoring.
 
 ---
 

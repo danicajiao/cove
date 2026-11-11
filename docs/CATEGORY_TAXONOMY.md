@@ -468,6 +468,6 @@ Defined in:
 
 ## References
 
-- [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md) — schema overview, ltree mechanics, attributes vs categories
+- [Data Model](DATA_MODEL.md) — schema overview, ltree mechanics, attributes vs categories
 - [Postgres Primer](POSTGRES_PRIMER.md) — ltree operator reference
 - [Database Migrations](DATABASE_MIGRATIONS.md) — how to run migrations against staging

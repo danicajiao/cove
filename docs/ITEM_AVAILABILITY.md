@@ -1,6 +1,6 @@
 # Item Availability
 
-> **Status:** Proposal (November 2026). Nothing here is built yet. This document extends the producer, place and item model in [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md). It covers how an item is sold, which places have it, and what Item Details shows as a result. [ITEM_AVAILABILITY.html](ITEM_AVAILABILITY.html) is an interactive version with example data: an explorer for Item Details and a chain menu grid. Open it in a browser, since GitHub shows HTML files as source.
+> **Status:** Proposal (November 2026). Nothing here is built yet. This document extends the producer, place and item model in [Data Model](DATA_MODEL.md). It covers how an item is sold, which places have it, and what Item Details shows as a result. [ITEM_AVAILABILITY.html](ITEM_AVAILABILITY.html) is an interactive version with example data: an explorer for Item Details and a chain menu grid. Open it in a browser, since GitHub shows HTML files as source.
 
 ## Contents
 
@@ -13,7 +13,7 @@
 - [The place list on Item Details](#the-place-list-on-item-details)
 - [Visit lists](#visit-lists)
 - [Schema changes](#schema-changes)
-- [Changes to Marketplace Architecture](#changes-to-marketplace-architecture)
+- [Changes to the Data Model doc](#changes-to-the-data-model-doc)
 - [Decisions and open questions](#decisions-and-open-questions)
 
 ---
@@ -49,7 +49,7 @@ See [Schema changes](#schema-changes).
 | **Item** | `catalog.items` | One thing a producer makes. Every item has one, even if it's the shared Unknown maker (see [Brands and unknown makers](#brands-and-unknown-makers)). It has one kind. |
 | **Availability** | `catalog.availability` | Links an item to a place that has it, with that place's price, whether it's new or secondhand, and when locals last saw it there. |
 
-A business that both makes and sells is two records: Thump the producer and Thump the café. That's what lets Thump open a second café, lets Onyx run eight, and fits places that make nothing (a gallery) and producers with no place (an artist). [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md#producer-run-places) explains the same split with New Belgium.
+A business that both makes and sells is two records: Thump the producer and Thump the café. That's what lets Thump open a second café, lets Onyx run eight, and fits places that make nothing (a gallery) and producers with no place (an artist). [Data Model](DATA_MODEL.md#producer-run-places) explains the same split with New Belgium.
 
 ---
 
@@ -99,7 +99,7 @@ Edge cases:
 | A pair of 90s Levi's 501s | Levi's, a community-started page | Goods | Each shop with a pair, its row marked secondhand |
 | A hand-carved chair, maker unknown | Unknown maker | One of a kind | The shop that has it, until it sells |
 
-Onyx is in Arizona. Its places illustrate how this works once Cove covers more than one city. In v1, every place is in the Denver metro area ([Geospatial gate](MARKETPLACE_ARCHITECTURE.md#geospatial-the-local-availability-gate)).
+Onyx is in Arizona. Its places illustrate how this works once Cove covers more than one city. In v1, every place is in the Denver metro area ([Geospatial gate](DATA_MODEL.md#geospatial-the-local-availability-gate)).
 
 ---
 
@@ -167,7 +167,7 @@ Availability gets three fields for this:
 - **`quantity`:** optional.
 - **`note`:** a short note for size or condition.
 
-A shop with three pairs in different sizes is still one row ("W30–W34, from $68"), which keeps the one-row-per-item-per-place key. These fields record what a listing or a local reported, not live stock: Cove doesn't track inventory or model SKUs ([what's not modeled](MARKETPLACE_ARCHITECTURE.md#what-is-deliberately-not-modeled)).
+A shop with three pairs in different sizes is still one row ("W30–W34, from $68"), which keeps the one-row-per-item-per-place key. These fields record what a listing or a local reported, not live stock: Cove doesn't track inventory or model SKUs ([what's not modeled](DATA_MODEL.md#what-is-deliberately-not-modeled)).
 
 **Secondhand sightings go stale faster.** Vintage stock turns over in days. A secondhand sighting older than about **2 weeks** shows "May have sold · last seen 3 weeks ago". A new-stock sighting waits about **4 weeks** before it shows as "Last seen here".
 
@@ -179,7 +179,7 @@ A shop with three pairs in different sizes is still one row ("W30–W34, from $6
 
 Every item has a producer:
 
-- **Brands are producers.** DWR and Levi's get producer pages like any other maker. The community can start a page, and the business claims it later, using the provenance and claim fields planned in [Listings and ownership](MARKETPLACE_ARCHITECTURE.md#listings-and-ownership). Until a claim, Cove verifies any trust signals on the page, as it does for every listing.
+- **Brands are producers.** DWR and Levi's get producer pages like any other maker. The community can start a page, and the business claims it later, using the provenance and claim fields planned in [Listings and ownership](DATA_MODEL.md#listings-and-ownership). Until a claim, Cove verifies any trust signals on the page, as it does for every listing.
 - **Unknown makers share one fallback producer, Unknown maker.** It has no page and stays out of producer listings and trust scoring. On Item Details the producer line shows "Maker unknown" as plain text.
 - **With no producer page**, "More at" the place replaces "More from" ("More at Loft 54"). Trust signals come from the place, and the top verification level is "Verified by" a place that has the item.
 
@@ -192,7 +192,7 @@ Whether community-started pages cover individual makers is still open. Today an 
 - **Every place shows, nearest first.** Places within 25 mi come first. Places farther away still show as cards, but below a "More than 25 mi away" divider, with dashed borders and their distance highlighted. The list shows up to 2 far places and ends in "See all" when there are more.
 - **Opened from a place:** the price line uses that place's price ("$24 at Thump"), the list becomes "Also nearby" or "Other Onyx locations" and leaves out the place you came from, and the main button saves that place.
 - **No list price** (common for secondhand): the price line starts from the cheapest place, "From $450".
-- **Sightings:** each card says how fresh its information is ("Seen here by 6 locals · 2 days ago"), using the stale windows above. Sightings depend on community contributions, which are planned for v3 ([Out of scope for v1](MARKETPLACE_ARCHITECTURE.md#out-of-scope-for-v1)). Until then, cards show what the listing says.
+- **Sightings:** each card says how fresh its information is ("Seen here by 6 locals · 2 days ago"), using the stale windows above. Sightings depend on community contributions, which are planned for v3 ([Out of scope for v1](DATA_MODEL.md#out-of-scope-for-v1)). Until then, cards show what the listing says.
 - **Distances come from the area being browsed.** Onboarding asks for location services, and by default distances and ranking use where the person is. Someone can browse another area instead, like New York while planning a trip, and distances follow that area. Items, places and producers don't show a "Local" tag: being local is expressed through distance and ranking, not a badge.
 
 In v1 all places are in the Denver metro area, so the far divider mostly matters for places at its edges, like Boulder or Castle Rock. It matters more once Cove covers several cities, which is also when browsing another city becomes useful.
@@ -283,13 +283,13 @@ Rules that a column can't express:
 
 ---
 
-## Changes to Marketplace Architecture
+## Changes to the Data Model doc
 
-If this proposal is accepted, [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md), the canonical data-model doc, needs these updates:
+If this proposal is accepted, [Data Model](DATA_MODEL.md), the canonical data-model doc, needs these updates:
 
-- **Brands become producers.** Its [Brands and secondhand items](MARKETPLACE_ARCHITECTURE.md#brands-and-secondhand-items) section says a brand is a producer only when it carries trust signals, and that secondhand items can have no producer. Here every item has a producer: brands get community-started pages, and unknown makers use the shared Unknown maker. `items.brand` is retired.
+- **Brands become producers.** Its [Brands and secondhand items](DATA_MODEL.md#brands-and-secondhand-items) section says a brand is a producer only when it carries trust signals, and that secondhand items can have no producer. Here every item has a producer: brands get community-started pages, and unknown makers use the shared Unknown maker. `items.brand` is retired.
 - **Item kinds and the location setting** join the entity model, along with the new `availability` columns and the `catalog.item_places` view, which the discovery query should join through.
-- **Visit lists come back.** Version 3.0 of that doc [removed the visit list](MARKETPLACE_ARCHITECTURE.md#revision-history); `profile.visit_lists` and `profile.visit_list_places` add it back.
+- **Visit lists come back.** Version 3.0 of that doc [removed the visit list](DATA_MODEL.md#revision-history); `profile.visit_lists` and `profile.visit_list_places` add it back.
 
 ---
 

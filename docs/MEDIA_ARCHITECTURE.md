@@ -30,7 +30,7 @@ Every item in Cove has at least one image, and most have a small gallery. Those 
 - Cache aggressively at the edge so the cluster doesn't re-do work
 - Stay safe from URL abuse without breaking how `<img>` and `AsyncImage` work
 
-This doc describes the system that delivers all of that. For the broader data model — including the polymorphic `media` table and item/producer/place schema — see [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md); for Postgres mechanics see [Postgres Primer](POSTGRES_PRIMER.md).
+This doc describes the system that delivers all of that. For the broader data model — including the polymorphic `media` table and item/producer/place schema — see [Data Model](DATA_MODEL.md); for Postgres mechanics see [Postgres Primer](POSTGRES_PRIMER.md).
 
 ---
 
@@ -73,7 +73,7 @@ flowchart LR
 
 ## Data model
 
-Images are stored in the polymorphic `catalog.media` table — one row per image, attached to an item, producer (logo), or place (photo) via an exclusive arc. An item's `primary` image is used in every list view; `gallery` images show up on the detail screen carousel. The **canonical table definition lives in [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md)**; this doc covers the storage, transformation, and serving pipeline that sits on top of it.
+Images are stored in the polymorphic `catalog.media` table — one row per image, attached to an item, producer (logo), or place (photo) via an exclusive arc. An item's `primary` image is used in every list view; `gallery` images show up on the detail screen carousel. The **canonical table definition lives in [Data Model](DATA_MODEL.md)**; this doc covers the storage, transformation, and serving pipeline that sits on top of it.
 
 The fields this pipeline relies on: `media_key` (the content-addressed Garage object key), `role` (`primary` / `gallery` / `logo`), `sort_order` (carousel order), `alt_text`, and source `width`/`height` (layout hints for the client).
 
@@ -525,7 +525,7 @@ Each of these can slot in without disturbing the v1 architecture — add a new e
 
 ## References
 
-- [Marketplace Architecture](MARKETPLACE_ARCHITECTURE.md) — the canonical data model (service layout, schema, polymorphic media table)
+- [Data Model](DATA_MODEL.md) — the canonical data model (service layout, schema, polymorphic media table)
 - [Postgres Primer](POSTGRES_PRIMER.md) — Postgres mechanics
 - [Backend Infrastructure](BACKEND_INFRASTRUCTURE.md) — cluster topology, deployment, Garage
 - [imgproxy documentation](https://docs.imgproxy.net/) — full options reference, signing details, deployment guides
