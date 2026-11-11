@@ -124,6 +124,8 @@ migrate \
   down 1
 ```
 
+> **Rolling back cove-user `000002_guest_profiles` deletes data.** `username` can't go back to `NOT NULL` while guest rows exist, so the down migration deletes every `profile.users` row with no username first. Their flags, favorites, follows, interests and activity cascade with them. Rolling back `000003_guest_last_seen` only drops `last_seen_at` and its index.
+
 ### Check current version
 
 ```bash

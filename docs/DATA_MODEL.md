@@ -204,10 +204,10 @@ Platform-level admin (Cove internal staff who can manage any listing) is handled
 
 | Service | Path | Responsibility |
 |---|---|---|
-| `cove-api` | `services/cove-api/` | Single ingress (BFF gateway). Validates Firebase ID tokens, routes to backend services, forwards UID via `X-Cove-Uid`. |
+| `cove-api` | `services/cove-api/` | Single ingress (BFF gateway). Validates Firebase ID tokens, routes to backend services, forwards UID via `X-Cove-Uid` and guest status via `X-Cove-Guest`. |
 | `cove-catalog` | `services/cove-catalog/` | Categories, items, availability, trust signals, media metadata, and the discovery endpoint (`GET /discovery`). Owns the `catalog` schema; reads `directory` for discovery. |
 | `cove-directory` | `services/cove-directory/` | Producers, places and place categories: `GET /producers/{id}`, `GET /places/{id}`, and next places by category and places for you. Owns the `directory` schema; reads `catalog` for signals, items sold at a place, and category matching. Self-serve onboarding and listing management land here later. |
-| `cove-user` | `services/cove-user/` | User profiles, interest management, `GET /recommendations/categories` (level 1 home shelf ranking), `POST /users/me/activity` (attention activity). Visit lists are planned here. |
+| `cove-user` | `services/cove-user/` | User profiles (including guest profiles and their daily cleanup), interest management, `GET /recommendations/categories` (level 1 home shelf ranking), `POST /users/me/activity` (attention activity). Visit lists are planned here. |
 | `cove-media` | `services/cove-media/` | Authenticated image uploads to Garage and signed-URL fetch via imgproxy. Stateless. |
 **Ownership rule:** each service writes only its own schema. Reads across schemas are allowed and granted explicitly: `cove-catalog` reads `directory` for discovery, `cove-directory` reads `catalog` for place and producer pages, and `cove-user` reads both. Directory data is seeded by migrations until community listings ship; see [Listings and ownership](#listings-and-ownership).
 
@@ -734,11 +734,16 @@ Planned additions ([Item Availability](ITEM_AVAILABILITY.md#schema-changes)): `k
 
 ```sql
 CREATE TABLE profile.users (
-    id         uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-    auth_uid   text        NOT NULL UNIQUE,         -- Firebase Auth UID
-    username   text        NOT NULL UNIQUE,
-    created_at timestamptz NOT NULL DEFAULT now()
+    id           uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    auth_uid     text        NOT NULL UNIQUE,         -- Firebase Auth UID
+    username     text        UNIQUE,                  -- NULL for a guest, and for a linked guest who hasn't picked one yet
+    created_at   timestamptz NOT NULL DEFAULT now(),
+    is_guest     boolean     NOT NULL DEFAULT false,  -- anonymous Firebase user; cleared once a real login is linked
+    last_seen_at timestamptz NOT NULL DEFAULT now()   -- latest day with an authenticated request (written at most once a day)
 );
+
+-- Guest cleanup (cove-user cleanup-guests) only scans guests.
+CREATE INDEX users_guest_last_seen_idx ON profile.users (last_seen_at) WHERE is_guest;
 
 -- Per-user flags. A row's presence is the flag; new flags need no schema change.
 -- Current flags: interests_onboarded (set by PUT /users/me/interests).
@@ -796,6 +801,8 @@ CREATE INDEX ON profile.activity (user_id, category_id) WHERE category_id IS NOT
 CREATE INDEX ON profile.activity (user_id, item_id)     WHERE item_id     IS NOT NULL;
 ```
 
+**Guest profiles** (cove-user migrations `000002_guest_profiles` and `000003_guest_last_seen`). A guest is a Firebase anonymous user with a `profile.users` row that has `is_guest = true` and no username; `UNIQUE` allows any number of `NULL` usernames. Guests can save interests and activity but not favorites or follows (cove-user returns 403 `account_required`). Signing up links a real login to the same Firebase UID, so the row carries over: `is_guest` is cleared and the username is set with `PATCH /users/me`. Guests with no username and a `last_seen_at` more than 30 days old are deleted daily, and their flags, interests and activity cascade with them. See [Guest identity](BACKEND_INFRASTRUCTURE.md#guest-identity).
+
 Planned ([Visit lists](ITEM_AVAILABILITY.md#visit-lists)): `profile.visit_lists` and `profile.visit_list_places`. People can make as many visit lists as they want, each with an optional city, and a saved place remembers the item it was saved from. Favorites stay for items, and follows for keeping up with a producer or place.
 
 ---
@@ -846,7 +853,7 @@ sequenceDiagram
     iOS->>CF: GET /discovery?q=ceramics&lat=..&lon=..&radius=20mi<br/>Authorization: Bearer {Firebase ID Token}
     CF->>API: forward request
     API->>API: validate Firebase ID token
-    API->>Item: route /discovery · inject X-Cove-Uid
+    API->>Item: route /discovery · inject X-Cove-Uid, X-Cove-Guest
     Item->>Item: discovery query<br/>items ⋈ producers ⋈ availability ⋈ places<br/>(trust + proximity + relevance)
     Item->>Item: resolve signals · sign imgproxy URLs for media
     Item-->>iOS: HTTP 200 — results
@@ -867,7 +874,7 @@ let results = try response.ok.body.json
 
 ViewModels never call the network directly. They depend on repository protocols (`ItemRepository`, `UserRepository`, `FavoritesRepository`, `ImageRepository`) whose active implementations are backed by the generated `CoveAPIClient` (`CoveAPIItemRepository`, `CoveAPIUserRepository`, `CoveAPIFavoritesRepository`, `CoveAPIImageRepository`). The abstraction was introduced in Phase 0 (#222–#227) to swap Firebase implementations for REST-backed ones at the DI site without touching ViewModels. See [iOS App Architecture](IOS_APP_ARCHITECTURE.md) for the full repository layer, the generated-client pipeline, and `FirebaseAuthMiddleware`.
 
-**Categories are API-driven** — the Firestore-era `ProductTypes.swift` enum (three hardcoded document IDs) was removed in Phase 3. `InterestOnboardingView` reads the tree from `GET /categories` and writes picks to `profile.interests` via `POST /users/me/interests`; the homepage renders `CategoryCard`s from `GET /recommendations/categories`; tapping one triggers `GET /discovery?category=<path>&lat=...` into `CategoryResultsView`.
+**Categories are API-driven** — the Firestore-era `ProductTypes.swift` enum (three hardcoded document IDs) was removed in Phase 3. `InterestOnboardingView` reads the tree from `GET /categories` and writes picks to `profile.interests` via `PUT /users/me/interests`; the homepage renders `CategoryCard`s from `GET /recommendations/categories`; tapping one triggers `GET /discovery?category=<path>&lat=...` into `CategoryResultsView`.
 
 ---
 
@@ -946,3 +953,4 @@ Items still open:
 - **Version 6.2** (October 2026) — **cove-user rename (#397).** `profile.activity.event_type` → `activity_type`; follows target `producer_id` / `place_id`; `profile.user_flags` folded into cove-user's first migration and documented in the `profile` schema.
 - **Version 6.3** (November 2026) — **Listings and ownership.** Added the planned model for community listings, claiming and owner administration (Product Brief A10 to A12). `profile.memberships` became `directory.memberships`, keyed on `user_id`, so `cove-directory` keeps to the ownership rule. Listing moderation now ships before community submissions, ahead of the v3 contributions work.
 - **Version 7.0** (November 2026) — **Data Model.** Renamed from Marketplace Architecture, since Cove doesn't sell anything. Added the planned model from [Item Availability](ITEM_AVAILABILITY.md): item kinds (goods, house-made, one of a kind) with the every-location setting and the `catalog.item_places` view; secondhand copies as Goods, with the condition on the availability row; brands as producers with community-started pages, a shared Unknown maker, a required `items.producer_id` and no `items.brand`; visit lists back in `profile` (removed in 3.0); and distance measured from the area being browsed, with no Local badge.
+- **Version 7.1** (November 2026) — **Guest browsing (epic #430).** `profile.users.username` became nullable, and `is_guest` and `last_seen_at` were added with the partial index `users_guest_last_seen_idx`, for guest profiles and their 30-day cleanup. `cove-api` forwards `X-Cove-Guest`.
