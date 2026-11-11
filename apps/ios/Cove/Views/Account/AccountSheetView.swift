@@ -16,10 +16,19 @@ struct AccountSheetView: View {
 
     let prompt: AccountPrompt
 
+    /// The step the sheet is sized for. Changes before `visibleStep` when the
+    /// sheet resizes.
     @State private var step: Step
+    /// The step on screen. `nil` while the sheet resizes between steps.
+    @State private var visibleStep: Step?
+    @State private var isTransitioning = false
     @State private var promptHeight: CGFloat = 460
+    /// The sheet's allowed sizes and the current one. Normally a single size;
+    /// both sizes are allowed only while animating from one to the other.
+    @State private var detents: Set<PresentationDetent>
+    @State private var selectedDetent: PresentationDetent
 
-    private enum Step {
+    private enum Step: Equatable {
         case prompt
         case signup
         case login
@@ -27,11 +36,16 @@ struct AccountSheetView: View {
 
     init(prompt: AccountPrompt) {
         self.prompt = prompt
-        switch prompt {
-        case .createAccount: _step = State(initialValue: .signup)
-        case .logIn: _step = State(initialValue: .login)
-        case .favorite, .follow: _step = State(initialValue: .prompt)
+        let initial: Step = switch prompt {
+        case .createAccount: .signup
+        case .logIn: .login
+        case .favorite, .follow: .prompt
         }
+        let detent: PresentationDetent = initial == .prompt ? .height(460) : .large
+        _step = State(initialValue: initial)
+        _visibleStep = State(initialValue: initial)
+        _detents = State(initialValue: [detent])
+        _selectedDetent = State(initialValue: detent)
     }
 
     /// True once a login is linked or signed in and the account still needs a
@@ -45,15 +59,25 @@ struct AccountSheetView: View {
     }
 
     var body: some View {
-        content
-            .animation(.default, value: step)
-            .animation(.default, value: appState.authState)
-            // One detent per state, so the sheet resizes to it on its own: the
-            // prompt fits its content, the forms and onboarding go full height.
-            .presentationDetents(showsPrompt ? [.height(promptHeight)] : [.large])
-            .presentationDragIndicator(showsPrompt ? .visible : .hidden)
-            .presentationBackground(Color.Colors.Backgrounds.primary)
-            .interactiveDismissDisabled(isOnboarding)
+        ZStack(alignment: .top) {
+            content
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .animation(Self.fade, value: appState.authState)
+        .presentationDetents(detents, selection: $selectedDetent)
+        .presentationDragIndicator(showsPrompt ? .visible : .hidden)
+        .presentationBackground(Color.Colors.Backgrounds.primary)
+        .interactiveDismissDisabled(isOnboarding)
+        .onChange(of: promptHeight) { _, height in
+            // Fit the prompt to its measured height. Not animated: it only
+            // changes as the sheet first appears.
+            guard step == .prompt, !isTransitioning else { return }
+            setDetent(.height(height))
+        }
+        .onChange(of: isOnboarding) { _, onboarding in
+            guard onboarding, selectedDetent != .large else { return }
+            Task { await resize(to: .large) }
+        }
     }
 
     @ViewBuilder
@@ -66,31 +90,90 @@ struct AccountSheetView: View {
             InterestOnboardingView(appState: appState)
                 .transition(.opacity)
         default:
-            switch step {
+            switch visibleStep {
+            case nil:
+                EmptyView()
             case .prompt:
                 AccountPromptContent(
                     prompt: prompt,
-                    onSignUpWithEmail: { step = .signup },
-                    onLogIn: { step = .login },
+                    onSignUpWithEmail: { go(to: .signup) },
+                    onLogIn: { go(to: .login) },
                     onNotNow: { appState.cancelAccountPrompt() }
                 )
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { promptHeight = $0 }
                 .transition(.opacity)
             case .signup:
-                SignupView(onBack: back, onNavigateToLogin: { step = .login })
+                SignupView(onBack: back, onNavigateToLogin: { go(to: .login) })
                     .transition(.opacity)
             case .login:
-                LoginView(onBack: back, onNavigateToSignup: { step = .signup })
+                LoginView(onBack: back, onNavigateToSignup: { go(to: .signup) })
                     .transition(.opacity)
             }
         }
+    }
+
+    // MARK: - Transitions
+
+    private static let fade = Animation.easeInOut(duration: 0.2)
+    private static let resizeAnimation = Animation.smooth(duration: 0.35)
+
+    private func detent(for step: Step) -> PresentationDetent {
+        step == .prompt ? .height(promptHeight) : .large
+    }
+
+    /// Moves to another step. When the sheet changes size (the prompt to a
+    /// form or back), it runs in three parts so nothing moves while visible:
+    /// fade the current step out, animate the empty sheet to its new size,
+    /// fade the next step in. Between sign-up and log in, both full height,
+    /// it's a plain crossfade.
+    private func go(to newStep: Step) {
+        guard !isTransitioning, newStep != step else { return }
+
+        guard detent(for: newStep) != detent(for: step) else {
+            withAnimation(Self.fade) {
+                step = newStep
+                visibleStep = newStep
+            }
+            return
+        }
+
+        isTransitioning = true
+        withAnimation(Self.fade) {
+            visibleStep = nil
+        } completion: {
+            Task { @MainActor in
+                step = newStep
+                await resize(to: detent(for: newStep))
+                withAnimation(Self.fade) { visibleStep = newStep }
+                isTransitioning = false
+            }
+        }
+    }
+
+    /// Animates the sheet to `target`. iOS only animates a change of the
+    /// selected detent, and only to one that's already allowed: replacing the
+    /// allowed set makes the sheet jump. So allow both sizes, let that apply,
+    /// animate the selection, then allow only the new size once it's there.
+    private func resize(to target: PresentationDetent) async {
+        detents = [selectedDetent, target]
+        try? await Task.sleep(for: .milliseconds(20))
+        withAnimation(Self.resizeAnimation) { selectedDetent = target }
+        try? await Task.sleep(for: .milliseconds(350))
+        detents = [target]
+    }
+
+    /// Changes the size without animating. The set and the selection change
+    /// together so the selection is always an allowed detent.
+    private func setDetent(_ detent: PresentationDetent) {
+        detents = [detent]
+        selectedDetent = detent
     }
 
     /// Back from sign-up or log in: to the prompt, or closes the sheet when it
     /// was opened straight on that step from the Profile tab.
     private func back() {
         switch prompt {
-        case .favorite, .follow: step = .prompt
+        case .favorite, .follow: go(to: .prompt)
         case .createAccount, .logIn: appState.cancelAccountPrompt()
         }
     }
