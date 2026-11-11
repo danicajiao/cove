@@ -10,11 +10,12 @@ import RiveRuntime
 import SwiftUI
 
 struct WelcomeView: View {
+    @EnvironmentObject private var appState: AppState
+
     var onNavigateToLogin: () -> Void
-    var onNavigateToSignup: () -> Void
-    /// Starts a guest session. A placeholder entry point until #435 replaces
-    /// "Join for free" with the designed "Get started".
-    var onContinueAsGuest: () -> Void
+
+    @State private var startingGuestSession = false
+    @State private var guestSessionError: String?
 
     var riveViewModel = RiveViewModel(
         fileName: "hero",
@@ -36,11 +37,17 @@ struct WelcomeView: View {
                 Wordmark(size: .large)
 
                 Button {
-                    onNavigateToSignup()
+                    startGuestSession()
                 } label: {
-                    Text("Join for free")
+                    if startingGuestSession {
+                        ProgressView()
+                            .tint(Color.Colors.Fills.inverse)
+                    } else {
+                        Text("Get started")
+                    }
                 }
                 .buttonStyle(PrimaryButton())
+                .disabled(startingGuestSession)
 
                 Button {
                     onNavigateToLogin()
@@ -48,26 +55,36 @@ struct WelcomeView: View {
                     Text("Log in")
                 }
                 .buttonStyle(SecondaryButton())
-
-                Button {
-                    onContinueAsGuest()
-                } label: {
-                    Text("Browse as a guest")
-                        .font(.custom("Lato-Regular", size: 14))
-                        .underline()
-                        .foregroundStyle(Color.Colors.Text.secondary)
-                }
-                .frame(maxWidth: .infinity)
             }
             .padding(Spacing.xl)
         }
         .ignoresSafeArea(edges: .top)
         .background(Color.Colors.Backgrounds.primary)
+        .alert(
+            "Couldn't get started",
+            isPresented: Binding(get: { guestSessionError != nil }, set: { if !$0 { guestSessionError = nil } })
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(guestSessionError ?? "")
+        }
+    }
+
+    /// Starts a guest session. The auth listener in `AppState` then creates the
+    /// guest profile and routes to interest picks, which replaces this screen.
+    private func startGuestSession() {
+        guard !startingGuestSession else { return }
+        startingGuestSession = true
+        appState.startGuestSession { error in
+            startingGuestSession = false
+            guestSessionError = error.localizedDescription
+        }
     }
 }
 
 struct WelcomeView_Previews: PreviewProvider {
     static var previews: some View {
-        WelcomeView(onNavigateToLogin: {}, onNavigateToSignup: {}, onContinueAsGuest: {})
+        WelcomeView(onNavigateToLogin: {})
+            .environmentObject(AppState())
     }
 }

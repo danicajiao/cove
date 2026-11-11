@@ -61,6 +61,15 @@ class FavoritesStore: ObservableObject {
         }
     }
 
+    /// Favorites an item unless it already is. Used to retry a guest's favorite
+    /// after sign-up: the account they end up in may be an existing one that
+    /// already has the item, where a toggle would remove it.
+    func addFavorite(_ itemId: String, categoryId: String) async {
+        await loadFavorites()
+        guard !favoriteIds.contains(itemId) else { return }
+        await toggle(itemId, categoryId: categoryId)
+    }
+
     func toggle(_ itemId: String, categoryId: String) async {
         guard let user = Auth.auth().currentUser else {
             print("FavoritesStore.toggle: no authenticated user, skipping")

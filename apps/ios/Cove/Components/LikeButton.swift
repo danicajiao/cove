@@ -14,6 +14,7 @@ struct LikeButton: View {
     var outlined: Bool = false
 
     @EnvironmentObject private var favoritesStore: FavoritesStore
+    @EnvironmentObject private var appState: AppState
     @State private var pressed = false
     @State private var scale = 1.0
 
@@ -54,7 +55,14 @@ struct LikeButton: View {
                 withAnimation(.easeOut(duration: 0.3)) {
                     scale = 1.0
                 }
-                Task { await favoritesStore.toggle(itemId, categoryId: categoryId) }
+                if appState.authState == .guest {
+                    // Guests can't favorite: ask them to sign up, then save it.
+                    appState.requireAccount(.favorite) { [favoritesStore, itemId, categoryId] in
+                        await favoritesStore.addFavorite(itemId, categoryId: categoryId)
+                    }
+                } else {
+                    Task { await favoritesStore.toggle(itemId, categoryId: categoryId) }
+                }
             }
         }, perform: {})
     }

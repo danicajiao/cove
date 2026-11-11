@@ -49,6 +49,13 @@ class AppState: ObservableObject {
     /// and naming a linked guest's existing one (`PATCH /users/me`).
     private(set) var hasProfile = false
 
+    /// The sign-up sheet shown over the main app when a guest tries an
+    /// account-only action. `nil` when no sheet is shown.
+    @Published var accountPrompt: AccountPrompt?
+
+    /// Retried once the guest has an account (state reaches `.loggedIn`).
+    private var pendingAccountAction: (@MainActor () async -> Void)?
+
     private var authListener: AuthStateDidChangeListenerHandle?
 
     /// True while the signed-in Firebase user is anonymous (a guest).
@@ -77,6 +84,41 @@ class AppState: ObservableObject {
         withAnimation {
             authState = state
         }
+        switch state {
+        case .loggedIn:
+            completeAccountPrompt()
+        case .loggedOut, .profileLoadFailed:
+            cancelAccountPrompt()
+        default:
+            break
+        }
+    }
+
+    // MARK: - Account-only actions
+
+    /// Shows the sign-up sheet for an action that needs an account. Once the
+    /// guest signs up (or logs in) and finishes onboarding, the sheet closes and
+    /// `action` runs, so the person ends up where they were with the action done.
+    @MainActor
+    func requireAccount(_ prompt: AccountPrompt, then action: (@MainActor () async -> Void)? = nil) {
+        pendingAccountAction = action
+        accountPrompt = prompt
+    }
+
+    /// Closes the sign-up sheet without running the pending action ("Not now",
+    /// swipe down, or sign-out).
+    func cancelAccountPrompt() {
+        pendingAccountAction = nil
+        if accountPrompt != nil { accountPrompt = nil }
+    }
+
+    private func completeAccountPrompt() {
+        guard accountPrompt != nil else { return }
+        let action = pendingAccountAction
+        pendingAccountAction = nil
+        accountPrompt = nil
+        guard let action else { return }
+        Task { @MainActor in await action() }
     }
 
     private static func method(for user: User) -> AuthMethod? {
