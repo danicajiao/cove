@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/danicajiao/cove/services/cove-user/internal/cleanup"
 	"github.com/danicajiao/cove/services/cove-user/internal/handler"
 )
 
@@ -22,6 +23,17 @@ var commitSHA = "dev"
 func main() {
 	ctx := context.Background()
 
+	// "cove-user" serves HTTP. "cove-user cleanup-guests" deletes idle guest
+	// profiles and exits; a daily Kubernetes CronJob runs it with the same image
+	// and DATABASE_URL.
+	command := ""
+	if len(os.Args) > 1 {
+		command = os.Args[1]
+	}
+	if command != "" && command != "cleanup-guests" {
+		log.Fatalf("unknown command %q (want: cleanup-guests, or no argument to serve)", command)
+	}
+
 	// ── Database ─────────────────────────────────────────────────────────────
 	dbURL := mustEnv("DATABASE_URL")
 	pool, err := pgxpool.New(ctx, dbURL)
@@ -34,6 +46,16 @@ func main() {
 		log.Fatalf("failed to ping database: %v", err)
 	}
 	log.Printf("database connected")
+
+	if command == "cleanup-guests" {
+		n, err := cleanup.DeleteIdleGuests(ctx, pool, cleanup.GuestIdleDays)
+		if err != nil {
+			pool.Close()
+			log.Fatalf("cleanup-guests failed: %v", err)
+		}
+		log.Printf("cleanup-guests: deleted %d guest profiles idle for more than %d days", n, cleanup.GuestIdleDays)
+		return
+	}
 
 	// ── Deps ─────────────────────────────────────────────────────────────────
 	deps := &handler.Deps{
@@ -51,6 +73,7 @@ func main() {
 	// Guests (X-Cove-Guest: true) can use everything except favorites and follows.
 	r.Group(func(r chi.Router) {
 		r.Use(handler.UIDMiddleware)
+		r.Use(deps.TouchLastSeen)
 		r.Get("/users/me", deps.GetMeHandler)
 		r.Post("/users/me", deps.CreateUserHandler)
 		r.Patch("/users/me", deps.UpdateUserHandler)
