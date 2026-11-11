@@ -17,6 +17,9 @@ import FirebaseAuth
 class FavoritesStore: ObservableObject {
     @Published private(set) var favoriteIds: Set<String> = []
     @Published private(set) var isTogglingFavorite: Bool = false
+    /// Set when a favorite was refused because the user is a guest
+    /// (`CoveAPIError.accountRequired`). The UI can show sign-up and reset it.
+    @Published var accountRequired: Bool = false
 
     private var authListener: AuthStateDidChangeListenerHandle?
     private let repository: FavoritesRepository
@@ -25,7 +28,7 @@ class FavoritesStore: ObservableObject {
         self.repository = repository
         authListener = Auth.auth().addStateDidChangeListener { [weak self] _, user in
             Task { @MainActor in
-                if user != nil {
+                if let user, !user.isAnonymous {
                     await self?.loadFavorites()
                 } else {
                     self?.favoriteIds = []
@@ -45,13 +48,26 @@ class FavoritesStore: ObservableObject {
     }
 
     func loadFavorites() async {
-        guard let user = Auth.auth().currentUser else { return }
+        // Guests can't have favorites; the gateway would answer 403.
+        guard let user = Auth.auth().currentUser, !user.isAnonymous else {
+            favoriteIds = []
+            return
+        }
         do {
             let favorites = try await repository.listFavorites(uid: user.uid)
             favoriteIds = Set(favorites.map(\.itemId))
         } catch {
             print("Error loading favorites: \(error)")
         }
+    }
+
+    /// Favorites an item unless it already is. Used to retry a guest's favorite
+    /// after sign-up: the account they end up in may be an existing one that
+    /// already has the item, where a toggle would remove it.
+    func addFavorite(_ itemId: String, categoryId: String) async {
+        await loadFavorites()
+        guard !favoriteIds.contains(itemId) else { return }
+        await toggle(itemId, categoryId: categoryId)
     }
 
     func toggle(_ itemId: String, categoryId: String) async {
@@ -79,7 +95,11 @@ class FavoritesStore: ObservableObject {
                 try await repository.add(itemId: itemId, categoryId: categoryId, uid: user.uid)
             }
         } catch {
-            print("Error toggling favorite: \(error)")
+            if case CoveAPIError.accountRequired = error {
+                accountRequired = true
+            } else {
+                print("Error toggling favorite: \(error)")
+            }
             if wasFavorite {
                 favoriteIds.insert(itemId)
             } else {

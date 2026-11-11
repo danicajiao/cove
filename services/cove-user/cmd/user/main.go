@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/danicajiao/cove/services/cove-user/internal/cleanup"
 	"github.com/danicajiao/cove/services/cove-user/internal/handler"
 )
 
@@ -21,6 +22,17 @@ var commitSHA = "dev"
 
 func main() {
 	ctx := context.Background()
+
+	// "cove-user" serves HTTP. "cove-user cleanup-guests" deletes idle guest
+	// profiles and exits; a daily Kubernetes CronJob runs it with the same image
+	// and DATABASE_URL.
+	command := ""
+	if len(os.Args) > 1 {
+		command = os.Args[1]
+	}
+	if command != "" && command != "cleanup-guests" {
+		log.Fatalf("unknown command %q (want: cleanup-guests, or no argument to serve)", command)
+	}
 
 	// ── Database ─────────────────────────────────────────────────────────────
 	dbURL := mustEnv("DATABASE_URL")
@@ -35,6 +47,16 @@ func main() {
 	}
 	log.Printf("database connected")
 
+	if command == "cleanup-guests" {
+		n, err := cleanup.DeleteIdleGuests(ctx, pool, cleanup.GuestIdleDays)
+		if err != nil {
+			pool.Close()
+			log.Fatalf("cleanup-guests failed: %v", err)
+		}
+		log.Printf("cleanup-guests: deleted %d guest profiles idle for more than %d days", n, cleanup.GuestIdleDays)
+		return
+	}
+
 	// ── Deps ─────────────────────────────────────────────────────────────────
 	deps := &handler.Deps{
 		DB:        handler.NewStore(pool),
@@ -48,16 +70,25 @@ func main() {
 	r.Get("/health", deps.HealthHandler)
 
 	// All other routes require X-Cove-Uid (injected by cove-api upstream).
+	// Guests (X-Cove-Guest: true) can use everything except favorites and follows.
 	r.Group(func(r chi.Router) {
 		r.Use(handler.UIDMiddleware)
+		r.Use(deps.TouchLastSeen)
 		r.Get("/users/me", deps.GetMeHandler)
 		r.Post("/users/me", deps.CreateUserHandler)
-		r.Get("/users/me/favorites", deps.GetFavoritesHandler)
-		r.Post("/users/me/favorites/{itemId}", deps.AddFavoriteHandler)
-		r.Delete("/users/me/favorites/{itemId}", deps.RemoveFavoriteHandler)
-		r.Get("/users/me/follows", deps.GetFollowsHandler)
-		r.Post("/users/me/follows", deps.AddFollowHandler)
-		r.Delete("/users/me/follows/{entityId}", deps.RemoveFollowHandler)
+		r.Patch("/users/me", deps.UpdateUserHandler)
+
+		// Favorites and follows need a signed-up account; guests get 403.
+		r.Group(func(r chi.Router) {
+			r.Use(handler.AccountRequiredMiddleware)
+			r.Get("/users/me/favorites", deps.GetFavoritesHandler)
+			r.Post("/users/me/favorites/{itemId}", deps.AddFavoriteHandler)
+			r.Delete("/users/me/favorites/{itemId}", deps.RemoveFavoriteHandler)
+			r.Get("/users/me/follows", deps.GetFollowsHandler)
+			r.Post("/users/me/follows", deps.AddFollowHandler)
+			r.Delete("/users/me/follows/{entityId}", deps.RemoveFollowHandler)
+		})
+
 		r.Get("/users/me/interests", deps.GetInterestsHandler)
 		r.Put("/users/me/interests", deps.ReplaceInterestsHandler)
 		r.Post("/users/me/activity", deps.IngestActivityHandler)

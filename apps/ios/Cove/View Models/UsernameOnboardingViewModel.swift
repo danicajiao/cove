@@ -42,17 +42,22 @@ class UsernameOnboardingViewModel: ObservableObject {
         serverError = nil
 
         do {
-            _ = try await CoveAPIClient.shared.createMe(username: trimmed)
-            appState.setAuthState(.needsInterestOnboarding)
+            if appState.hasProfile {
+                // A guest who just signed up already has a profile: name it.
+                _ = try await CoveAPIClient.shared.updateUsername(trimmed)
+            } else {
+                _ = try await CoveAPIClient.shared.createMe(username: trimmed)
+            }
+            await appState.finishUsernameOnboarding()
         } catch CoveAPIError.unexpectedStatus(409) {
             serverError = "That username is already taken. Try another."
             isLoading = false
         } catch let CoveAPIError.unexpectedStatus(code) {
-            print("❌ createMe failed with HTTP \(code)")
+            print("❌ Saving username failed with HTTP \(code)")
             serverError = "Something went wrong. Please try again."
             isLoading = false
         } catch {
-            print("❌ createMe failed: \(error)")
+            print("❌ Saving username failed: \(error)")
             serverError = "Something went wrong. Please try again."
             isLoading = false
         }

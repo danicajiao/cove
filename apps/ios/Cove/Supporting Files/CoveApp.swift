@@ -91,16 +91,43 @@ struct CoveApp: App {
 
     private var rootView: some View {
         ZStack {
-            switch appState.authState {
-            case .loggedIn:
+            if showsMainView {
                 MainView()
                     .environment(\.imageRepository, CoveAPIImageRepository())
                     .transition(.opacity)
+            } else {
+                onboardingOrAuthView
+            }
+        }
+    }
+
+    /// The main app shows while signed in or browsing as a guest. It also stays
+    /// up while a guest who just signed up from the sign-up sheet finishes
+    /// onboarding inside that sheet, so they end up back where they were.
+    private var showsMainView: Bool {
+        switch appState.authState {
+        case .loggedIn, .guest:
+            true
+        case .needsUsernameOnboarding, .needsInterestOnboarding:
+            appState.accountPrompt != nil
+        case .loggedOut, .profileLoadFailed:
+            false
+        }
+    }
+
+    private var onboardingOrAuthView: some View {
+        ZStack {
+            switch appState.authState {
+            case .loggedIn, .guest:
+                EmptyView()
             case .needsUsernameOnboarding:
                 UsernameOnboardingView(appState: appState)
                     .transition(.opacity)
             case .needsInterestOnboarding:
                 InterestOnboardingView(appState: appState)
+                    .transition(.opacity)
+            case .profileLoadFailed:
+                ProfileLoadErrorView()
                     .transition(.opacity)
             case .loggedOut:
                 authFlowView
@@ -125,11 +152,8 @@ struct CoveApp: App {
                     SignupView(onBack: { authScreen = nil }, onNavigateToLogin: { authScreen = .login })
                         .transition(.opacity)
                 default:
-                    WelcomeView(
-                        onNavigateToLogin: { authScreen = .login },
-                        onNavigateToSignup: { authScreen = .signup }
-                    )
-                    .transition(.opacity)
+                    WelcomeView(onNavigateToLogin: { authScreen = .login })
+                        .transition(.opacity)
                 }
             }
         }

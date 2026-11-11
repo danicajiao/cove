@@ -275,11 +275,11 @@ All components are defined in the **Components page** of the Figma file. Views s
 |---|---|---|
 | Buttons / Primary | `apps/ios/Cove/Styles/PrimaryButton.swift` | `PrimitiveButtonStyle`, uses `fills/primary` + `fills/inverse`. Dims to 40% when disabled (Large Button `State=Disabled`) |
 | Buttons / Secondary | `apps/ios/Cove/Styles/SecondaryButton.swift` | Outlined style, uses `strokes/primary`. Dims to 40% when disabled |
-| Buttons / Social Login | `apps/ios/Cove/Components/` | Google, Facebook, Apple variants |
+| Buttons / Social Login | `apps/ios/Cove/Components/SmallSocialButton.swift` | Google, Facebook, Apple variants. Apple sign-in isn't implemented: its button only logs the tap |
 | Text Field | `apps/ios/Cove/Components/CustomTextField.swift` | `State` Empty (placeholder) or Filled (`Value` in `text/primary`); Label, Placeholder, Leading Icon (off by default), Secure (eye toggle), Helper. Helper text lives in the view |
 | Section Header | `apps/ios/Cove/Components/SectionHeader.swift` | Title (Body LG) + optional "See all →" link (Body MD) in `brand/accent` |
 | Wordmark | `apps/ios/Cove/Components/Wordmark.swift` | The "Cove." logo in Gazpacho Heavy: `.large` (60/66) on Welcome and `.regular` (40/44) above the auth and onboarding forms, both at -5%. Not a text style |
-| Divider | `apps/ios/Cove/Components/` | Plain line and "OR" variants |
+| Divider | `apps/ios/Cove/Components/OrDivider.swift` | Plain line and "OR" variants. `OrDivider` is the "OR" variant (Caption in `text/quaternary` between two `fills/quaternary` rules), used in the sign-up sheet |
 | Item | `apps/ios/Cove/Components/ItemCard.swift` | Name (Heading XS), producer (Caption), price (Body SM Bold). The `On Sale` variant is design-only for now |
 | Category Card | `apps/ios/Cove/Components/CategoryCard.swift` | Home shelf card, 130×60: parent (Caption SM), name (Heading XS). One variant per category image |
 | Interest Category Card | `apps/ios/Cove/Components/InterestCategoryCard.swift` | Onboarding card: name (Heading MD), selected badge |

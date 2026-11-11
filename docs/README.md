@@ -14,7 +14,7 @@ Welcome to the documentation for the Cove iOS app.
 - **[Design System](DESIGN_SYSTEM.md)** - Color tokens, typography, spacing, radius, shadow, and Figma↔Swift component mapping
 - **[App Architecture](IOS_APP_ARCHITECTURE.md)** - How the app is structured and how data flows
   - MVVM pattern and ViewModels
-  - Authentication and navigation
+  - Authentication and navigation, including guest browsing and the sign-up sheet
   - Repository abstraction layer (CoveAPI implementations)
   - Firebase data model (historical; Firestore retired in Phase 3)
 
@@ -32,7 +32,7 @@ Welcome to the documentation for the Cove iOS app.
   - GitHub Personal Access Token
 
 ### Backend Architecture
-- **[Backend Infrastructure](BACKEND_INFRASTRUCTURE.md)** - K3s cluster, the `cove-api` gateway, Cloudflare Tunnel, and migration phases (Phases 0–3 complete)
+- **[Backend Infrastructure](BACKEND_INFRASTRUCTURE.md)** - K3s cluster, the `cove-api` gateway and guest identity headers, Cloudflare Tunnel, and migration phases (Phases 0–3 complete)
 - **[Data Model](DATA_MODEL.md)** - The canonical data model: producer/place/item entities, the trust signal system, composite scoring, geospatial discovery, schemas, and the discovery query
 - **[Item Availability](ITEM_AVAILABILITY.md)** - Planned, not built: item kinds (goods, house-made, one of a kind), chain menus, secondhand items, brands and unknown makers, the place list on Item Details, and visit lists. [Interactive version](ITEM_AVAILABILITY.html) (open in a browser)
 - **[Homelab Layout for Cove](HOMELAB_COVE_LAYOUT.md)** - Where Cove's backend services and platform operators live in the [`homelab`](https://github.com/danicajiao/homelab) repo

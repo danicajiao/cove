@@ -65,6 +65,7 @@ If LSP features stop working after a large refactor or a DerivedData wipe, rebui
 - **Bundle ID:** `com.danicajiao.cove`
 - **Minimum deployment target:** iOS 26.0
 - Google Sign-In and Facebook Login are configured via `Info.plist` — no additional setup required beyond the `GoogleService-Info.plist`
+- **Get started** on the Welcome screen signs in with Firebase anonymous auth (guest browsing), so the Firebase project must have the Anonymous sign-in provider enabled
 - For CI/CD setup, see [CI/CD Workflows Documentation](CI_CD_WORKFLOWS.md)
 
 ## Troubleshooting
@@ -80,4 +81,4 @@ If LSP features stop working after a large refactor or a DerivedData wipe, rebui
 
 ---
 
-**Last Updated**: June 2026
+**Last Updated**: November 2026
