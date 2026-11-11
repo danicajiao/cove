@@ -1,6 +1,6 @@
 # Item Availability
 
-> **Status:** Proposal (November 2026). Nothing here is built yet. This document extends the producer, place and item model in [Data Model](DATA_MODEL.md). It covers how an item is sold, which places have it, and what Item Details shows as a result. [ITEM_AVAILABILITY.html](ITEM_AVAILABILITY.html) is an interactive version with example data: an explorer for Item Details and a chain menu grid. Open it in a browser, since GitHub shows HTML files as source.
+> **Status:** Planned, not built (November 2026). [Data Model](DATA_MODEL.md) summarizes the item kinds, brands and visit lists described here. This document has the detail: how an item is sold, which places have it, and what Item Details shows as a result. [ITEM_AVAILABILITY.html](ITEM_AVAILABILITY.html) is an interactive version with example data: an explorer for Item Details and a chain menu grid. Open it in a browser, since GitHub shows HTML files as source.
 
 ## Contents
 
@@ -13,7 +13,6 @@
 - [The place list on Item Details](#the-place-list-on-item-details)
 - [Visit lists](#visit-lists)
 - [Schema changes](#schema-changes)
-- [Changes to the Data Model doc](#changes-to-the-data-model-doc)
 - [Decisions and open questions](#decisions-and-open-questions)
 
 ---
@@ -30,7 +29,7 @@ Every item has a producer and a set of places that have it, through `catalog.ava
 
 The kind decides what Item Details shows: the list of places, the price line, the main button and the community prompt.
 
-Most of the schema already exists. The proposal adds:
+Most of the schema already exists. The plan adds:
 - `items.kind`, `items.at_every_location` and `items.sold_at`;
 - a required `items.producer_id`, with community-started pages for brands and one shared Unknown maker;
 - per-place price, sightings and condition on `availability`;
@@ -221,7 +220,7 @@ Visit lists are user data, so they live in `cove-user`'s `profile` schema (see [
 | Column or table | Used for |
 |---|---|
 | `directory.places.run_by_producer_id` | Which producer runs a place. Thump runs 1, Call Your Mother 5, Onyx 8, a gallery none. |
-| `catalog.items.producer_id` (nullable today), `catalog.items.brand` | Who makes the item, or a plain brand name. This proposal makes the producer required and retires `brand`. |
+| `catalog.items.producer_id` (nullable today), `catalog.items.brand` | Who makes the item, or a plain brand name. The producer becomes required and `brand` is retired. |
 | `catalog.items.price_cents` | The list price |
 | `catalog.availability` (`item_id`, `place_id`, `listing_source`, `is_active`) | Which places have an item. `listing_source` already tells the producer's own place (`producer_listed`) apart from a stockist (`place_listed`). |
 | `catalog.entity_signals` | Trust signals like B Corp, on a producer, place or item |
@@ -280,16 +279,6 @@ Rules that a column can't express:
 - **House-made follows the producer.** The [`catalog.item_places` view](#house-made-items-and-locations) applies it on read.
 - **One place for one of a kind.** An original has at most one active availability row. A partial unique index on `availability` can't see `items.kind`, so a trigger enforces this.
 - **Stale windows** (about 14 days secondhand, 28 days new) are applied when the list is built, from `last_seen_at`.
-
----
-
-## Changes to the Data Model doc
-
-If this proposal is accepted, [Data Model](DATA_MODEL.md), the canonical data-model doc, needs these updates:
-
-- **Brands become producers.** Its [Brands and secondhand items](DATA_MODEL.md#brands-and-secondhand-items) section says a brand is a producer only when it carries trust signals, and that secondhand items can have no producer. Here every item has a producer: brands get community-started pages, and unknown makers use the shared Unknown maker. `items.brand` is retired.
-- **Item kinds and the location setting** join the entity model, along with the new `availability` columns and the `catalog.item_places` view, which the discovery query should join through.
-- **Visit lists come back.** Version 3.0 of that doc [removed the visit list](DATA_MODEL.md#revision-history); `profile.visit_lists` and `profile.visit_list_places` add it back.
 
 ---
 
