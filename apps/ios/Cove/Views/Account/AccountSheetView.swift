@@ -18,7 +18,6 @@ struct AccountSheetView: View {
 
     @State private var step: Step
     @State private var promptHeight: CGFloat = 460
-    @State private var detent: PresentationDetent = .large
 
     private enum Step {
         case prompt
@@ -49,17 +48,12 @@ struct AccountSheetView: View {
         content
             .animation(.default, value: step)
             .animation(.default, value: appState.authState)
-            .presentationDetents(showsPrompt ? [.height(promptHeight)] : [.large], selection: $detent)
+            // One detent per state, so the sheet resizes to it on its own: the
+            // prompt fits its content, the forms and onboarding go full height.
+            .presentationDetents(showsPrompt ? [.height(promptHeight)] : [.large])
             .presentationDragIndicator(showsPrompt ? .visible : .hidden)
             .presentationBackground(Color.Colors.Backgrounds.primary)
             .interactiveDismissDisabled(isOnboarding)
-            .onAppear { detent = showsPrompt ? .height(promptHeight) : .large }
-            .onChange(of: showsPrompt) { _, showsPrompt in
-                detent = showsPrompt ? .height(promptHeight) : .large
-            }
-            .onChange(of: promptHeight) { _, height in
-                if showsPrompt { detent = .height(height) }
-            }
     }
 
     @ViewBuilder
