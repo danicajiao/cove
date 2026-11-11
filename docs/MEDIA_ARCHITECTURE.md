@@ -383,7 +383,7 @@ This is the most nuanced part of the architecture. Image URLs need to coexist wi
 
 1. **Cloudflare wants to cache by URL.** Per-user URLs destroy hit rate.
 2. **`<img src>` and `AsyncImage` don't add auth headers.** Custom URLSession wiring at every image-loading site is unworkable.
-3. **The catalog is a marketplace.** Item images are inherently meant to be seen by potential buyers.
+3. **The catalog is public.** Item images are meant to be seen by anyone discovering what's nearby.
 
 ### The four options
 
@@ -410,7 +410,7 @@ The implementation is straightforward: `cove-catalog` checks the item state when
 
 Image **URLs** are public; the **API that produces them** is not. To discover an item image's URL, a client must first call `/items/search` or `/items/{id}` with a valid Firebase ID Token. The Bearer-token check at `cove-api` happens *before* the URL is returned.
 
-Once a URL is in hand, anyone can fetch the bytes — but the URL is unguessable (HMAC-SHA256 signature), and you can't enumerate them without going through the authenticated API. This is the same pattern Etsy, Shopify places, Amazon product images, and every major marketplace uses. Authenticated image serving is reserved for things like medical records, financial documents, and other categories where bytes leaking would be a real harm — not for item catalog images.
+Once a URL is in hand, anyone can fetch the bytes — but the URL is unguessable (HMAC-SHA256 signature), and you can't enumerate them without going through the authenticated API. This is the same pattern Etsy, Shopify storefronts, Amazon product images, and every major marketplace uses. Authenticated image serving is reserved for things like medical records, financial documents, and other categories where bytes leaking would be a real harm — not for item catalog images.
 
 ---
 
