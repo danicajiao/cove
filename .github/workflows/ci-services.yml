@@ -12,15 +12,10 @@ on:
       - 'services/cove-user/**'
       - 'packages/imgproxy/**'
       - '.github/workflows/ci-services.yml'
-  pull_request:
-    paths:
-      - 'services/cove-api/**'
-      - 'services/cove-media/**'
-      - 'services/cove-catalog/**'
-      - 'services/cove-directory/**'
-      - 'services/cove-user/**'
-      - 'packages/imgproxy/**'
-      - '.github/workflows/ci-services.yml'
+  # Pull requests run this through ci.yml, which calls it only when the PR
+  # touches a service or packages/imgproxy. CI Gate in ci.yml is the
+  # required check.
+  workflow_call:
   # Allows manually triggering a build+push from any branch.
   # Useful for bootstrapping GAR before the integration branch merges to main,
   # or for emergency re-deploys.

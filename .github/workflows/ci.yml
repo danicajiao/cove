@@ -1,0 +1,101 @@
+name: CI
+
+# The entry point for every pull request. It works out which parts of the
+# repo the PR touches, runs only the matching workflows, and ends with
+# CI Gate, the single required check on main.
+#
+# A required check has to report on every PR, or the PR waits on it forever.
+# Path filters on the individual workflows can't do that, so the filtering
+# happens here instead: a workflow that doesn't apply is skipped, and
+# CI Gate passes as long as nothing it ran failed.
+
+on:
+  pull_request:
+
+concurrency:
+  group: ci-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      ios: ${{ steps.filter.outputs.ios }}
+      services: ${{ steps.filter.outputs.services }}
+      openapi: ${{ steps.filter.outputs.openapi }}
+    steps:
+      - name: Check changed files
+        id: filter
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          FILES=$(gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --paginate --jq '.[].filename')
+          echo "Changed files:"
+          echo "$FILES"
+
+          # matches <pattern> [exclude]: true when a changed file matches the
+          # pattern and isn't excluded. A change to ci.yml runs everything.
+          matches() {
+            local hits
+            hits=$(echo "$FILES" | grep -E "$1|^\.github/workflows/ci\.yml$" || true)
+            if [ -n "${2:-}" ]; then hits=$(echo "$hits" | grep -vE "$2" || true); fi
+            [ -n "$hits" ] && echo true || echo false
+          }
+
+          # Same rules as each workflow's push filter.
+          {
+            echo "ios=$(matches '^apps/ios/|^\.github/workflows/ci-ios\.yml$' '^apps/ios/.*\.md$')"
+            echo "services=$(matches '^services/cove-(api|media|catalog|directory|user)/|^packages/imgproxy/|^\.github/workflows/ci-services\.yml$')"
+            echo "openapi=$(matches '^services/cove-(api|media|catalog|directory|user)/api/|^\.github/workflows/ci-openapi\.yml$')"
+          } | tee -a "$GITHUB_OUTPUT"
+
+  ios:
+    name: iOS
+    needs: changes
+    if: needs.changes.outputs.ios == 'true'
+    uses: ./.github/workflows/ci-ios.yml
+    permissions:
+      contents: read
+
+  services:
+    name: Services
+    needs: changes
+    if: needs.changes.outputs.services == 'true'
+    uses: ./.github/workflows/ci-services.yml
+    # The service jobs ask for id-token: write for deploys from main; a
+    # called workflow can't have more permissions than its caller grants.
+    permissions:
+      contents: read
+      id-token: write
+    secrets: inherit
+
+  openapi:
+    name: OpenAPI
+    needs: changes
+    if: needs.changes.outputs.openapi == 'true'
+    uses: ./.github/workflows/ci-openapi.yml
+    permissions:
+      contents: read
+
+  gate:
+    name: CI Gate
+    needs: [changes, ios, services, openapi]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check results
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          # Skipped is fine: that part of the repo didn't change.
+          FAILED=$(echo "$RESULTS" | jq -r '[to_entries[] | select(.value.result == "failure" or .value.result == "cancelled") | .key] | join(", ")')
+          if [ -n "$FAILED" ]; then
+            echo "::error::Failed or cancelled: $FAILED"
+            exit 1
+          fi
+          echo "All checks that apply to this PR passed."
