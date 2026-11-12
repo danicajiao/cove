@@ -173,12 +173,12 @@ Font files live in `apps/ios/Cove/Resources/`. Always use `Font.custom()` — ne
 
 | Figma style | Font | Size | Line height | Letter spacing | Swift |
 |---|---|---|---|---|---|
-| Gazpacho/Display | Gazpacho-Black | 40pt | 44 | -5% | `.textStyle(.display)` |
-| Gazpacho/Heading XL | Gazpacho-Black | 32pt | 38 | -5% | `.textStyle(.headingXL)` |
-| Gazpacho/Heading LG | Gazpacho-Black | 28pt | 34 | -5% | `.textStyle(.headingLG)` |
-| Gazpacho/Heading MD | Gazpacho-Black | 24pt | 30 | -5% | `.textStyle(.headingMD)` |
-| Gazpacho/Heading SM | Gazpacho-Black | 20pt | 26 | -5% | `.textStyle(.headingSM)` |
-| Gazpacho/Heading XS | Gazpacho-Black | 12pt | 16 | -5% | `.textStyle(.headingXS)` |
+| Gazpacho/Display | Gazpacho-Black | 40pt | 44 | -4.2% | `.textStyle(.display)` |
+| Gazpacho/Heading XL | Gazpacho-Black | 32pt | 38 | -4.2% | `.textStyle(.headingXL)` |
+| Gazpacho/Heading LG | Gazpacho-Black | 28pt | 34 | -4.2% | `.textStyle(.headingLG)` |
+| Gazpacho/Heading MD | Gazpacho-Black | 24pt | 30 | -4.2% | `.textStyle(.headingMD)` |
+| Gazpacho/Heading SM | Gazpacho-Black | 20pt | 26 | -4.2% | `.textStyle(.headingSM)` |
+| Gazpacho/Heading XS | Gazpacho-Black | 12pt | 16 | -4.2% | `.textStyle(.headingXS)` |
 | Lato/Body LG | Lato-Bold | 18pt | 28 | 0 | `.textStyle(.bodyLG)` |
 | Lato/Body MD | Lato-Regular | 16pt | 24 | 0 | `.textStyle(.bodyMD)` |
 | Lato/Body SM | Lato-Regular | 14pt | 20 | 0 | `.textStyle(.bodySM)` |
@@ -278,7 +278,7 @@ All components are defined in the **Components page** of the Figma file. Views s
 | Buttons / Social Login | `apps/ios/Cove/Components/SmallSocialButton.swift` | Google, Facebook, Apple variants. Apple sign-in isn't implemented: its button only logs the tap |
 | Text Field | `apps/ios/Cove/Components/CustomTextField.swift` | `State` Empty (placeholder) or Filled (`Value` in `text/primary`); Label, Placeholder, Leading Icon (off by default), Secure (eye toggle), Helper. Helper text lives in the view |
 | Section Header | `apps/ios/Cove/Components/SectionHeader.swift` | Title (Body LG) + optional "See all →" link (Body MD) in `brand/accent` |
-| Wordmark | `apps/ios/Cove/Components/Wordmark.swift` | The "Cove." logo in Gazpacho Heavy: `.large` (60/66) on Welcome and `.regular` (40/44) above the auth and onboarding forms, both at -5%. Not a text style |
+| Wordmark | `apps/ios/Cove/Components/Wordmark.swift` | The "Cove." logo in Gazpacho Heavy: `.large` (60/66) on Welcome and `.regular` (40/44) above the auth and onboarding forms, both at -4.2%. Not a text style |
 | Divider | `apps/ios/Cove/Components/OrDivider.swift` | Plain line and "OR" variants. `OrDivider` is the "OR" variant (Caption in `text/quaternary` between two `fills/quaternary` rules), used in the sign-up sheet |
 | Item | `apps/ios/Cove/Components/ItemCard.swift` | Name (Heading XS), producer (Caption), price (Body SM Bold). The `On Sale` variant is design-only for now |
 | Category Card | `apps/ios/Cove/Components/CategoryCard.swift` | Home shelf card, 130×60: parent (Caption SM), name (Heading XS). One variant per category image |

@@ -29,9 +29,9 @@ struct Wordmark: View {
             }
         }
 
-        /// -5%, like the Gazpacho text styles.
+        /// -4.2%, like the Gazpacho text styles.
         var tracking: CGFloat {
-            points * -0.05
+            points * -0.042
         }
     }
 
