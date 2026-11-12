@@ -231,9 +231,11 @@ select {
 .pc .av { font-size: 12px; color: var(--ok); }
 .pc .av.stale { color: var(--muted); }
 .far { font-size: 12px; color: var(--muted); padding: 2px 2px 0; }
-.far-h { display: flex; align-items: center; gap: 8px; margin-top: 4px; font: 700 10px/1 var(--body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-.far-h::after { content: ""; flex: 1; border-top: 1px dashed var(--edge); }
-.pc.farc { border-style: dashed; background: none; }
+.prow { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin-right: -12px; padding-right: 12px; }
+.prow::-webkit-scrollbar { display: none; }
+.prow .pc { flex: 0 0 82%; align-content: start; }
+.far-v { flex: 0 0 64px; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11px; line-height: 1.3; text-align: center; color: var(--muted); }
+.far-v i { flex: 1; min-height: 8px; border-left: 1px solid var(--edge); }
 .pc .meta b { color: var(--accent-ink); }
 .empty { border: 1px dashed var(--edge); border-radius: 12px; padding: 12px; font-size: 13px; color: var(--muted); display: grid; gap: 6px; }
 .empty b { color: var(--accent-ink); font-size: 13px; }
@@ -403,7 +405,7 @@ dl.mini dd { margin: 2px 0 0; font-size: 14px; }
       <div class="ent link">
         <span class="tag">catalog.availability</span>
         <h3>Availability</h3>
-        <p>Links an item to a place that carries it, with that place's price, whether it's new or secondhand, and when locals last saw it there.</p>
+        <p>Links an item to a place that carries it, with that place's price, whether it's new or secondhand, and when people last saw it there.</p>
       </div>
     </div>
     <div class="prose">
@@ -487,7 +489,7 @@ dl.mini dd { margin: 2px 0 0; font-size: 14px; }
             <span><i class="lg-box off"></i>Turned off here</span>
             <span><i class="lg-dot"></i>A stored row</span>
           </div>
-          <p class="hint muted">Click a cell to change it. Turning off a ✓ is what a local's "Not at this location" report does. Click an item or a deli to preview its page.</p>
+          <p class="hint muted">Click a cell to change it. Turning off a ✓ is what someone's "Not at this location" report does. Click an item or a deli to preview its page.</p>
         </div>
         <div class="panel stored" id="stored" aria-live="polite"></div>
       </div>
@@ -501,7 +503,7 @@ dl.mini dd { margin: 2px 0 0; font-size: 14px; }
     </div>
 
     <div class="callout">
-      <p><strong>When locals add a chain's item.</strong> Someone adds the everything bagel after one visit. Because Call Your Mother runs more than one deli, it starts as <b>Every location</b>, since most chains keep one menu. A local who finds it missing taps "Not at this location", which turns it off at that deli. Once Call Your Mother claims its listing, it can set each item exactly.</p>
+      <p><strong>When people add a chain's item.</strong> Someone adds the everything bagel after one visit. Because Call Your Mother runs more than one deli, it starts as <b>Every location</b>, since most chains keep one menu. Someone who finds it missing taps "Not at this location", which turns it off at that deli. Once Call Your Mother claims its listing, it can set each item exactly.</p>
     </div>
   </section>
 
@@ -520,10 +522,10 @@ dl.mini dd { margin: 2px 0 0; font-size: 14px; }
             <td><span class="kind k-goods">Goods</span><br><em>default</em></td>
             <td>Onyx espresso blend, hemp soda, almond croissant, an art print, a vintage Toto lamp or 90s Levi's</td>
             <td>Any place: the producer's own places and any place that carries it, new or secondhand</td>
-            <td>"Find it nearby", or "Also nearby" from a place. Places more than 25 mi away still show, under a divider with their distance. Empty state asks people to add a place.</td>
+            <td>"Find it nearby", or "Also nearby" from a place. Places scroll sideways; ones more than 25 mi away follow a "More than 25 mi away" divider in the row. Empty state asks people to add a place.</td>
             <td>"List price", or "$24 at Thump" when opened from a place</td>
             <td>Find it nearby</td>
-            <td>Bought this lately? Help others by confirming the details.</td>
+            <td>Bought or seen this lately? Help others by confirming the details.</td>
           </tr>
           <tr>
             <td><span class="kind k-house">House-made</span></td>
@@ -604,8 +606,8 @@ dl.mini dd { margin: 2px 0 0; font-size: 14px; }
           <div><dt>catalog.items.producer_id becomes required</dt><dd>Every item has a producer. Brands get producer pages the community can start, and the <code>brand</code> column folds into them. Items with an unknown maker point at one shared Unknown maker row, which has no page and stays out of producer listings and trust scoring.</dd></div>
           <div><dt>catalog.items.at_every_location</dt><dd>For house-made items; defaults to true. True means the item counts as available at every place its producer runs, worked out when read, so a new location needs no copying. False means it's only where an availability row lists it.</dd></div>
           <div><dt>catalog.availability.price_cents</dt><dd>Per-place price ("$24 at Thump"). <code>items.price_cents</code> stays as the list price.</dd></div>
-          <div><dt>catalog.availability.last_seen_at, seen_count</dt><dd>Backs "Seen here by 6 locals · 2 days ago" and the freshness sort.</dd></div>
-          <div><dt>catalog.availability.condition, quantity, note<br>new | secondhand</dt><dd>What a shop's copies are like: "Secondhand · 2 available · sold as a pair". One row per item per shop, even with several sizes ("W30–W34"). It records what locals see, not inventory. Secondhand sightings go stale after about 2 weeks, new ones after about 4.</dd></div>
+          <div><dt>catalog.availability.last_seen_at, seen_count</dt><dd>Backs "Seen here by 6 people · 2 days ago" and the freshness sort.</dd></div>
+          <div><dt>catalog.availability.condition, quantity, note<br>new | secondhand</dt><dd>What a shop's copies are like: "Secondhand · 2 available · sold as a pair". One row per item per shop, even with several sizes ("W30–W34"). It records what people see, not inventory. Secondhand sightings go stale after about 2 weeks, new ones after about 4.</dd></div>
           <div><dt>catalog.items.sold_at</dt><dd>For one of a kind. Set when it sells; the item stays viewable.</dd></div>
           <div><dt>Rule: rows are exceptions for every-location items</dt><dd>An every-location item has no row per place. A stored row only records an exception: <code>is_active = false</code> turns it off at one place, and <code>price_cents</code> sets that place's price.</dd></div>
           <div><dt>Rule: one place for one of a kind</dt><dd>An original has at most one active availability row.</dd></div>
@@ -663,7 +665,7 @@ dl.mini dd { margin: 2px 0 0; font-size: 14px; }
       </li>
       <li>
         <div class="hd"><span class="st decided">Decided</span><strong>Far places still show</strong></div>
-        <p>Item Details lists every place that has it. Places more than 25 mi away sit under a divider with their distance, and long lists end in "See all". Still open: the exact cutoff, and whether people can set it themselves.</p>
+        <p>Item Details lists every place that has it. Places more than 25 mi away follow a "More than 25 mi away" divider inside the scrolling row, and long lists end in "See all". Still open: the exact cutoff, and whether people can set it themselves.</p>
       </li>
       <li>
         <div class="hd"><span class="st decided">Decided</span><strong>Visit lists live in cove-user, as many as you want</strong></div>
@@ -883,7 +885,7 @@ dl.mini dd { margin: 2px 0 0; font-size: 14px; }
   }
 
   /* ---------- Item Details mock ---------- */
-  function placeCard(it, r, isFar) {
+  function placeCard(it, r) {
     const pl = PLACES[r.place];
     const own = pl.run === it.producer;
     const mi = PLACE_MI[state.city][r.place];
@@ -894,16 +896,17 @@ dl.mini dd { margin: 2px 0 0; font-size: 14px; }
     if (it.kind === "house") av = `On the menu · confirmed ${ago}`;
     else if (it.kind === "original") av = isSold(it) ? "Sold" : `Seen here ${ago}`;
     else if (stale) av = used ? `May have sold · last seen ${ago}` : `Last seen here ${ago}`;
-    else av = `Seen here by ${n} local${n > 1 ? "s" : ""} · ${ago}`;
+    else av = `Seen here by ${n} ${n > 1 ? "people" : "person"}`;
     const cond = used ? `<span class="cond">Secondhand${r.qty ? ` · ${r.qty} available` : ""}${r.note ? " · " + esc(r.note) : ""}</span>` : "";
-    return `<div class="pc${isFar ? " farc" : ""}"><div class="t"><span class="nm">${esc(pl.name)} <span class="m-cat">${esc(pl.sub)}</span></span>` +
+    return `<div class="pc"><div class="t"><span class="nm">${esc(pl.name)} <span class="m-cat">${esc(pl.sub)}</span></span>` +
       `<span class="own">${own ? "Their own place" : "Carries it"}</span></div>` +
-      `<span class="meta">${pl.type} · ${isFar ? `<b>${miles(mi)} away</b>` : miles(mi)} · ${money(r.price)}${r.qty > 1 ? " each" : ""}</span>` + cond +
+      `<span class="meta">${pl.type} · ${miles(mi)} · ${money(r.price)}${r.qty > 1 ? " each" : ""}</span>` + cond +
       `<span class="av ${stale || isSold(it) ? "stale" : ""}">${av}</span></div>`;
   }
 
-  // Far places still show as cards, nearest first, under a divider.
-  // The list shows every near place and up to 2 far ones; "See all" covers the rest,
+  // Places sit in a row that scrolls sideways: near ones first, then a small
+  // "More than 25 mi away" divider, then far ones, each nearest first.
+  // The row shows every near place and up to 2 far ones; "See all" covers the rest,
   // including a chain's locations that aren't drawn in the graph.
   const FAR_SHOWN = 2;
   function placeList(it, near, far, label) {
@@ -911,8 +914,8 @@ dl.mini dd { margin: 2px 0 0; font-size: 14px; }
     const extra = it.kind === "house" ? PRODUCERS[it.producer].extra || 0 : 0;
     const total = near.length + far.length + extra;
     const shown = near.length + Math.min(far.length, FAR_SHOWN);
-    return near.map((r) => placeCard(it, r)).join("") +
-      (far.length ? `<p class="far-h">More than ${RADIUS} mi away</p>` + farSorted.slice(0, FAR_SHOWN).map((r) => placeCard(it, r, true)).join("") : "") +
+    return `<div class="prow">` + near.map((r) => placeCard(it, r)).join("") +
+      (far.length ? `<div class="far-v"><i></i><span>More than ${RADIUS} mi away</span><i></i></div>` + farSorted.slice(0, FAR_SHOWN).map((r) => placeCard(it, r)).join("") : "") + `</div>` +
       (total > shown ? `<span class="see-all">See all ${total} ${esc(label)} →</span>` : "");
   }
   const PLACES_MI = (id) => PLACE_MI[state.city][id];
@@ -973,9 +976,8 @@ dl.mini dd { margin: 2px 0 0; font-size: 14px; }
         body = `<div class="empty"><span>No other places yet. Know where else to get it?</span><b>Add a place</b></div>`;
         why.push("No other places carry it yet, so the section asks people to add one.");
       } else if (!near.length) {
-        body = `<div class="empty"><span>Nothing within ${RADIUS} mi yet.</span><b>Add a place</b></div>` + placeList(it, near, far, "places");
-        why.push(`Nothing carries it within ${RADIUS} mi of you. Farther places still show, under a divider with their distance.`);
-      } else if (far.length) why.push(`Places more than ${RADIUS} mi away still show, under a divider with their distance.`);
+        why.push(`Nothing carries it within ${RADIUS} mi of you, so the row starts with the "More than ${RADIUS} mi away" divider and the farther places follow it.`);
+      } else if (far.length) why.push(`Places more than ${RADIUS} mi away still show, after a "More than ${RADIUS} mi away" divider in the row.`);
       if (rows.some((r) => r.cond === "secondhand" && agoDays(r.seen[1]) > STALE_DAYS.secondhand && r.place !== state.ctx)) {
         why.push(`Secondhand stock moves fast, so a sighting older than ${STALE_DAYS.secondhand / 7} weeks is marked "May have sold". New stock waits ${STALE_DAYS.new / 7} weeks.`);
       }
@@ -987,7 +989,7 @@ dl.mini dd { margin: 2px 0 0; font-size: 14px; }
       } else {
         const title = ctxRow ? `Other ${prod.short} locations` : "Where to get it";
         nearby = `<div class="m-sec"><h4>${title}</h4>${placeList(it, near, far, prod.short + " locations")}</div>`;
-        if (far.length) why.push(`Locations more than ${RADIUS} mi away still show, under a divider with their distance.`);
+        if (far.length) why.push(`Locations more than ${RADIUS} mi away still show, after a "More than ${RADIUS} mi away" divider in the row.`);
         if (state.second && it.producer === "thump") why.push("The Highlands café was added and the cold brew followed it automatically.");
       }
     } else {
@@ -1004,9 +1006,9 @@ dl.mini dd { margin: 2px 0 0; font-size: 14px; }
       if (it.kind !== "goods") why.push(`"${more}" replaces "Similar to this": the producer's other things are the better next step.`);
     }
 
-    // Community prompt (shown at the Community added level)
+    // Community prompt (shown at every verification level)
     const prompt = sold ? "" : {
-      goods: used ? "Seen one lately? Let others know where it is." : "Bought this lately? Help others by confirming the details.",
+      goods: used ? "Seen one lately? Let others know where it is." : "Bought or seen this lately? Help others by confirming the details.",
       house: "Had this lately? Let others know it's still on the menu.",
       original: "Seen it lately? Let others know it's still there."
     }[it.kind];
@@ -1032,7 +1034,7 @@ dl.mini dd { margin: 2px 0 0; font-size: 14px; }
         `<div class="m-price"><b class="${sold ? "sold" : ""}">${price}</b><span>${esc(priceNote)}</span></div>` +
         nearby +
         `<div class="m-sec"><h4>${esc(more)}</h4><div class="tiles"><div></div><div></div><div></div></div></div>` +
-        (prompt ? `<div class="verif"><span class="h">Verification · if still Community added</span><span class="p">${prompt}</span><b>Confirm details</b></div>` : "") +
+        (prompt ? `<div class="verif"><span class="h">Verification · every level</span><span class="p">${prompt}</span><b>Confirm details</b></div>` : "") +
       `</div>` +
       `<div class="m-btn">${esc(btn)}</div>`;
     $("why").innerHTML = why.filter(Boolean).map((w) => `<li>${w}</li>`).join("");
