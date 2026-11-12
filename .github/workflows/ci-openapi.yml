@@ -1,14 +1,9 @@
 name: CI - OpenAPI Lint
 
 on:
-  pull_request:
-    paths:
-      - 'services/cove-api/api/**'
-      - 'services/cove-media/api/**'
-      - 'services/cove-catalog/api/**'
-      - 'services/cove-directory/api/**'
-      - 'services/cove-user/api/**'
-      - '.github/workflows/ci-openapi.yml'
+  # Pull requests run this through ci.yml, which calls it only when the PR
+  # touches a service's api/ folder. CI Gate in ci.yml is the required check.
+  workflow_call:
 
 jobs:
   lint:
