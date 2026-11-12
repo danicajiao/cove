@@ -11,6 +11,11 @@ on:
   # Pull requests run this through ci.yml, which calls it only when the PR
   # touches the iOS app. CI Gate in ci.yml is the required check.
   workflow_call:
+    inputs:
+      swift-changed:
+        description: Whether the PR changes any .swift files. SwiftFormat and SwiftLint only run when it does.
+        type: boolean
+        default: true
 
 jobs:
   lint-and-validate:
@@ -26,8 +31,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
@@ -36,22 +39,16 @@ jobs:
           bundler-cache: true
           working-directory: apps/ios
 
-      - name: Check for Swift file changes
-        id: swift-changes
-        run: |
-          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep '\.swift$' || true)
-          if [ -z "$CHANGED" ]; then
-            echo "No Swift files changed — skipping lint."
-            echo "skip=true" >> $GITHUB_OUTPUT
-          else
-            echo "skip=false" >> $GITHUB_OUTPUT
-          fi
+      # ci.yml's Detect changes job decides whether any .swift files changed.
+      - name: Note skipped Swift lint
+        if: ${{ !inputs.swift-changed }}
+        run: echo "No Swift files changed, so SwiftFormat and SwiftLint are skipped."
 
       # Pin SwiftLint to the version used locally instead of the latest
       # Homebrew release, so new upstream rules can't break lint unannounced.
       # Bump SWIFTLINT_VERSION and SWIFTLINT_SHA256 together when upgrading.
       - name: Install SwiftLint
-        if: steps.swift-changes.outputs.skip != 'true'
+        if: inputs.swift-changed
         env:
           SWIFTLINT_VERSION: 0.63.2
           SWIFTLINT_SHA256: c59a405c85f95b92ced677a500804e081596a4cae4a6a485af76065557d6ed29
@@ -67,7 +64,7 @@ jobs:
       # preinstalled copy, so runner image updates can't introduce new rules.
       # Bump SWIFTFORMAT_VERSION and SWIFTFORMAT_SHA256 together when upgrading.
       - name: Install SwiftFormat
-        if: steps.swift-changes.outputs.skip != 'true'
+        if: inputs.swift-changed
         env:
           SWIFTFORMAT_VERSION: 0.60.1
           SWIFTFORMAT_SHA256: 23b50c75f4223c477e822833c4cf819a1c9abbb6d00e892900bda1c3a8231afd
@@ -80,19 +77,19 @@ jobs:
           echo "$RUNNER_TEMP/swiftformat" >> "$GITHUB_PATH"
 
       - name: Run SwiftFormat (lint only)
-        if: steps.swift-changes.outputs.skip != 'true'
+        if: inputs.swift-changed
         run: |
           swiftformat --version
           swiftformat --lint .
 
       - name: Run SwiftLint
-        if: steps.swift-changes.outputs.skip != 'true'
+        if: inputs.swift-changed
         run: |
           swiftlint version
           swiftlint lint --strict
 
       - name: Check for merge conflict markers
-        if: steps.swift-changes.outputs.skip != 'true'
+        if: inputs.swift-changed
         run: |
           if grep -r "^<<<<<<< \|^=======$\|^>>>>>>> " Cove/ --include="*.swift"; then
             echo "❌ Merge conflict markers found!"

@@ -24,6 +24,7 @@ jobs:
       pull-requests: read
     outputs:
       ios: ${{ steps.filter.outputs.ios }}
+      swift: ${{ steps.filter.outputs.swift }}
       services: ${{ steps.filter.outputs.services }}
       openapi: ${{ steps.filter.outputs.openapi }}
     steps:
@@ -49,6 +50,8 @@ jobs:
           # Same rules as each workflow's push filter.
           {
             echo "ios=$(matches '^apps/ios/|^\.github/workflows/ci-ios\.yml$' '^apps/ios/.*\.md$')"
+            # Narrower than ios: SwiftFormat and SwiftLint only run for .swift changes.
+            echo "swift=$(matches '^apps/ios/.*\.swift$|^\.github/workflows/ci-ios\.yml$')"
             echo "services=$(matches '^services/cove-(api|media|catalog|directory|user)/|^packages/imgproxy/|^\.github/workflows/ci-services\.yml$')"
             echo "openapi=$(matches '^services/cove-(api|media|catalog|directory|user)/api/|^\.github/workflows/ci-openapi\.yml$')"
           } | tee -a "$GITHUB_OUTPUT"
@@ -58,6 +61,8 @@ jobs:
     needs: changes
     if: needs.changes.outputs.ios == 'true'
     uses: ./.github/workflows/ci-ios.yml
+    with:
+      swift-changed: ${{ needs.changes.outputs.swift == 'true' }}
     permissions:
       contents: read
 
