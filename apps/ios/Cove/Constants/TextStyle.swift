@@ -81,10 +81,10 @@ enum TextStyle: CaseIterable {
         }
     }
 
-    /// Figma letter spacing as a fraction of the font size (-5% is -0.05).
+    /// Figma letter spacing as a fraction of the font size (-4.2% is -0.042).
     var letterSpacing: CGFloat {
         switch self {
-        case .display, .headingXL, .headingLG, .headingMD, .headingSM, .headingXS: -0.05
+        case .display, .headingXL, .headingLG, .headingMD, .headingSM, .headingXS: -0.042
         case .bodyLG, .bodyMD, .bodySM, .bodySMBold, .caption, .captionBold, .captionSM: 0
         }
     }
