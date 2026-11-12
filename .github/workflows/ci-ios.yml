@@ -8,16 +8,45 @@ on:
       - 'apps/ios/**'
       - '!apps/ios/**/*.md'
       - '.github/workflows/ci-ios.yml'
+  # No paths filter on pull requests: "Lint & Validate" is a required check,
+  # so it has to report on every PR. A PR that doesn't touch the iOS app
+  # skips the job instead, and GitHub counts a skipped required check as
+  # passing. With a paths filter, docs-only PRs would wait on it forever.
   pull_request:
-    paths:
-      - 'apps/ios/**'
-      - '!apps/ios/**/*.md'
-      - '.github/workflows/ci-ios.yml'
 
 jobs:
+  # Decides whether the PR touches the iOS app, on a cheap Linux runner so
+  # PRs that don't never start a macOS one.
+  changes:
+    name: Detect iOS changes
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      ios: ${{ steps.filter.outputs.ios }}
+    steps:
+      - name: Check changed files
+        id: filter
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Same rules as the push filter above: anything under apps/ios
+          # except Markdown, plus this workflow.
+          FILES=$(gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --paginate --jq '.[].filename')
+          if echo "$FILES" | grep -E '^apps/ios/|^\.github/workflows/ci-ios\.yml$' | grep -qvE '^apps/ios/.*\.md$'; then
+            echo "iOS files changed."
+            echo "ios=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No iOS files changed, so Lint & Validate is skipped."
+            echo "ios=false" >> "$GITHUB_OUTPUT"
+          fi
+
   lint-and-validate:
     name: Lint & Validate
-    if: github.event_name == 'pull_request'
+    needs: changes
+    if: github.event_name == 'pull_request' && needs.changes.outputs.ios == 'true'
     runs-on: macos-26
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
