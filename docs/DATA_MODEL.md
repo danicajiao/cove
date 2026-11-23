@@ -335,8 +335,8 @@ Producer: New Belgium Brewing
 Place: New Belgium Taproom (RiNo, type: taproom, run by the producer)
   └─ (inherits B Corp)                 ← producer-run: no signals of its own
 
-Place: Sunbeam Coffee Co. (RiNo, type: café, run by Sunbeam Coffee Co. the business)
-  └─ (inherits Living Wage)            ← from its operator, which holds the certification
+Place: Mango Tree Coffee (Englewood, type: café, run by Mango Tree Coffee the business)
+  └─ (inherits Nonprofit Owned)        ← from its operator, which holds the signal
 
 Item: "The Purist Clean Lager"  (made by New Belgium)
   └─ signal: USDA Organic              ← item-level (this beer only)
@@ -345,7 +345,7 @@ Item: "Fat Tire"  (made by New Belgium)
   └─ (no organic signal)               ← same producer, no item-level cert
 ```
 
-Discovering "Purist Clean Lager" at the taproom yields **B Corp (from the maker, which also operates the taproom) + USDA Organic (from the item)**. The same beer at Sunbeam yields **B Corp + Living Wage (from Sunbeam's operator) + USDA Organic**. "Fat Tire" carries B Corp but not organic. Item-level signals differentiate items from the same producer.
+Discovering "Purist Clean Lager" at the taproom yields **B Corp (from the maker, which also operates the taproom) + USDA Organic (from the item)**. The same beer at Mango Tree's Englewood café yields **B Corp + Nonprofit Owned (from Mango Tree, the café's operator) + USDA Organic**. "Fat Tire" carries B Corp but not organic. Item-level signals differentiate items from the same producer.
 
 > **Planned:** signals attach to businesses and items only, and a place resolves its signals from its operator ([Businesses, places and vendors](#businesses-places-and-vendors)). Today `entity_signals` can still attach a signal to a place.
 
