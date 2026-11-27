@@ -48,7 +48,7 @@ See [Schema changes](#schema-changes).
 | **Item** | `catalog.items` | One thing a producer makes. Every item has one, even if it's the shared Unknown maker (see [Brands and unknown makers](#brands-and-unknown-makers)). It has one kind. |
 | **Availability** | `catalog.availability` | Links an item to a place that has it, with that place's price, whether it's new or secondhand, and when locals last saw it there. |
 
-A business that both makes and sells is two records: Thump the producer and Thump the café. That's what lets Thump open a second café, lets Onyx run eight, and fits places that make nothing (a gallery) and producers with no place (an artist). [Data Model](DATA_MODEL.md#producer-run-places) explains the same split with New Belgium.
+A business that both makes and sells is two records: Thump the producer and Thump the café. That's what lets Thump open a second café, lets Onyx run eight, and fits places that make nothing (a gallery) and producers with no place (an artist). [Data Model](DATA_MODEL.md#businesses-places-and-vendors) explains the same split with New Belgium, and how every place has one operating business.
 
 ---
 

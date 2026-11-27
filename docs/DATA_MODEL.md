@@ -72,7 +72,7 @@ Cove separates **who makes** a thing from **where you find it** — *"Cove tells
 | Entity | Role | Carries | Local-availability gate? |
 |---|---|---|---|
 | **producer** | Who makes it: a company *or* an individual (farm, roaster, chocolatier, baker, artist, musician, brewery), including a brand like Levi's | Provenance signals (B Corp, 1% for the Planet) + **tier** (Verified Business / Individual Lister) | No — can be national |
-| **place** | Where you go. `type` is one of café, restaurant, bar, bakery, dessert shop, shop, gallery, studio, market, venue, taproom | Local signals (Living Wage, Community Verified) + **location** + optional category tags (`place_categories`) | **Yes — must be local** |
+| **place** | Where you go. `type` is one of café, restaurant, bar, bakery, dessert shop, shop, gallery, studio, market, venue, taproom | **location** + optional category tags (`place_categories`). Its trust signals are its operator's (planned: [Businesses, places and vendors](#businesses-places-and-vendors)) | **Yes — must be local** |
 | **item** | What a producer makes, and what a user searches for | Its own signals (USDA Organic); made by **one** producer, **sold at** many places; a **kind** that says how it's sold (planned) | Via its places |
 
 "Producer" and "place" are both the internal names and the consumer-facing words. A `type` carries the specifics: a market and a gallery are both places, of different types. On an item, the consumer labels are **"Made by"** (the producer) and **"Sold at"** (its places). On a place page, items split into **"Made here"** (from the producer that runs the place) and **"From local producers"**.
@@ -81,16 +81,62 @@ Cove separates **who makes** a thing from **where you find it** — *"Cove tells
 
 It correctly handles real cases and reframes the "national chains" concern:
 
-- **A local boutique selling Patagonia.** Place = the boutique (`type: shop`, local, its own signals). Producer = Patagonia (B Corp, national). The item carries Patagonia's producer trust *on top of* the boutique's local trust.
+- **A local boutique selling Patagonia.** Place = the boutique (`type: shop`, local), run by the boutique's business, which holds its signals. Producer = Patagonia (B Corp, national). The item carries Patagonia's producer trust *on top of* the boutique's local trust.
 - **An individual potter.** Producer = the potter (Individual Lister tier, her provenance signals). She's available at her **studio** (`type: studio`, by appointment), a **gallery** (`type: gallery`, someone else's), and the **Saturday market** (`type: market`, a shared place). One producer, one item, many places.
 - **Patagonia's own RiNo store.** Surfaces *because* it has a local place AND genuine signals — not excluded for being national.
 - **Walmart.** Has local stores too, but no meaningful trust signals, so the ranking buries it.
 
 The rule is not "local only." It is **require a local point of availability, then rank by trust.** The geographic gate applies to the **place**; the trust ranking does the promotion. Size becomes irrelevant; local availability + verified trust is what wins.
 
-### Producer-run places
+### Businesses, places and vendors
 
-A place may be run by the producer themselves (a potter's studio, New Belgium's taproom) or be an independent place that carries many producers' goods (a boutique, a gallery, a farmers market). A nullable `run_by_producer_id` on `places` records the former — useful for showing "the producer's own studio" and for attributing trust. A vertically integrated business like New Belgium is a **producer** (B Corp) plus a **place** (`type: taproom`) it operates; keeping them as separate rows is correct, because the producer can also be sold at other places and the taproom can carry guest producers. When an item's producer runs the place being viewed, the item reads "Made by them, sold here" instead of linking out.
+> **Status:** Planned, not built. Today `places.run_by_producer_id` is nullable, places without it are "independent", and `catalog.entity_signals` can attach signals to a place.
+
+**Every place is run by exactly one business.** A business is whoever operates it: a roaster with cafés, a boutique, a restaurant group, or the company that runs a farmers market. Some businesses make items (a producer), some only run places, and some do both. A brand like Levi's makes items and runs no place in Denver.
+
+| Relationship | Cardinality | Example |
+|---|---|---|
+| business **operates** place | Exactly one operator per place; a business runs any number of places | Mango Tree Coffee operates its Englewood and Littleton cafés |
+| business **sells at** place | Many-to-many, with an optional schedule and booth note | Mango Tree Coffee sells at South Pearl Street Market on Sundays |
+| business **makes** item | One maker per item | Mango Tree Coffee makes its Huila beans |
+| item **is available at** place | Many-to-many (`availability`) | Huila beans are available at South Pearl Street Market |
+
+- **Operating and selling are different.** The operator owns the place's page and its signals. A vendor or supplier sells at the place without running it. A café that stocks Onyx beans and a market vendor are both "sells at"; only the market company or the café owner "operates".
+- **Signals live on businesses and items, never on places.** A place shows its operator's signals, no more and no fewer: every Mango Tree location shows Mango Tree's signals, and adding one to the business adds it to all of its places. An item at a place shows its maker's signals, the place operator's signals and its own.
+- **A business that makes nothing is not a producer.** It has a page listing the places it runs, but no "Made by" items, and it never appears as an item's maker.
+
+#### Markets and vendors
+
+A farmers market is a place of type `market`, run by the business that organizes it. Its vendors are businesses that sell there.
+
+```
+Business: Jarman and Co Events            ← operates the market, makes no items
+  └─ signal: Colorado-grown               ← the market's own sourcing rule
+
+Place: South Pearl Street Market (type: market, Sundays May–Nov)
+  ├─ operated by Jarman and Co Events
+  ├─ vendor: Mango Tree Coffee            ← sells at, also runs its own cafés
+  │    └─ items here: Huila beans, Cold brew      (a subset of its catalog)
+  └─ vendor: Bonfire Burritos             ← sells at, also runs its own restaurants
+       └─ items here: Breakfast burrito
+```
+
+- **The market lists its vendors from the "sells at" link,** so a vendor appears as soon as it joins, before any of its items are listed. Makers whose items are available at the place but who have no "sells at" link are listed after them.
+- **A vendor picks what it brings.** A market booth carries a reduced selection, so joining a market selects nothing. The vendor ticks the items it brings, and each one gets an `availability` row at the market. Seasonal items can carry a date range, or are unticked when the season ends, and the Availability Line's "Last seen" state covers items that stop being confirmed.
+- **Items sold only at the market** are ordinary items whose only availability is the market.
+- **Before a vendor claims its page,** the market's operator or the community can add the vendor and its items, and the vendor takes them over when it claims ([Listings and ownership](#listings-and-ownership)).
+- **On the vendor's own page,** the market appears under "Other places with their items" with just the items brought there, next to the vendor's own locations under "Find them nearby".
+
+#### Schema direction
+
+- `directory.places.run_by_producer_id` becomes `operated_by` and `NOT NULL`. Seed places with no operator today get a business of their own.
+- `catalog.items.producer_id` becomes `business_id`: an item's maker is a business.
+- **"Producer" is renamed "business" everywhere:** `directory.producers` becomes `directory.businesses`, every `producer_id` becomes `business_id`, `run_by_producer_id` becomes `operated_by`, the API's producer endpoints and types become business ones, and the app and Figma say "business". "Made by" stays as the label for an item's maker. Whether "makes items" is a stored flag or derived from having items is settled in the migration.
+- A new `directory.place_vendors (business_id, place_id, schedule, note)` records "sells at". Item selection stays in `catalog.availability`.
+- `catalog.entity_signals.place_id` is dropped, and `places.trust_score` with it: a place's trust is its operator's.
+- A place claim becomes a claim of its operator, so `directory.memberships` only needs the business side.
+
+When an item's maker operates the place being viewed, the item reads "Made by them, sold here" instead of linking out. A business like New Belgium is still a **business** (B Corp) plus a **place** (`type: taproom`) it operates: the business is also sold at other places, and the taproom can carry guest producers.
 
 ### Item kinds
 
@@ -287,7 +333,10 @@ Producer: New Belgium Brewing
   └─ signal: B Corp Certified          ← company-level (the producer)
 
 Place: New Belgium Taproom (RiNo, type: taproom, run by the producer)
-  └─ signal: Living Wage Certified     ← local-place-level (has the location)
+  └─ (inherits B Corp)                 ← producer-run: no signals of its own
+
+Place: Mango Tree Coffee (Englewood, type: café, run by Mango Tree Coffee the business)
+  └─ (inherits Nonprofit Owned)        ← from its operator, which holds the signal
 
 Item: "The Purist Clean Lager"  (made by New Belgium)
   └─ signal: USDA Organic              ← item-level (this beer only)
@@ -296,7 +345,9 @@ Item: "Fat Tire"  (made by New Belgium)
   └─ (no organic signal)               ← same producer, no item-level cert
 ```
 
-Discovering "Purist Clean Lager" yields **B Corp (from the producer) + Living Wage (from the place) + USDA Organic (from the item)**. "Fat Tire" at the same taproom carries B Corp + Living Wage but not organic. Item-level signals differentiate items from the same producer.
+Discovering "Purist Clean Lager" at the taproom yields **B Corp (from the maker, which also operates the taproom) + USDA Organic (from the item)**. The same beer at Mango Tree's Englewood café yields **B Corp + Nonprofit Owned (from Mango Tree, the café's operator) + USDA Organic**. "Fat Tire" carries B Corp but not organic. Item-level signals differentiate items from the same producer.
+
+> **Planned:** signals attach to businesses and items only, and a place resolves its signals from its operator ([Businesses, places and vendors](#businesses-places-and-vendors)). Today `entity_signals` can still attach a signal to a place.
 
 ### Signal taxonomy
 
@@ -307,9 +358,10 @@ Discovering "Purist Clean Lager" yields **B Corp (from the producer) + Living Wa
 | Fair Trade Certified | Cross-reference issuing body | item / producer |
 | 1% for the Planet | Cross-reference member directory | producer |
 | Colorado Proud | CO Dept. of Agriculture (location-tied) | producer / item |
-| Living Wage Certified | Cross-reference Living Wage directory | place / producer |
-| Community Verified | Community vouching (softer signal) | place / producer |
-| Resale / secondhand | Declared by the place | place |
+| Living Wage Certified | Cross-reference Living Wage directory | business |
+| Community Verified | Community vouching (softer signal) | business |
+| Resale / secondhand | Declared by the business | business |
+| Colorado-grown (market sourcing rule) | Published market rules | business (a market's operator) |
 | DUNS-verified ("Verified Business" tier) | DUNS number lookup | producer (drives `tier`) |
 
 ### The exclusive-arc attachment
@@ -365,6 +417,8 @@ result_trust_score(item, producer, place) =
     + place.trust_score     -- materialized from place signals (Living Wage, etc.)
     + Σ item's own signals       -- USDA Organic, etc. — usually 0–2, added at query time
 ```
+
+**Planned:** `place.trust_score` goes away and the place term becomes the operator's `trust_score`. When the item's maker also operates the place, the business is counted once, not twice.
 
 **Materialize** `producer.trust_score` and `place.trust_score` (recompute when their signals change — rare; for v1, computed once at seed time) and B-tree index them so the discovery `ORDER BY` is cheap. Add the item's own signals live.
 
@@ -478,6 +532,8 @@ Steps 2–4 are additive — no existing tables change.
 Location is the proximity dimension of discovery and the integrity gate: every place has a verifiable local address within the Denver metro area and appears in radius search. There is no online-only place type. A producer that sells only online reaches Cove through the local places that carry its items. (The four placeholder seed places still use a temporary `online` type with no location; the Denver seed data in #406 replaces them and drops the value.) This prevents national chains from self-listing as local and diluting the trust layer.
 
 **Distance is measured from the area being browsed.** Onboarding asks for location services, and by default distance and ranking use where the person is. Once Cove covers more than one city, someone planning a trip can browse another one, and distances follow it. Being local shows through distance and ranking: items, places and producers never carry a "Local" badge.
+
+The Figma mock-ups put the person at Denver Union Station (1701 Wynkoop St). Every distance in them is the straight line from there, so a place shows the same distance on every screen.
 
 Both `directory.producers` and `directory.places` carry a `geography(Point,4326)` column with a GiST index (from `migrations/000002_directory.up.sql`). It is nullable on producers, which can be national. The PostGIS extension is enabled in `migrations/000001_setup.up.sql`.
 
@@ -916,7 +972,7 @@ Items resolved in Phase 3:
 Items still open:
 
 4. **Trust score recomputation** — for v1 it is seeded once at seed time; define the trigger/job model for when signals change post-onboarding.
-5. **Independent-place tier** — `tier` lives on `producer`. A registered independent place (a boutique that resells, with no producer of its own) earns trust via its signals, not a tier; revisit if places need their own tier.
+5. **"Makes items" flag** — with every place operated by a business and "producer" renamed "business" ([Businesses, places and vendors](#businesses-places-and-vendors)), whether a business that makes items is marked by a stored flag or derived from having items. A boutique's `tier` lives on its business like any other.
 6. **`details` on products vs a separate table** — folded into a `details` JSONB column here; split back out only if payloads get large enough to hurt list queries.
 7. **`user_flags`** — the table and its one flag (`interests_onboarded`) are documented in the `profile` schema above; #368 tracks defining further flags and their owner.
 8. **Place sourcing** — whether people add a place by searching an existing maps source instead of typing it in, and which source's terms allow Cove to keep that data.
@@ -954,3 +1010,4 @@ Items still open:
 - **Version 6.3** (November 2026) — **Listings and ownership.** Added the planned model for community listings, claiming and owner administration (Product Brief A10 to A12). `profile.memberships` became `directory.memberships`, keyed on `user_id`, so `cove-directory` keeps to the ownership rule. Listing moderation now ships before community submissions, ahead of the v3 contributions work.
 - **Version 7.0** (November 2026) — **Data Model.** Renamed from Marketplace Architecture, since Cove doesn't sell anything. Added the planned model from [Item Availability](ITEM_AVAILABILITY.md): item kinds (goods, house-made, one of a kind) with the every-location setting and the `catalog.item_places` view; secondhand copies as Goods, with the condition on the availability row; brands as producers with community-started pages, a shared Unknown maker, a required `items.producer_id` and no `items.brand`; visit lists back in `profile` (removed in 3.0); and distance measured from the area being browsed, with no Local badge.
 - **Version 7.1** (November 2026) — **Guest browsing (epic #430).** `profile.users.username` became nullable, and `is_guest` and `last_seen_at` were added with the partial index `users_guest_last_seen_idx`, for guest profiles and their 30-day cleanup. `cove-api` forwards `X-Cove-Guest`.
+- **Version 7.2** (November 2026) — **Businesses operate places (planned).** Every place has exactly one operating business; signals live on businesses and items, never places; a place's trust is its operator's. Added vendors ("sells at", `directory.place_vendors`) and per-place item selection, with South Pearl Street Market as the worked example. "Producer" is renamed "business" throughout the planned schema, API and app; this document still uses "producer" for what is built today. Open item 5 became the "makes items" flag.
