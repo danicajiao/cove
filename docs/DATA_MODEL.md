@@ -533,6 +533,8 @@ Location is the proximity dimension of discovery and the integrity gate: every p
 
 **Distance is measured from the area being browsed.** Onboarding asks for location services, and by default distance and ranking use where the person is. Once Cove covers more than one city, someone planning a trip can browse another one, and distances follow it. Being local shows through distance and ranking: items, places and producers never carry a "Local" badge.
 
+The Figma mock-ups put the person at Denver Union Station (1701 Wynkoop St). Every distance in them is the straight line from there, so a place shows the same distance on every screen.
+
 Both `directory.producers` and `directory.places` carry a `geography(Point,4326)` column with a GiST index (from `migrations/000002_directory.up.sql`). It is nullable on producers, which can be national. The PostGIS extension is enabled in `migrations/000001_setup.up.sql`.
 
 ```sql
